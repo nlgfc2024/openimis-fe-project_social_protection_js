@@ -141,6 +141,14 @@ function reducer(
         fetchingProject: false,
         errorProject: formatServerError(action.payload),
       };
+    case CLEAR(ACTION_TYPE.GET_PROJECT):
+      return {
+        ...state,
+        fetchingProject: false,
+        fetchedProject: false,
+        project: null,
+        errorProject: null,
+      };
     case REQUEST(ACTION_TYPE.SEARCH_PROJECTS_HISTORY):
       return {
         ...state,

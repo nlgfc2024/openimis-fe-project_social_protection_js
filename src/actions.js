@@ -206,6 +206,10 @@ export function projectNameValidationCheck(modulesManager, variables) {
   );
 }
 
+export const clearProject = () => (dispatch) => {
+  dispatch({ type: CLEAR(ACTION_TYPE.GET_PROJECT) });
+};
+
 export const projectNameSetValid = () => (dispatch) => {
   dispatch({ type: ACTION_TYPE.PROJECT_NAME_SET_VALID });
 };

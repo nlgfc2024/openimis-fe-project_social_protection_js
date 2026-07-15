@@ -175,7 +175,7 @@ function BenefitPlanProjectsSearcher({
 
     if (rights.includes(RIGHT_PROJECT_UPDATE)) {
       formatters.push((project) => (
-        <Tooltip title={formatMessage(intl, 'project', 'editButtonTooltip')}>
+        <Tooltip title={formatMessage(intl, MODULE_NAME, 'editButtonTooltip')}>
           <IconButton
             onClick={() => openProject(project)}
             disabled={deletedProjectUuids.includes(project.id)}

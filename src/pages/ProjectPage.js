@@ -24,6 +24,7 @@ import {
   updateProject,
   deleteProject,
   undoDeleteProject,
+  clearProject,
 } from '../actions';
 import { ACTION_TYPE } from '../reducer';
 import ProjectHeadPanel from '../components/ProjectHeadPanel';
@@ -52,6 +53,7 @@ function ProjectPage({
   updateProject,
   deleteProject,
   undoDeleteProject,
+  clearProject,
   submittingMutation,
   mutation,
   coreConfirm,
@@ -63,7 +65,7 @@ function ProjectPage({
   const history = useHistory();
   const locationState = history.location?.state;
 
-  const benefitPlanIdFromState = locationState?.benefitPlanid;
+  const benefitPlanIdFromState = locationState?.benefitPlanId;
   const benefitPlanNameFromState = locationState?.benefitPlanName;
 
   const pathMatch = history.location?.pathname?.match(/benefitPlan\/([^/]+)/);
@@ -112,6 +114,10 @@ function ProjectPage({
   useEffect(() => {
     if (projectUuid) {
       fetchProject(modulesManager, [`id: "${projectUuid}"`]);
+    } else {
+      // Creating a new project: drop any project left in the store from a previously
+      // opened one, so the Delete/Undo action and change-detection don't use stale data.
+      clearProject();
     }
   }, [projectUuid]);
 
@@ -287,6 +293,7 @@ const mapDispatchToProps = (dispatch) => bindActionCreators(
     updateProject,
     deleteProject,
     undoDeleteProject,
+    clearProject,
     coreConfirm,
     clearConfirm,
     journalize,
