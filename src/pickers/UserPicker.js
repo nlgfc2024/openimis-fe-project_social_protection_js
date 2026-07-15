@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { TextField, Tooltip } from '@material-ui/core';
 import {
   Autocomplete,
@@ -29,10 +29,12 @@ function UserPicker({
   const modulesManager = useModulesManager();
   const { formatMessage } = useTranslations('projectSocialProtection', modulesManager);
 
+  const [search, setSearch] = useState(null);
+
   const { isLoading, data, error } = useGraphqlQuery(
     `
-    query UserPicker($first: Int) {
-      users(first: $first, orderBy: "iUser__lastName") {
+    query UserPicker($search: String, $first: Int) {
+      users(str: $search, first: $first, orderBy: "iUser__lastName") {
         edges {
           node {
             id
@@ -43,7 +45,7 @@ function UserPicker({
       }
     }
     `,
-    { first: 50 },
+    { search, first: 20 },
     { skip: false },
   );
 
@@ -61,6 +63,7 @@ function UserPicker({
       getOptionLabel={userLabel}
       getOptionSelected={(option, v) => option?.id === v?.id}
       onChange={(v) => onChange(v, v ? userLabel(v) : null)}
+      onInputChange={(v) => setSearch(v || null)}
       renderInput={(inputProps) => (
         <Tooltip title="">
           <TextField

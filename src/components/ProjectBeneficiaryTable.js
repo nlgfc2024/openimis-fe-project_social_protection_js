@@ -40,6 +40,7 @@ function BaseProjectBeneficiaryTable({
   fetchingBeneficiaries,
   beneficiaries,
   beneficiariesTotalCount,
+  submittingMutation,
   coreAlert: showAlert,
 }) {
   const orderBy = isGroup ? 'orderBy: ["group__code"]' : 'orderBy: ["individual__last_name", "individual__first_name"]';
@@ -91,8 +92,8 @@ function BaseProjectBeneficiaryTable({
     return changes.newData;
   }), [beneficiaries, pendingChanges]);
   // Trigger fetch: batch & concat handled in projectBeneficiariesMiddleware & reducers
-  useEffect(() => {
-    if (project?.benefitPlan?.id) {
+  const triggerFetch = useCallback(() => {
+    if (project?.id) {
       dispatch({
         type: REQUEST(actionType),
         meta: {
@@ -101,7 +102,23 @@ function BaseProjectBeneficiaryTable({
         },
       });
     }
-  }, [project?.benefitPlan?.id]);
+  }, [project?.id, actionType]);
+
+  // Keyed on project.id (not benefitPlan.id) so switching projects under the same
+  // benefit plan refetches.
+  useEffect(() => {
+    triggerFetch();
+  }, [project?.id]);
+
+  // Refetch after a time-entry save so the grid reflects the persisted values
+  // (the store still holds pre-mutation rows until this fires).
+  const prevSubmittingRef = useRef();
+  useEffect(() => {
+    if (prevSubmittingRef.current && !submittingMutation) {
+      triggerFetch();
+    }
+    prevSubmittingRef.current = submittingMutation;
+  }, [submittingMutation]);
 
   const assignButtonComponentFn = () => (
     <Button
@@ -320,6 +337,7 @@ function BaseProjectBeneficiaryTable({
 // For Individual Beneficiaries
 const mapStateToPropsIndividual = (state) => ({
   rights: state.core?.user?.i_user?.rights ?? [],
+  submittingMutation: state.projectSocialProtection.submittingMutation,
   fetchingBeneficiaries: state.projectSocialProtection.fetchingProjectBeneficiaries,
   beneficiaries: state.projectSocialProtection.projectBeneficiaries,
   beneficiariesTotalCount: state.projectSocialProtection.projectBeneficiariesTotalCount,
@@ -343,6 +361,7 @@ export const ProjectBeneficiaryTable = injectIntl((props) => (
 // For Group Beneficiaries
 const mapStateToPropsGroup = (state) => ({
   rights: state.core?.user?.i_user?.rights ?? [],
+  submittingMutation: state.projectSocialProtection.submittingMutation,
   fetchingBeneficiaries: state.projectSocialProtection.fetchingProjectGroupBeneficiaries,
   beneficiaries: state.projectSocialProtection.projectGroupBeneficiaries,
   beneficiariesTotalCount: state.projectSocialProtection.projectGroupBeneficiariesTotalCount,

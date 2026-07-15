@@ -58,7 +58,8 @@ function HotspotPicker({
       isLoading={isLoading}
       value={value ?? null}
       getOptionLabel={(option) => (option?.code ? `${option.name} (${option.code})` : option?.name ?? '')}
-      onChange={(v) => onChange(v, v ? v.name : null)}
+      getOptionSelected={(option, v) => option?.id === v?.id}
+      onChange={(v) => onChange(v, (v && !Array.isArray(v)) ? v.name : null)}
       filterOptions={filter}
       filterSelectedOptions={filterSelectedOptions}
       onInputChange={(search) => setFilters({ search })}
