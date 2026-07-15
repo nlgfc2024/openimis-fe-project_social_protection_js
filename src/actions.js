@@ -1,0 +1,308 @@
+import {
+  graphql,
+  formatPageQuery,
+  formatPageQueryWithCount,
+  formatMutation,
+  formatGQLString,
+  graphqlWithVariables,
+} from '@openimis/fe-core';
+import { ACTION_TYPE } from './reducer';
+import {
+  CLEAR, ERROR, REQUEST, SUCCESS,
+} from './util/action-type';
+
+const BENEFIT_PLAN_PROJECTION = () => [
+  'id',
+  'name',
+  'code',
+  'type',
+  'maxBeneficiaries',
+];
+
+const PROJECT_FULL_PROJECTION = (modulesManager) => [
+  'id',
+  'benefitPlan {id, name, type}',
+  'name',
+  'status',
+  'targetBeneficiaries',
+  'workingDays',
+  'activity {id, name}',
+  'location' + modulesManager.getProjection('location.Location.FlatProjection'),
+  'isDeleted',
+  'userUpdated {username}',
+  'version',
+  'dateCreated',
+  'dateUpdated',
+];
+
+const BENEFICIARY_PROJECTION = (modulesManager) => [
+  'id',
+  'status',
+  'jsonExt',
+  'individual {firstName, lastName, dob, location' + modulesManager.getProjection('location.Location.FlatProjection') + '}',
+];
+
+const GROUP_BENEFICIARY_PROJECTION = (modulesManager) => [
+  'id',
+  'status',
+  'jsonExt',
+  'group {id, code, head {uuid, firstName, lastName, dob}, location' + modulesManager.getProjection('location.Location.FlatProjection') + '}',
+];
+
+// Enrolled members are read through the enrollment join type so each row carries its
+// enrollment id and daily time entries (needed for the logsheet grid).
+const PROJECT_ENROLLMENT_PROJECTION = (modulesManager) => [
+  'id',
+  'beneficiary {' + BENEFICIARY_PROJECTION(modulesManager).join(', ') + '}',
+  'timeEntries { id, dayNumber, percentComplete }',
+];
+
+const PROJECT_GROUP_ENROLLMENT_PROJECTION = (modulesManager) => [
+  'id',
+  'groupBeneficiary {' + GROUP_BENEFICIARY_PROJECTION(modulesManager).join(', ') + '}',
+  'timeEntries { id, dayNumber, percentComplete }',
+];
+
+export function fetchBenefitPlan(modulesManager, params) {
+  const payload = formatPageQuery('benefitPlan', params, BENEFIT_PLAN_PROJECTION(modulesManager));
+  return graphql(payload, 'PROJECT_SOCIAL_PROTECTION_BENEFIT_PLAN');
+}
+
+export function fetchBenefitPlanProjects(modulesManager, params) {
+  const payload = formatPageQueryWithCount('project', params, PROJECT_FULL_PROJECTION(modulesManager));
+  return graphql(payload, ACTION_TYPE.SEARCH_PROJECTS);
+}
+
+export function fetchProject(modulesManager, params) {
+  const payload = formatPageQuery('project', params, PROJECT_FULL_PROJECTION(modulesManager));
+  return graphql(payload, ACTION_TYPE.GET_PROJECT);
+}
+
+export function fetchProjectHistory(modulesManager, params) {
+  const payload = formatPageQueryWithCount('projectHistory', params, PROJECT_FULL_PROJECTION(modulesManager));
+  return graphql(payload, ACTION_TYPE.SEARCH_PROJECTS_HISTORY);
+}
+
+// Enrolled-beneficiary lists shown on a project. Read through the enrollment join
+// type (beneficiaryProjectEnrollment / groupBeneficiaryProjectEnrollment) so each row
+// carries its enrollment id and daily time entries for the logsheet grid.
+export function fetchProjectBeneficiaries(modulesManager, params, meta = {}) {
+  const payload = formatPageQueryWithCount(
+    'beneficiaryProjectEnrollment',
+    params,
+    PROJECT_ENROLLMENT_PROJECTION(modulesManager),
+  );
+  return graphql(payload, ACTION_TYPE.SEARCH_PROJECT_BENEFICIARIES, meta);
+}
+
+export function fetchProjectGroupBeneficiaries(modulesManager, params, meta = {}) {
+  const payload = formatPageQueryWithCount(
+    'groupBeneficiaryProjectEnrollment',
+    params,
+    PROJECT_GROUP_ENROLLMENT_PROJECTION(modulesManager),
+  );
+  return graphql(payload, ACTION_TYPE.SEARCH_PROJECT_GROUP_BENEFICIARIES, meta);
+}
+
+// Candidate lists shown in the enrollment dialog. These reuse social_protection's
+// own beneficiary / groupBeneficiary search (rich search / location / villageOrChildOf
+// / customFilters). Already-enrolled members are marked in the dialog via the enrolled
+// list above; the dialog reads the response payload directly.
+export function fetchBeneficiaries(modulesManager, params) {
+  const payload = formatPageQueryWithCount('beneficiary', params, BENEFICIARY_PROJECTION(modulesManager));
+  return graphql(payload, ACTION_TYPE.SEARCH_PROJECT_ELIGIBLE_BENEFICIARIES);
+}
+
+export function fetchGroupBeneficiaries(modulesManager, params) {
+  const payload = formatPageQueryWithCount('groupBeneficiary', params, GROUP_BENEFICIARY_PROJECTION(modulesManager));
+  return graphql(payload, ACTION_TYPE.SEARCH_PROJECT_ELIGIBLE_GROUP_BENEFICIARIES);
+}
+
+function formatProjectGQL(project) {
+  return `
+    ${project?.id ? `id: "${project.id}"` : ''}
+    ${project?.name ? `name: "${formatGQLString(project.name)}"` : ''}
+    ${project?.targetBeneficiaries ? `targetBeneficiaries: ${project.targetBeneficiaries}` : ''}
+    ${project?.workingDays ? `workingDays: ${project.workingDays}` : ''}
+    ${project?.status ? `status: "${project.status}"` : ''}
+    ${project?.activity?.id ? `activityId: "${project.activity.id}"` : ''}
+    ${project?.location?.uuid ? `locationId: "${project.location.uuid}"` : ''}
+    ${project?.benefitPlan?.id ? `benefitPlanId: "${project.benefitPlan.id}"` : ''}`;
+}
+
+export function createProject(project, clientMutationLabel) {
+  const mutation = formatMutation('createProject', formatProjectGQL(project), clientMutationLabel);
+  const requestedDateTime = new Date();
+  return graphql(
+    mutation.payload,
+    [REQUEST(ACTION_TYPE.MUTATION), SUCCESS(ACTION_TYPE.CREATE_PROJECT), ERROR(ACTION_TYPE.MUTATION)],
+    {
+      actionType: ACTION_TYPE.CREATE_PROJECT,
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      requestedDateTime,
+    },
+  );
+}
+
+export function updateProject(project, clientMutationLabel) {
+  const mutation = formatMutation('updateProject', formatProjectGQL(project), clientMutationLabel);
+  const requestedDateTime = new Date();
+  return graphql(
+    mutation.payload,
+    [REQUEST(ACTION_TYPE.MUTATION), SUCCESS(ACTION_TYPE.UPDATE_PROJECT), ERROR(ACTION_TYPE.MUTATION)],
+    {
+      actionType: ACTION_TYPE.UPDATE_PROJECT,
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      requestedDateTime,
+    },
+  );
+}
+
+export function deleteProject(project, clientMutationLabel) {
+  const projectUuids = `ids: ["${project?.id}"]`;
+  const mutation = formatMutation('deleteProject', projectUuids, clientMutationLabel);
+  const requestedDateTime = new Date();
+  return graphql(
+    mutation.payload,
+    [REQUEST(ACTION_TYPE.MUTATION), SUCCESS(ACTION_TYPE.DELETE_PROJECT), ERROR(ACTION_TYPE.MUTATION)],
+    {
+      actionType: ACTION_TYPE.DELETE_PROJECT,
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      requestedDateTime,
+    },
+  );
+}
+
+export function undoDeleteProject(project, clientMutationLabel) {
+  const projectUuids = `ids: ["${project?.id}"]`;
+  const mutation = formatMutation('undoDeleteProject', projectUuids, clientMutationLabel);
+  const requestedDateTime = new Date();
+  return graphql(
+    mutation.payload,
+    [REQUEST(ACTION_TYPE.MUTATION), SUCCESS(ACTION_TYPE.UNDO_DELETE_PROJECT), ERROR(ACTION_TYPE.MUTATION)],
+    {
+      actionType: ACTION_TYPE.UNDO_DELETE_PROJECT,
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      requestedDateTime,
+    },
+  );
+}
+
+export function projectNameValidationCheck(modulesManager, variables) {
+  return graphqlWithVariables(
+    `
+      query ($projectName: String!, $benefitPlanId: String!) {
+        isValid: projectNameValidity(projectName: $projectName, benefitPlanId: $benefitPlanId) {
+          isValid
+        }
+      }
+    `,
+    variables,
+    ACTION_TYPE.PROJECT_NAME_FIELDS_VALIDATION,
+  );
+}
+
+export const projectNameSetValid = () => (dispatch) => {
+  dispatch({ type: ACTION_TYPE.PROJECT_NAME_SET_VALID });
+};
+
+export const projectNameValidationClear = () => (dispatch) => {
+  dispatch({
+    type: CLEAR(ACTION_TYPE.PROJECT_NAME_FIELDS_VALIDATION),
+  });
+};
+
+function formatProjectEnrollmentGQL(params) {
+  // double quotes are important!
+  const ids = params.ids?.length ? `"${params.ids.join('","')}"` : '';
+  return `ids: [${ids}]
+          projectId: "${params.projectId}"`;
+}
+
+export function enrollProject(params, clientMutationLabel) {
+  const mutation = formatMutation('enrollProject', formatProjectEnrollmentGQL(params), clientMutationLabel);
+  const requestedDateTime = new Date();
+  return graphql(
+    mutation.payload,
+    [REQUEST(ACTION_TYPE.MUTATION), SUCCESS(ACTION_TYPE.PROJECT_ENROLL), ERROR(ACTION_TYPE.MUTATION)],
+    {
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      requestedDateTime,
+    },
+  );
+}
+
+export function enrollGroupProject(params, clientMutationLabel) {
+  const mutation = formatMutation('enrollGroupProject', formatProjectEnrollmentGQL(params), clientMutationLabel);
+  const requestedDateTime = new Date();
+  return graphql(
+    mutation.payload,
+    [REQUEST(ACTION_TYPE.MUTATION), SUCCESS(ACTION_TYPE.PROJECT_ENROLL_GROUP), ERROR(ACTION_TYPE.MUTATION)],
+    {
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      requestedDateTime,
+    },
+  );
+}
+
+// --- Logsheet: daily time entries -------------------------------------------------
+function formatTimeEntriesGQL(timeEntries) {
+  if (!timeEntries || timeEntries.length === 0) {
+    return '[]';
+  }
+  const formatted = timeEntries.map((entry) => {
+    const fields = [];
+    if (entry.id) {
+      fields.push(`id: "${entry.id}"`);
+    }
+    fields.push(`enrollmentId: "${entry.enrollmentId}"`);
+    fields.push(`dayNumber: ${entry.dayNumber}`);
+    fields.push(`percentComplete: ${entry.percentComplete}`);
+    return `{ ${fields.join(', ')} }`;
+  });
+  return `[${formatted.join(', ')}]`;
+}
+
+export function bulkUpdateBeneficiaryTimeEntries(params, clientMutationLabel) {
+  const gqlParams = `timeEntries: ${formatTimeEntriesGQL(params.timeEntries || [])}`;
+  const mutation = formatMutation('bulkUpdateBeneficiaryTimeEntries', gqlParams, clientMutationLabel);
+  const requestedDateTime = new Date();
+  return graphql(
+    mutation.payload,
+    [
+      REQUEST(ACTION_TYPE.MUTATION),
+      SUCCESS(ACTION_TYPE.BULK_UPDATE_BENEFICIARY_TIME_ENTRIES),
+      ERROR(ACTION_TYPE.MUTATION),
+    ],
+    {
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      requestedDateTime,
+    },
+  );
+}
+
+export function bulkUpdateGroupBeneficiaryTimeEntries(params, clientMutationLabel) {
+  const gqlParams = `timeEntries: ${formatTimeEntriesGQL(params.timeEntries || [])}`;
+  const mutation = formatMutation('bulkUpdateGroupBeneficiaryTimeEntries', gqlParams, clientMutationLabel);
+  const requestedDateTime = new Date();
+  return graphql(
+    mutation.payload,
+    [
+      REQUEST(ACTION_TYPE.MUTATION),
+      SUCCESS(ACTION_TYPE.BULK_UPDATE_GROUP_BENEFICIARY_TIME_ENTRIES),
+      ERROR(ACTION_TYPE.MUTATION),
+    ],
+    {
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      requestedDateTime,
+    },
+  );
+}
