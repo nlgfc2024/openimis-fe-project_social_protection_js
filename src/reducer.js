@@ -131,6 +131,12 @@ function reducer(
             ...project?.activity,
             id: project?.activity?.id ? decodeId(project.activity.id) : null,
           },
+          hotspot: project?.hotspot?.id
+            ? { ...project.hotspot, id: decodeId(project.hotspot.id) } : null,
+          foreman: project?.foreman?.id
+            ? { ...project.foreman, id: decodeId(project.foreman.id) } : null,
+          supervisor: project?.supervisor?.id
+            ? { ...project.supervisor, id: decodeId(project.supervisor.id) } : null,
           id: decodeId(project.id),
         }))?.[0],
         errorProject: null,
