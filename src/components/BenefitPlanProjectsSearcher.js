@@ -244,7 +244,7 @@ function BenefitPlanProjectsSearcher({
 
   const onAdd = () => {
     history.push({
-      pathname: projectRouteBase(),
+      pathname: `${projectRouteBase()}/create`,
       state: {
         benefitPlanId,
         benefitPlanName,
