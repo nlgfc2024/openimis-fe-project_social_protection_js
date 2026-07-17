@@ -18,7 +18,7 @@ export const RIGHT_PROJECT_DELETE = 209004;
 export const RIGHT_BENEFIT_PLAN_SEARCH = 160001;
 export const RIGHT_BENEFIT_PLAN_UPDATE = 160003;
 
-export const PROJECT_STATUS_LIST = ['PREPARATION', 'IN_PROGRESS', 'COMPLETED'];
+export const PROJECT_STATUS_LIST = ['INITIATED', 'PREPARATION', 'IN_PROGRESS', 'COMPLETED'];
 
 // Upper bound on the number of daily time-entry ("Day N") columns rendered in the
 // logsheet grid. Overridable per-instance via the `maxWorkingDays` module conf.

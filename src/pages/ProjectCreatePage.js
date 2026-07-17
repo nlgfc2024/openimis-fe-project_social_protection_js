@@ -61,7 +61,7 @@ function ProjectCreatePage({
 
   const [editedProject, setEditedProject] = useState({
     benefitPlan: { id: benefitPlanId, name: benefitPlanName },
-    status: 'PREPARATION',
+    status: 'INITIATED',
   });
 
   useEffect(() => {
@@ -98,6 +98,7 @@ function ProjectCreatePage({
       if (createdProject?.id) {
         const benefitPlanRoute = modulesManager.getRef('socialProtection.route.benefitPlan');
         const projectRoute = modulesManager.getRef('projectSocialProtection.route.project');
+        const benefitPlanId = createdProject?.benefitPlan?.id || benefitPlanId;
         history.replace(
           `/${benefitPlanRoute}/${benefitPlanId}/${projectRoute}/${createdProject.id}`
         );
