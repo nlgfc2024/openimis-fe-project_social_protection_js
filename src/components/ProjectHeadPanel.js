@@ -14,6 +14,19 @@ import ActivityPicker from '../pickers/ActivityPicker';
 import HotspotPicker from '../pickers/HotspotPicker';
 import UserPicker from '../pickers/UserPicker';
 
+// Walk the location parent chain (from the flat projection) and return the
+// ancestor whose `type` matches. Used to derive District (R) / TA (D) from the
+// single location selected in the cascader so the Micro-Catchment / Hotspot
+// pickers can be filtered by the chosen TA.
+function findLocationByType(location, type) {
+  let loc = location;
+  while (loc) {
+    if (loc.type === type) return loc;
+    loc = loc.parent;
+  }
+  return null;
+}
+
 const styles = (theme) => ({
   item: theme.paper.item,
 });
@@ -34,6 +47,9 @@ class ProjectHeadPanel extends FormPanel {
 
     const project = { ...edited };
     const isNewProject = !project?.id;
+    // The District is kept as a transient field; fall back to deriving it from the
+    // stored TA (project.location) so it displays correctly when editing.
+    const district = project?.district || findLocationByType(project?.location, 'R');
 
     return (
       <Grid container className={classes.item}>
@@ -49,23 +65,87 @@ class ProjectHeadPanel extends FormPanel {
         </Grid>
 
         <Grid item xs={4} className={classes.item}>
+          <PublishedComponent
+            pubRef="location.LocationPicker"
+            module="projectSocialProtection"
+            locationLevel={1}
+            label="project.district"
+            required
+            withNull={false}
+            readOnly={readOnly}
+            value={district}
+            onChange={(v) => {
+              if (!v?.uuid) return;
+              if (district?.uuid !== v?.uuid) {
+                this.updateAttributes({
+                  district: v,
+                  location: null,
+                  microCatchment: null,
+                  hotspot: null,
+                });
+              }
+            }}
+          />
+        </Grid>
+
+        <Grid item xs={4} className={classes.item}>
+          <PublishedComponent
+            pubRef="location.LocationPicker"
+            module="projectSocialProtection"
+            locationLevel={2}
+            label="project.ta"
+            required
+            withNull={false}
+            readOnly={readOnly || !district}
+            parentLocation={district}
+            value={project?.location}
+            onChange={(v) => {
+              if (!v?.uuid) return;
+              if (project?.location?.uuid !== v?.uuid) {
+                this.updateAttributes({
+                  microCatchment: null,
+                  hotspot: null,
+                  location: v,
+                });
+              } else {
+                this.updateAttribute('location', v);
+              }
+            }}
+          />
+        </Grid>
+
+        <Grid item xs={4} className={classes.item}>
+          <PublishedComponent
+            pubRef="location.MicroCatchmentPicker"
+            module="projectSocialProtection"
+            label="project.microCatchment"
+            required
+            withNull={false}
+            readOnly={readOnly}
+            value={project?.microCatchment}
+            district={district}
+            onChange={(v) => {
+              if (project?.microCatchment?.id !== v?.id) {
+                this.updateAttributes({
+                  hotspot: null,
+                  microCatchment: v,
+                });
+              } else {
+                this.updateAttribute('microCatchment', v);
+              }
+            }}
+          />
+        </Grid>
+
+        <Grid item xs={4} className={classes.item}>
           <HotspotPicker
             label="project.hotspot"
             withLabel
             required
             readOnly={readOnly}
             value={project?.hotspot}
+            microCatchmentUuid={project?.microCatchment?.uuid}
             onChange={(v) => this.updateAttribute('hotspot', v)}
-          />
-        </Grid>
-
-        <Grid item xs={4} className={classes.item}>
-          <TextInput
-            module="projectSocialProtection"
-            label="project.knownPlace"
-            value={project?.knownPlace ?? ''}
-            readOnly={readOnly}
-            onChange={(v) => this.updateAttribute('knownPlace', v)}
           />
         </Grid>
 
@@ -81,15 +161,12 @@ class ProjectHeadPanel extends FormPanel {
         </Grid>
 
         <Grid item xs={4} className={classes.item}>
-          <PublishedComponent
-            pubRef="location.LocationCascader"
+          <TextInput
             module="projectSocialProtection"
-            label="Location"
-            required
-            withNull={false}
+            label="project.knownPlace"
+            value={project?.knownPlace ?? ''}
             readOnly={readOnly}
-            value={project?.location}
-            onChange={(v) => this.updateAttribute('location', v)}
+            onChange={(v) => this.updateAttribute('knownPlace', v)}
           />
         </Grid>
 

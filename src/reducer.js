@@ -38,6 +38,7 @@ export const ACTION_TYPE = {
   // the dialog reads the response payload directly).
   SEARCH_PROJECT_ELIGIBLE_BENEFICIARIES: 'PROJECT_SOCIAL_PROTECTION_ELIGIBLE_BENEFICIARIES',
   SEARCH_PROJECT_ELIGIBLE_GROUP_BENEFICIARIES: 'PROJECT_SOCIAL_PROTECTION_ELIGIBLE_GROUP_BENEFICIARIES',
+  PROJECT_EXPORT: 'PROJECT_SOCIAL_PROTECTION_PROJECT_EXPORT',
 };
 
 function reducer(
@@ -75,6 +76,11 @@ function reducer(
     fetchingProjectEligibleBeneficiaries: false,
     fetchingProjectEligibleGroupBeneficiaries: false,
     validationFields: {},
+    fetchingProjectExport: false,
+    fetchedProjectExport: false,
+    projectExport: null,
+    projectExportPageInfo: {},
+    errorProjectExport: null,
   },
   action,
 ) {
@@ -97,6 +103,8 @@ function reducer(
         projects: parseData(action.payload.data.project)?.map((project) => ({
           ...project,
           benefitPlan: { id: project?.benefitPlan?.id ? decodeId(project.benefitPlan.id) : null },
+          microCatchment: project?.microCatchment?.id
+            ? { ...project.microCatchment, id: decodeId(project.microCatchment.id) } : null,
           id: decodeId(project.id),
         })),
         projectsPageInfo: pageInfo(action.payload.data.project),
@@ -131,6 +139,8 @@ function reducer(
             ...project?.activity,
             id: project?.activity?.id ? decodeId(project.activity.id) : null,
           },
+          microCatchment: project?.microCatchment?.id
+            ? { ...project.microCatchment, id: decodeId(project.microCatchment.id) } : null,
           hotspot: project?.hotspot?.id
             ? { ...project.hotspot, id: decodeId(project.hotspot.id) } : null,
           foreman: project?.foreman?.id
@@ -368,6 +378,39 @@ function reducer(
       return dispatchMutationResp(state, 'bulkUpdateBeneficiaryTimeEntries', action);
     case SUCCESS(ACTION_TYPE.BULK_UPDATE_GROUP_BENEFICIARY_TIME_ENTRIES):
       return dispatchMutationResp(state, 'bulkUpdateGroupBeneficiaryTimeEntries', action);
+    case CLEAR(ACTION_TYPE.PROJECT_EXPORT):
+      return {
+        ...state,
+        fetchingProjectExport: false,
+        fetchedProjectExport: false,
+        projectExport: null,
+        projectExportPageInfo: {},
+        errorProjectExport: null,
+      };
+    case REQUEST(ACTION_TYPE.PROJECT_EXPORT):
+      return {
+        ...state,
+        fetchingProjectExport: true,
+        fetchedProjectExport: false,
+        projectExport: null,
+        projectExportPageInfo: {},
+        errorProjectExport: null,
+      };
+    case SUCCESS(ACTION_TYPE.PROJECT_EXPORT):
+      return {
+        ...state,
+        fetchingProjectExport: false,
+        fetchedProjectExport: true,
+        projectExport: action.payload.data.projectExport,
+        projectExportPageInfo: pageInfo(action.payload.data.projectExport),
+        errorProjectExport: formatGraphQLError(action.payload),
+      };
+    case ERROR(ACTION_TYPE.PROJECT_EXPORT):
+      return {
+        ...state,
+        fetchingProjectExport: false,
+        errorProjectExport: formatServerError(action.payload),
+      };
     default:
       return state;
   }

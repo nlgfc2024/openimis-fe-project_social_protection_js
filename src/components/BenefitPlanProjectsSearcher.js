@@ -31,14 +31,12 @@ import {
 } from '../constants';
 import {
   fetchBenefitPlanProjects,
+  downloadProjects,
   deleteProject,
   undoDeleteProject,
 } from '../actions';
 import ProjectFilter from './BenefitPlanProjectsFilter';
-import {
-  LOC_LEVELS,
-  locationFormatter,
-} from '../util/searcher-utils';
+import { locationFormatter } from '../util/searcher-utils';
 
 function BenefitPlanProjectsSearcher({
   intl,
@@ -146,8 +144,11 @@ function BenefitPlanProjectsSearcher({
       'project.activity',
       'project.targetBeneficiaries',
       'project.workingDays',
+      'location.locationType.0',
+      'location.locationType.1',
+      'project.microCatchment',
+      'project.hotspot',
     ];
-    baseHeaders.push(...Array.from({ length: LOC_LEVELS }, (_, i) => `location.locationType.${i}`));
 
     if (rights.includes(RIGHT_PROJECT_UPDATE)) {
       baseHeaders.push('emptyLabel');
@@ -157,6 +158,32 @@ function BenefitPlanProjectsSearcher({
     }
 
     return baseHeaders;
+  };
+
+  const exportFields = [
+    'name',
+    'status',
+    'activity.name',
+    'targetBeneficiaries',
+    'workingDays',
+    'location.name',
+    'hotspot.name',
+    'knownPlace',
+    'foreman.username',
+    'supervisor.username',
+  ];
+
+  const exportFieldsColumns = {
+    name: formatMessage(intl, MODULE_NAME, 'project.name'),
+    status: formatMessage(intl, MODULE_NAME, 'project.status'),
+    activity__name: formatMessage(intl, MODULE_NAME, 'project.activity'),
+    targetBeneficiaries: formatMessage(intl, MODULE_NAME, 'project.targetBeneficiaries'),
+    workingDays: formatMessage(intl, MODULE_NAME, 'project.workingDays'),
+    location__name: formatMessage(intl, 'location', 'location'),
+    hotspot__name: formatMessage(intl, MODULE_NAME, 'project.hotspot'),
+    knownPlace: formatMessage(intl, MODULE_NAME, 'project.knownPlace'),
+    foreman__username: formatMessage(intl, MODULE_NAME, 'project.foreman'),
+    supervisor__username: formatMessage(intl, MODULE_NAME, 'project.supervisor'),
   };
 
   const itemFormatters = () => {
@@ -170,7 +197,10 @@ function BenefitPlanProjectsSearcher({
 
     const formatters = [
       ...baseFormatters,
-      ...Array.from({ length: LOC_LEVELS }, (_, i) => (project) => locationFormatter(project?.location)[i]),
+      (project) => locationFormatter(project?.location)[0] ?? '',
+      (project) => locationFormatter(project?.location)[1] ?? '',
+      (project) => project.microCatchment?.name ?? '',
+      (project) => project.hotspot?.name ?? '',
     ];
 
     if (rights.includes(RIGHT_PROJECT_UPDATE)) {
@@ -218,6 +248,10 @@ function BenefitPlanProjectsSearcher({
     ['activity', true],
     ['targetBeneficiaries', true],
     ['workingDays', true],
+    ['location', true],
+    ['location', true],
+    ['microCatchment', true],
+    ['hotspot', true],
   ];
 
   const defaultFilters = () => ({
@@ -298,7 +332,10 @@ function BenefitPlanProjectsSearcher({
         enableActionButtons
         searcherActionsPosition="header-right"
         exportable
+        exportFields={exportFields}
+        exportFieldsColumns={exportFieldsColumns}
         exportFieldLabel={formatMessage(intl, MODULE_NAME, 'export.label')}
+        exportFetch={downloadProjects}
         onDoubleClick={openProject}
         onFiltersApplied={onFiltersApplied}
       />
@@ -320,6 +357,7 @@ const mapStateToProps = (state) => ({
 
 const mapDispatchToProps = (dispatch) => bindActionCreators({
   fetchBenefitPlanProjects,
+  downloadProjects,
   deleteProject,
   undoDeleteProject,
   coreConfirm,

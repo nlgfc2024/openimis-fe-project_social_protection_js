@@ -8,7 +8,6 @@ import {
   clearConfirm,
   journalize,
   useHistory,
-  coreAlert,
 } from '@openimis/fe-core';
 import { injectIntl } from 'react-intl';
 import { bindActionCreators } from 'redux';
@@ -55,7 +54,6 @@ function ProjectPage({
   clearConfirm,
   confirmed,
   journalize,
-  coreAlert,
 }) {
   const history = useHistory();
 
@@ -105,11 +103,6 @@ function ProjectPage({
         ACTION_TYPE.UNDO_DELETE_PROJECT,
       ].includes(mutation?.actionType)) {
         back();
-      } else if (mutation?.actionType === ACTION_TYPE.UPDATE_PROJECT) {
-        coreAlert(
-          formatMessageWithValues(intl, 'projectSocialProtection', 'project.update.success.title', project),
-          formatMessageWithValues(intl, 'projectSocialProtection', 'project.update.success.message', project),
-        );
       }
     }
   }, [submittingMutation]);
