@@ -5,6 +5,7 @@ import {
   formatMutation,
   formatGQLString,
   graphqlWithVariables,
+  decodeId,
 } from '@openimis/fe-core';
 import { ACTION_TYPE } from './reducer';
 import {
@@ -29,6 +30,7 @@ const PROJECT_FULL_PROJECTION = (modulesManager) => [
   'activity {id, name}',
   'location' + modulesManager.getProjection('location.Location.FlatProjection'),
   // Malawi (sprint) fields
+  'microCatchment {id, name, code}',
   'hotspot {id, name, code}',
   'knownPlace',
   'foreman {id, username, iUser {lastName, otherNames}}',
@@ -133,6 +135,7 @@ function formatProjectGQL(project) {
     ${project?.activity?.id ? `activityId: "${project.activity.id}"` : ''}
     ${project?.location?.uuid ? `locationId: "${project.location.uuid}"` : ''}
     ${project?.benefitPlan?.id ? `benefitPlanId: "${project.benefitPlan.id}"` : ''}
+    ${project?.microCatchment?.id ? `microCatchmentId: ${decodeId(project.microCatchment.id)}` : ''}
     ${project?.hotspot?.id ? `hotspotId: "${project.hotspot.id}"` : ''}
     ${project?.knownPlace ? `knownPlace: "${formatGQLString(project.knownPlace)}"` : ''}
     ${project?.foreman?.id ? `foremanId: "${project.foreman.id}"` : ''}
@@ -319,3 +322,31 @@ export function bulkUpdateGroupBeneficiaryTimeEntries(params, clientMutationLabe
     },
   );
 }
+
+export function downloadProjects(params) {
+  const payload = `
+    {
+      projectExport${!!params && params.length ? `(${params.join(',')})` : ''}
+    }`;
+  return graphql(payload, ACTION_TYPE.PROJECT_EXPORT);
+}
+
+export function downloadProjectHistory(params) {
+  const payload = `
+    {
+      projectExport${!!params && params.length ? `(${params.join(',')})` : ''}
+    }`;
+  return graphql(payload, ACTION_TYPE.PROJECT_HISTORY_EXPORT);
+}
+
+export const clearProjectExport = () => (dispatch) => {
+  dispatch({
+    type: CLEAR(ACTION_TYPE.PROJECT_EXPORT),
+  });
+};
+
+export const clearProjectHistoryExport = () => (dispatch) => {
+  dispatch({
+    type: CLEAR(ACTION_TYPE.PROJECT_HISTORY_EXPORT),
+  });
+};

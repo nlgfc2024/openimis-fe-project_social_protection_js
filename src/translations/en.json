@@ -8,6 +8,10 @@
   "project.name.alreadyTaken": "The name is already taken",
   "project.name.autoHint": "Auto-generated on save",
   "project.hotspot": "Hotspot",
+  "project.microCatchment": "Micro-Catchment",
+  "project.district": "District",
+  "project.ta": "Traditional Authority (TA)",
+  "project.districtTa": "District / TA",
   "project.knownPlace": "Known Place",
   "project.foreman": "Foreman",
   "project.supervisor": "Supervisor",
@@ -27,12 +31,17 @@
 
   "project.activityPicker.label": "Activity",
   "project.statusPicker": "Status",
+  "project.statusPicker.INITIATED": "Initiated",
   "project.statusPicker.PREPARATION": "Preparation",
   "project.statusPicker.IN_PROGRESS": "In Progress",
   "project.statusPicker.COMPLETED": "Completed",
 
   "project.create.mutationLabel": "Create project {name}",
   "project.update.mutationLabel": "Update project {name}",
+  "project.create.success.title": "Project created",
+  "project.create.success.message": "Project {name} has been created successfully.",
+  "project.update.success.title": "Project updated",
+  "project.update.success.message": "Project {name} has been updated successfully.",
   "project.delete.mutationLabel": "Delete project {name}",
   "project.delete.confirm.title": "Delete project {name}?",
   "project.delete.confirm.message": "Deleting a project does not mean erasing it from OpenIMIS database. The project will only be deactivated and hidden in the default list view.",
@@ -59,6 +68,8 @@
   "projectChangelog.label": "Changelog",
 
   "export.label": "DOWNLOAD",
+  "export.filename.projects": "projects_export",
+  "export.filename.projectHistory": "project_history_export",
 
   "editButtonTooltip": "Edit",
   "deleteButtonTooltip": "Delete",

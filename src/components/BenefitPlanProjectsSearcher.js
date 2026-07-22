@@ -10,8 +10,14 @@ import {
   coreConfirm,
   clearConfirm,
   journalize,
+  downloadExport,
 } from '@openimis/fe-core';
 import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogTitle,
+  DialogContent,
   IconButton,
   Tooltip,
 } from '@material-ui/core';
@@ -31,20 +37,20 @@ import {
 } from '../constants';
 import {
   fetchBenefitPlanProjects,
+  downloadProjects,
   deleteProject,
   undoDeleteProject,
+  clearProjectExport,
 } from '../actions';
 import ProjectFilter from './BenefitPlanProjectsFilter';
-import {
-  LOC_LEVELS,
-  locationFormatter,
-} from '../util/searcher-utils';
+import { locationFormatter } from '../util/searcher-utils';
 
 function BenefitPlanProjectsSearcher({
   intl,
   fetchBenefitPlanProjects,
   deleteProject,
   undoDeleteProject,
+  clearProjectExport,
   fetchingProjects,
   fetchedProjects,
   errorProjects,
@@ -60,6 +66,8 @@ function BenefitPlanProjectsSearcher({
   journalize,
   submittingMutation,
   mutation,
+  projectExport,
+  errorProjectExport,
 }) {
   const history = useHistory();
   const modulesManager = useModulesManager();
@@ -139,6 +147,26 @@ function BenefitPlanProjectsSearcher({
     prevSubmittingMutationRef.current = submittingMutation;
   });
 
+  const [failedExport, setFailedExport] = useState(false);
+
+  useEffect(() => {
+    if (errorProjectExport) {
+      setFailedExport(true);
+    }
+  }, [errorProjectExport]);
+
+  useEffect(() => {
+    if (projectExport) {
+      downloadExport(
+        projectExport,
+        `${formatMessage(intl, MODULE_NAME, 'export.filename.projects')}.csv`,
+      )();
+      clearProjectExport();
+    }
+
+    return setFailedExport(false);
+  }, [projectExport]);
+
   const headers = () => {
     const baseHeaders = [
       'project.name',
@@ -146,8 +174,11 @@ function BenefitPlanProjectsSearcher({
       'project.activity',
       'project.targetBeneficiaries',
       'project.workingDays',
+      'location.locationType.0',
+      'location.locationType.1',
+      'project.microCatchment',
+      'project.hotspot',
     ];
-    baseHeaders.push(...Array.from({ length: LOC_LEVELS }, (_, i) => `location.locationType.${i}`));
 
     if (rights.includes(RIGHT_PROJECT_UPDATE)) {
       baseHeaders.push('emptyLabel');
@@ -157,6 +188,32 @@ function BenefitPlanProjectsSearcher({
     }
 
     return baseHeaders;
+  };
+
+  const exportFields = [
+    'name',
+    'status',
+    'activity.name',
+    'targetBeneficiaries',
+    'workingDays',
+    'location.name',
+    'hotspot.name',
+    'knownPlace',
+    'foreman.username',
+    'supervisor.username',
+  ];
+
+  const exportFieldsColumns = {
+    name: formatMessage(intl, MODULE_NAME, 'project.name'),
+    status: formatMessage(intl, MODULE_NAME, 'project.status'),
+    activity__name: formatMessage(intl, MODULE_NAME, 'project.activity'),
+    targetBeneficiaries: formatMessage(intl, MODULE_NAME, 'project.targetBeneficiaries'),
+    workingDays: formatMessage(intl, MODULE_NAME, 'project.workingDays'),
+    location__name: formatMessage(intl, 'location', 'location'),
+    hotspot__name: formatMessage(intl, MODULE_NAME, 'project.hotspot'),
+    knownPlace: formatMessage(intl, MODULE_NAME, 'project.knownPlace'),
+    foreman__username: formatMessage(intl, MODULE_NAME, 'project.foreman'),
+    supervisor__username: formatMessage(intl, MODULE_NAME, 'project.supervisor'),
   };
 
   const itemFormatters = () => {
@@ -170,7 +227,10 @@ function BenefitPlanProjectsSearcher({
 
     const formatters = [
       ...baseFormatters,
-      ...Array.from({ length: LOC_LEVELS }, (_, i) => (project) => locationFormatter(project?.location)[i]),
+      (project) => locationFormatter(project?.location)[0] ?? '',
+      (project) => locationFormatter(project?.location)[1] ?? '',
+      (project) => project.microCatchment?.name ?? '',
+      (project) => project.hotspot?.name ?? '',
     ];
 
     if (rights.includes(RIGHT_PROJECT_UPDATE)) {
@@ -218,6 +278,10 @@ function BenefitPlanProjectsSearcher({
     ['activity', true],
     ['targetBeneficiaries', true],
     ['workingDays', true],
+    ['location', true],
+    ['location', true],
+    ['microCatchment', true],
+    ['hotspot', true],
   ];
 
   const defaultFilters = () => ({
@@ -244,7 +308,7 @@ function BenefitPlanProjectsSearcher({
 
   const onAdd = () => {
     history.push({
-      pathname: projectRouteBase(),
+      pathname: `${projectRouteBase()}/create`,
       state: {
         benefitPlanId,
         benefitPlanName,
@@ -274,34 +338,52 @@ function BenefitPlanProjectsSearcher({
 
   return (
     !!benefitPlanId && (
-      <Searcher
-        module={MODULE_NAME}
-        FilterPane={benefitPlanProjectsFilter}
-        fetch={fetch}
-        items={items}
-        itemsPageInfo={projectsPageInfo}
-        fetchingItems={fetchingProjects}
-        fetchedItems={fetchedProjects}
-        errorItems={errorProjects}
-        tableTitle={formatMessageWithValues(intl, MODULE_NAME, 'projects.searcherResultsTitle', {
-          projectsTotalCount,
-        })}
-        headers={headers}
-        itemFormatters={itemFormatters}
-        sorts={sorts}
-        rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
-        defaultPageSize={DEFAULT_PAGE_SIZE}
-        defaultOrderBy="-name"
-        rowIdentifier={rowIdentifier}
-        defaultFilters={defaultFilters()}
-        searcherActions={searcherActions}
-        enableActionButtons
-        searcherActionsPosition="header-right"
-        exportable
-        exportFieldLabel={formatMessage(intl, MODULE_NAME, 'export.label')}
-        onDoubleClick={openProject}
-        onFiltersApplied={onFiltersApplied}
-      />
+      <div>
+        <Searcher
+          module={MODULE_NAME}
+          FilterPane={benefitPlanProjectsFilter}
+          fetch={fetch}
+          items={items}
+          itemsPageInfo={projectsPageInfo}
+          fetchingItems={fetchingProjects}
+          fetchedItems={fetchedProjects}
+          errorItems={errorProjects}
+          tableTitle={formatMessageWithValues(intl, MODULE_NAME, 'projects.searcherResultsTitle', {
+            projectsTotalCount,
+          })}
+          headers={headers}
+          itemFormatters={itemFormatters}
+          sorts={sorts}
+          rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
+          defaultPageSize={DEFAULT_PAGE_SIZE}
+          defaultOrderBy="-name"
+          rowIdentifier={rowIdentifier}
+          defaultFilters={defaultFilters()}
+          searcherActions={searcherActions}
+          enableActionButtons
+          searcherActionsPosition="header-right"
+          exportable
+          exportFields={exportFields}
+          exportFieldsColumns={exportFieldsColumns}
+          exportFieldLabel={formatMessage(intl, MODULE_NAME, 'export.label')}
+          exportFetch={downloadProjects}
+          onDoubleClick={openProject}
+          onFiltersApplied={onFiltersApplied}
+        />
+        {failedExport && (
+          <Dialog open={failedExport} fullWidth maxWidth="sm">
+            <DialogTitle>{errorProjectExport?.message}</DialogTitle>
+            <DialogContent>
+              <strong>{`${errorProjectExport?.code}: `}</strong>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setFailedExport(false)} color="primary" variant="contained">
+                {formatMessage(intl, MODULE_NAME, 'ok')}
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )}
+      </div>
     )
   );
 }
@@ -316,12 +398,16 @@ const mapStateToProps = (state) => ({
   confirmed: state.core.confirmed,
   submittingMutation: state.projectSocialProtection.submittingMutation,
   mutation: state.projectSocialProtection.mutation,
+  projectExport: state.projectSocialProtection.projectExport,
+  errorProjectExport: state.projectSocialProtection.errorProjectExport,
 });
 
 const mapDispatchToProps = (dispatch) => bindActionCreators({
   fetchBenefitPlanProjects,
+  downloadProjects,
   deleteProject,
   undoDeleteProject,
+  clearProjectExport,
   coreConfirm,
   clearConfirm,
   journalize,

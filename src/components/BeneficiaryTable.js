@@ -255,7 +255,10 @@ function BeneficiaryTable({
   const nameDoBFieldPrefix = isGroup ? 'group.head' : 'individual';
   const locationFieldPrefix = isGroup ? 'group' : 'individual';
 
-  const translate = useCallback((key) => formatMessage(intl, MODULE_NAME, key), [intl]);
+  const translate = useCallback((key) => formatMessage(intl, MODULE_NAME, key), [intl, MODULE_NAME]);
+
+  const translateRef = useRef(translate);
+  translateRef.current = translate;
 
   const initialFiltersRef = useRef(appliedFilters || {});
   const [jsonExtFilters, setJsonExtFilters] = React.useState({});
@@ -265,8 +268,8 @@ function BeneficiaryTable({
   const maxWorkingDays = modulesManager.getConf('fe-project_social_protection', 'maxWorkingDays', DEFAULT_MAX_WORKING_DAYS);
 
   const dynamicColumns = React.useMemo(() => (
-    getDynamicColumns(translate, jsonExtFilters)
-  ), [jsonExtFilters, translate]);
+    getDynamicColumns(translateRef.current, jsonExtFilters)
+  ), [jsonExtFilters]);
 
   useEffect(() => {
     if (appliedFilters) {
@@ -349,30 +352,30 @@ function BeneficiaryTable({
   const columns = useMemo(() => {
     const additionalColumns = isGroup ? [
       {
-        title: translate('socialProtection.groupBeneficiary.code'),
+        title: translateRef.current('socialProtection.groupBeneficiary.code'),
         field: 'group.code',
         editable: 'never',
         defaultSort: 'asc',
       },
     ] : [];
-    const workDayColumns = getWorkDayColumns(translate, onTimeEntryChange, workingDays, maxWorkingDays);
+    const workDayColumns = getWorkDayColumns(translateRef.current, onTimeEntryChange, workingDays, maxWorkingDays);
     const allColumns = [
       ...additionalColumns,
       {
-        title: translate('socialProtection.beneficiary.firstName'),
+        title: translateRef.current('socialProtection.beneficiary.firstName'),
         field: `${nameDoBFieldPrefix}.firstName`,
         editable: 'never',
         ...(isGroup && { orderField: 'head_first_name' }),
       },
       {
-        title: translate('socialProtection.beneficiary.lastName'),
+        title: translateRef.current('socialProtection.beneficiary.lastName'),
         field: `${nameDoBFieldPrefix}.lastName`,
         editable: 'never',
         ...(!isGroup && { defaultSort: 'asc' }),
         ...(isGroup && { orderField: 'head_last_name' }),
       },
       {
-        title: translate('socialProtection.beneficiary.dob'),
+        title: translateRef.current('socialProtection.beneficiary.dob'),
         field: `${nameDoBFieldPrefix}.dob`,
         editable: 'never',
         ...(isGroup && { orderField: 'head_dob' }),
@@ -385,7 +388,7 @@ function BeneficiaryTable({
         const orderField = `${locationFieldPrefix}__${locationPath}`;
 
         return {
-          title: translate(`location.locationType.${i}`),
+          title: translateRef.current(`location.locationType.${i}`),
           type: 'location',
           level: i,
           orderField,
@@ -411,7 +414,7 @@ function BeneficiaryTable({
       tableData: { filterValue: initialFiltersRef.current[c.title] || '' },
     }));
   }, [
-    isGroup, nameDoBFieldPrefix, locationFieldPrefix, translate,
+    isGroup, nameDoBFieldPrefix, locationFieldPrefix,
     dynamicColumns, workingDays, onTimeEntryChange, maxWorkingDays,
   ]);
 
@@ -465,7 +468,7 @@ function BeneficiaryTable({
           rowStyle: {
             height: '42px',
           },
-          doubleHorizontalScroll: true,
+          doubleHorizontalScroll: false,
           tableLayout: 'fixed',
           emptyRowsWhenPaging: false,
           fixedColumns: { left: isGroup ? 3 : 2, right: 0 },
