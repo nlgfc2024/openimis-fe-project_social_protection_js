@@ -137,7 +137,9 @@ function ProjectCreatePage({
     );
   };
 
-  if (!benefitPlanId) return <div>Loading...</div>;
+  if (!benefitPlanId) {
+    return <div>{formatMessage(intl, 'projectSocialProtection', 'project.loading')}</div>;
+  }
 
   return rights.includes(RIGHT_BENEFIT_PLAN_UPDATE) && (
     <div className={classes.page}>
