@@ -326,8 +326,27 @@ export function bulkUpdateGroupBeneficiaryTimeEntries(params, clientMutationLabe
 export function downloadProjects(params) {
   const payload = `
     {
-      projectExport(${params.join(', ')})
-    }
-  `;
+      projectExport${!!params && params.length ? `(${params.join(',')})` : ''}
+    }`;
   return graphql(payload, ACTION_TYPE.PROJECT_EXPORT);
 }
+
+export function downloadProjectHistory(params) {
+  const payload = `
+    {
+      projectExport${!!params && params.length ? `(${params.join(',')})` : ''}
+    }`;
+  return graphql(payload, ACTION_TYPE.PROJECT_HISTORY_EXPORT);
+}
+
+export const clearProjectExport = () => (dispatch) => {
+  dispatch({
+    type: CLEAR(ACTION_TYPE.PROJECT_EXPORT),
+  });
+};
+
+export const clearProjectHistoryExport = () => (dispatch) => {
+  dispatch({
+    type: CLEAR(ACTION_TYPE.PROJECT_HISTORY_EXPORT),
+  });
+};

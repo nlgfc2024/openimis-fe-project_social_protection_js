@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { injectIntl } from 'react-intl';
 import {
   clearConfirm,
@@ -9,14 +9,26 @@ import {
   withHistory,
   formatDateFromISO,
   withModulesManager,
+  downloadExport,
 } from '@openimis/fe-core';
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogTitle,
+  DialogContent,
+} from '@material-ui/core';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import {
   DEFAULT_PAGE_SIZE,
   ROWS_PER_PAGE_OPTIONS,
 } from '../constants';
-import { fetchProjectHistory } from '../actions';
+import {
+  fetchProjectHistory,
+  downloadProjectHistory,
+  clearProjectHistoryExport,
+} from '../actions';
 import ProjectFilter from './BenefitPlanProjectsFilter';
 import {
   LOC_LEVELS,
@@ -34,8 +46,29 @@ function ProjectHistorySearcher({
   projectsHistoryPageInfo,
   projectsHistoryTotalCount,
   projectId,
+  projectHistoryExport,
+  errorProjectHistoryExport,
 }) {
   const fetch = (params) => fetchProjectHistory(modulesManager, params);
+
+  const [failedExport, setFailedExport] = useState(false);
+
+  useEffect(() => {
+    if (errorProjectHistoryExport) {
+      setFailedExport(true);
+    }
+  }, [errorProjectHistoryExport]);
+
+  useEffect(() => {
+    if (projectHistoryExport) {
+      downloadExport(
+        projectHistoryExport,
+        `${formatMessage(intl, MODULE_NAME, 'export.filename.projectHistory')}.csv`,
+      )();
+      clearProjectHistoryExport();
+    }
+    return setFailedExport(false);
+  }, [projectHistoryExport]);
 
   const headers = () => {
     const baseHeaders = [
@@ -70,12 +103,34 @@ function ProjectHistorySearcher({
       ...[
         (project) => project.version,
         (project) => (project.dateUpdated
-          ? formatDateFromISO(modulesManager, intl, projectsHistory.dateUpdated)
+          ? formatDateFromISO(modulesManager, intl, project.dateUpdated)
           : ''),
-        (project) => project.userUpdated.username,
+        (project) => project.userUpdated?.username ?? '',
       ],
     ];
     return formatters;
+  };
+
+  const exportFields = [
+    'name',
+    'status',
+    'activity.name',
+    'targetBeneficiaries',
+    'workingDays',
+    'version',
+    'dateUpdated',
+    'userUpdated.username',
+  ];
+
+  const exportFieldsColumns = {
+    name: formatMessage(intl, MODULE_NAME, 'project.name'),
+    status: formatMessage(intl, MODULE_NAME, 'project.status'),
+    activity__name: formatMessage(intl, MODULE_NAME, 'project.activity'),
+    targetBeneficiaries: formatMessage(intl, MODULE_NAME, 'project.targetBeneficiaries'),
+    workingDays: formatMessage(intl, MODULE_NAME, 'project.workingDays'),
+    version: formatMessage(intl, MODULE_NAME, 'project.version'),
+    dateUpdated: formatMessage(intl, MODULE_NAME, 'project.dateUpdated'),
+    userUpdated__username: formatMessage(intl, MODULE_NAME, 'project.userUpdated'),
   };
 
   const rowIdentifier = (projectsHistory) => projectsHistory.id;
@@ -107,27 +162,47 @@ function ProjectHistorySearcher({
   );
 
   return (
-    <Searcher
-      module="projectSocialProtection"
-      FilterPane={projectHistoryFilter}
-      fetch={fetch}
-      items={projectsHistory}
-      itemsPageInfo={projectsHistoryPageInfo}
-      fetchingItems={fetchingProjectsHistory}
-      fetchedItems={fetchedProjectsHistory}
-      errorItems={errorProjectsHistory}
-      tableTitle={formatMessageWithValues(intl, 'projectSocialProtection', 'project.searcherResultsTitleHistory', {
-        projectsHistoryTotalCount,
-      })}
-      headers={headers}
-      itemFormatters={itemFormatters}
-      sorts={sorts}
-      rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
-      defaultPageSize={DEFAULT_PAGE_SIZE}
-      defaultOrderBy="-version"
-      rowIdentifier={rowIdentifier}
-      defaultFilters={defaultFilters()}
-    />
+    <div>
+      <Searcher
+        module={MODULE_NAME}
+        FilterPane={projectHistoryFilter}
+        fetch={fetch}
+        items={projectsHistory}
+        itemsPageInfo={projectsHistoryPageInfo}
+        fetchingItems={fetchingProjectsHistory}
+        fetchedItems={fetchedProjectsHistory}
+        errorItems={errorProjectsHistory}
+        tableTitle={formatMessageWithValues(intl, 'projectSocialProtection', 'project.searcherResultsTitleHistory', {
+          projectsHistoryTotalCount,
+        })}
+        headers={headers}
+        itemFormatters={itemFormatters}
+        sorts={sorts}
+        rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
+        defaultPageSize={DEFAULT_PAGE_SIZE}
+        defaultOrderBy="-version"
+        rowIdentifier={rowIdentifier}
+        defaultFilters={defaultFilters()}
+        exportable
+        exportFields={exportFields}
+        exportFieldsColumns={exportFieldsColumns}
+        exportFieldLabel={formatMessage(intl, MODULE_NAME, 'export.label')}
+        exportFetch={downloadProjectHistory}
+      />
+      {failedExport && (
+        <Dialog open={failedExport} fullWidth maxWidth="sm">
+          <DialogTitle>{errorProjectHistoryExport?.message}</DialogTitle>
+          <DialogContent>
+            <strong>{`${errorProjectHistoryExport?.code}: `}</strong>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setFailedExport(false)} color="primary" variant="contained">
+              {formatMessage(intl, MODULE_NAME, 'ok')}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
+    </div>
   );
 }
 
@@ -141,11 +216,15 @@ const mapStateToProps = (state) => ({
   confirmed: state.core.confirmed,
   submittingMutation: state.projectSocialProtection.submittingMutation,
   mutation: state.projectSocialProtection.mutation,
+  projectHistoryExport: state.projectSocialProtection.projectHistoryExport,
+  errorProjectHistoryExport: state.projectSocialProtection.errorProjectHistoryExport,
 });
 
 const mapDispatchToProps = (dispatch) => bindActionCreators(
   {
     fetchProjectHistory,
+    downloadProjectHistory,
+    clearProjectHistoryExport,
     coreConfirm,
     clearConfirm,
     journalize,

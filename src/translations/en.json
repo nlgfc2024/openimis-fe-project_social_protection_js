@@ -68,6 +68,8 @@
   "projectChangelog.label": "Changelog",
 
   "export.label": "DOWNLOAD",
+  "export.filename.projects": "projects_export",
+  "export.filename.projectHistory": "project_history_export",
 
   "editButtonTooltip": "Edit",
   "deleteButtonTooltip": "Delete",

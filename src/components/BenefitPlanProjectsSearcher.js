@@ -10,8 +10,14 @@ import {
   coreConfirm,
   clearConfirm,
   journalize,
+  downloadExport,
 } from '@openimis/fe-core';
 import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogTitle,
+  DialogContent,
   IconButton,
   Tooltip,
 } from '@material-ui/core';
@@ -34,6 +40,7 @@ import {
   downloadProjects,
   deleteProject,
   undoDeleteProject,
+  clearProjectExport,
 } from '../actions';
 import ProjectFilter from './BenefitPlanProjectsFilter';
 import { locationFormatter } from '../util/searcher-utils';
@@ -43,6 +50,7 @@ function BenefitPlanProjectsSearcher({
   fetchBenefitPlanProjects,
   deleteProject,
   undoDeleteProject,
+  clearProjectExport,
   fetchingProjects,
   fetchedProjects,
   errorProjects,
@@ -58,6 +66,8 @@ function BenefitPlanProjectsSearcher({
   journalize,
   submittingMutation,
   mutation,
+  projectExport,
+  errorProjectExport,
 }) {
   const history = useHistory();
   const modulesManager = useModulesManager();
@@ -136,6 +146,26 @@ function BenefitPlanProjectsSearcher({
   useEffect(() => {
     prevSubmittingMutationRef.current = submittingMutation;
   });
+
+  const [failedExport, setFailedExport] = useState(false);
+
+  useEffect(() => {
+    if (errorProjectExport) {
+      setFailedExport(true);
+    }
+  }, [errorProjectExport]);
+
+  useEffect(() => {
+    if (projectExport) {
+      downloadExport(
+        projectExport,
+        `${formatMessage(intl, MODULE_NAME, 'export.filename.projects')}.csv`,
+      )();
+      clearProjectExport();
+    }
+
+    return setFailedExport(false);
+  }, [projectExport]);
 
   const headers = () => {
     const baseHeaders = [
@@ -308,37 +338,52 @@ function BenefitPlanProjectsSearcher({
 
   return (
     !!benefitPlanId && (
-      <Searcher
-        module={MODULE_NAME}
-        FilterPane={benefitPlanProjectsFilter}
-        fetch={fetch}
-        items={items}
-        itemsPageInfo={projectsPageInfo}
-        fetchingItems={fetchingProjects}
-        fetchedItems={fetchedProjects}
-        errorItems={errorProjects}
-        tableTitle={formatMessageWithValues(intl, MODULE_NAME, 'projects.searcherResultsTitle', {
-          projectsTotalCount,
-        })}
-        headers={headers}
-        itemFormatters={itemFormatters}
-        sorts={sorts}
-        rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
-        defaultPageSize={DEFAULT_PAGE_SIZE}
-        defaultOrderBy="-name"
-        rowIdentifier={rowIdentifier}
-        defaultFilters={defaultFilters()}
-        searcherActions={searcherActions}
-        enableActionButtons
-        searcherActionsPosition="header-right"
-        exportable
-        exportFields={exportFields}
-        exportFieldsColumns={exportFieldsColumns}
-        exportFieldLabel={formatMessage(intl, MODULE_NAME, 'export.label')}
-        exportFetch={downloadProjects}
-        onDoubleClick={openProject}
-        onFiltersApplied={onFiltersApplied}
-      />
+      <div>
+        <Searcher
+          module={MODULE_NAME}
+          FilterPane={benefitPlanProjectsFilter}
+          fetch={fetch}
+          items={items}
+          itemsPageInfo={projectsPageInfo}
+          fetchingItems={fetchingProjects}
+          fetchedItems={fetchedProjects}
+          errorItems={errorProjects}
+          tableTitle={formatMessageWithValues(intl, MODULE_NAME, 'projects.searcherResultsTitle', {
+            projectsTotalCount,
+          })}
+          headers={headers}
+          itemFormatters={itemFormatters}
+          sorts={sorts}
+          rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
+          defaultPageSize={DEFAULT_PAGE_SIZE}
+          defaultOrderBy="-name"
+          rowIdentifier={rowIdentifier}
+          defaultFilters={defaultFilters()}
+          searcherActions={searcherActions}
+          enableActionButtons
+          searcherActionsPosition="header-right"
+          exportable
+          exportFields={exportFields}
+          exportFieldsColumns={exportFieldsColumns}
+          exportFieldLabel={formatMessage(intl, MODULE_NAME, 'export.label')}
+          exportFetch={downloadProjects}
+          onDoubleClick={openProject}
+          onFiltersApplied={onFiltersApplied}
+        />
+        {failedExport && (
+          <Dialog open={failedExport} fullWidth maxWidth="sm">
+            <DialogTitle>{errorProjectExport?.message}</DialogTitle>
+            <DialogContent>
+              <strong>{`${errorProjectExport?.code}: `}</strong>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setFailedExport(false)} color="primary" variant="contained">
+                {formatMessage(intl, MODULE_NAME, 'ok')}
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )}
+      </div>
     )
   );
 }
@@ -353,6 +398,8 @@ const mapStateToProps = (state) => ({
   confirmed: state.core.confirmed,
   submittingMutation: state.projectSocialProtection.submittingMutation,
   mutation: state.projectSocialProtection.mutation,
+  projectExport: state.projectSocialProtection.projectExport,
+  errorProjectExport: state.projectSocialProtection.errorProjectExport,
 });
 
 const mapDispatchToProps = (dispatch) => bindActionCreators({
@@ -360,6 +407,7 @@ const mapDispatchToProps = (dispatch) => bindActionCreators({
   downloadProjects,
   deleteProject,
   undoDeleteProject,
+  clearProjectExport,
   coreConfirm,
   clearConfirm,
   journalize,
