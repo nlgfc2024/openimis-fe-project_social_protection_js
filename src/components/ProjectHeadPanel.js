@@ -5,8 +5,11 @@ import {
   NumberInput,
   PublishedComponent,
   TextInput,
+  formatMessage,
   withModulesManager,
 } from '@openimis/fe-core';
+
+const MODULE_NAME = 'projectSocialProtection';
 import { injectIntl } from 'react-intl';
 import { withTheme, withStyles } from '@material-ui/core/styles';
 import ProjectStatusPicker from '../pickers/ProjectStatusPicker';
@@ -65,11 +68,13 @@ class ProjectHeadPanel extends FormPanel {
         </Grid>
 
         <Grid item xs={4} className={classes.item}>
+          {/* Malawi hierarchy is 0-indexed over types [R, D, W, V]:
+              level 0 = R = District, level 1 = D = TA. */}
           <PublishedComponent
             pubRef="location.LocationPicker"
             module="projectSocialProtection"
-            locationLevel={1}
-            label="project.district"
+            locationLevel={0}
+            label={formatMessage(intl, MODULE_NAME, 'project.district')}
             required
             withNull={false}
             readOnly={readOnly}
@@ -92,8 +97,8 @@ class ProjectHeadPanel extends FormPanel {
           <PublishedComponent
             pubRef="location.LocationPicker"
             module="projectSocialProtection"
-            locationLevel={2}
-            label="project.ta"
+            locationLevel={1}
+            label={formatMessage(intl, MODULE_NAME, 'project.ta')}
             required
             withNull={false}
             readOnly={readOnly || !district}
@@ -139,7 +144,7 @@ class ProjectHeadPanel extends FormPanel {
 
         <Grid item xs={4} className={classes.item}>
           <HotspotPicker
-            label="project.hotspot"
+            label={formatMessage(intl, MODULE_NAME, 'project.hotspot')}
             withLabel
             required
             readOnly={readOnly}
