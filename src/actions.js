@@ -334,7 +334,7 @@ export function downloadProjects(params) {
 export function downloadProjectHistory(params) {
   const payload = `
     {
-      projectExport${!!params && params.length ? `(${params.join(',')})` : ''}
+      projectHistoryExport${!!params && params.length ? `(${params.join(',')})` : ''}
     }`;
   return graphql(payload, ACTION_TYPE.PROJECT_HISTORY_EXPORT);
 }

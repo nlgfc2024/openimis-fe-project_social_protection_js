@@ -30,6 +30,7 @@ import {
   clearProjectHistoryExport,
 } from '../actions';
 import ProjectFilter from './BenefitPlanProjectsFilter';
+import ExportWithFiltersDialog from './ExportWithFiltersDialog';
 import {
   LOC_LEVELS,
   locationFormatter,
@@ -39,6 +40,8 @@ function ProjectHistorySearcher({
   intl,
   modulesManager,
   fetchProjectHistory,
+  downloadProjectHistory,
+  clearProjectHistoryExport,
   fetchingProjectsHistory,
   fetchedProjectsHistory,
   errorProjectsHistory,
@@ -52,6 +55,8 @@ function ProjectHistorySearcher({
   const fetch = (params) => fetchProjectHistory(modulesManager, params);
 
   const [failedExport, setFailedExport] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [activeFilters, setActiveFilters] = useState(defaultFilters());
 
   useEffect(() => {
     if (errorProjectHistoryExport) {
@@ -67,8 +72,11 @@ function ProjectHistorySearcher({
       )();
       clearProjectHistoryExport();
     }
-    return setFailedExport(false);
+    setFailedExport(false);
   }, [projectHistoryExport]);
+
+  const openExportDialog = () => setExportDialogOpen(true);
+  const closeExportDialog = () => setExportDialogOpen(false);
 
   const headers = () => {
     const baseHeaders = [
@@ -125,12 +133,25 @@ function ProjectHistorySearcher({
   const exportFieldsColumns = {
     name: formatMessage(intl, MODULE_NAME, 'project.name'),
     status: formatMessage(intl, MODULE_NAME, 'project.status'),
-    activity__name: formatMessage(intl, MODULE_NAME, 'project.activity'),
+    'activity.name': formatMessage(intl, MODULE_NAME, 'project.activity'),
     targetBeneficiaries: formatMessage(intl, MODULE_NAME, 'project.targetBeneficiaries'),
     workingDays: formatMessage(intl, MODULE_NAME, 'project.workingDays'),
     version: formatMessage(intl, MODULE_NAME, 'project.version'),
     dateUpdated: formatMessage(intl, MODULE_NAME, 'project.dateUpdated'),
-    userUpdated__username: formatMessage(intl, MODULE_NAME, 'project.userUpdated'),
+    'userUpdated.username': formatMessage(intl, MODULE_NAME, 'project.userUpdated'),
+  };
+
+  const exportWithFilters = (dialogFilters, selectedFields) => {
+    const filterParams = Object.keys(dialogFilters)
+      .filter((f) => !!dialogFilters[f]?.filter)
+      .map((f) => dialogFilters[f].filter);
+    const parameters = [...filterParams];
+    const fields = selectedFields?.length ? selectedFields : exportFields;
+    parameters.push(`fileFormat: "csv"`);
+    parameters.push(`fields: ${JSON.stringify(fields)}`);
+    parameters.push(`fieldsColumns: "${JSON.stringify(exportFieldsColumns).replace(/\"/g, '\\\"')}"`);
+    downloadProjectHistory(parameters);
+    closeExportDialog();
   };
 
   const rowIdentifier = (projectsHistory) => projectsHistory.id;
@@ -187,13 +208,24 @@ function ProjectHistorySearcher({
         exportFields={exportFields}
         exportFieldsColumns={exportFieldsColumns}
         exportFieldLabel={formatMessage(intl, MODULE_NAME, 'export.label')}
-        exportFetch={downloadProjectHistory}
+        exportFetch={openExportDialog}
+        onFiltersApplied={(appliedFilters) => setActiveFilters(appliedFilters)}
+      />
+      <ExportWithFiltersDialog
+        open={exportDialogOpen}
+        onClose={closeExportDialog}
+        onConfirm={exportWithFilters}
+        intl={intl}
+        filters={activeFilters}
+        exportFields={exportFields}
+        exportFieldsColumns={exportFieldsColumns}
+        module={MODULE_NAME}
       />
       {failedExport && (
         <Dialog open={failedExport} fullWidth maxWidth="sm">
-          <DialogTitle>{errorProjectHistoryExport?.message}</DialogTitle>
+          <DialogTitle>{formatMessage(intl, MODULE_NAME, 'export.error.title')}</DialogTitle>
           <DialogContent>
-            <strong>{`${errorProjectHistoryExport?.code}: `}</strong>
+            <strong>{formatMessage(intl, MODULE_NAME, 'export.error.code', { code: errorProjectHistoryExport?.code })}</strong>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setFailedExport(false)} color="primary" variant="contained">

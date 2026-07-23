@@ -93,13 +93,11 @@ function ProjectCreatePage({
   }, [clearProject]);
 
   useEffect(() => {
-    if (!submittingMutation && mutation?.clientMutationId && mutation?.actionType === ACTION_TYPE.CREATE_PROJECT) {
+    if (!submittingMutation && mutation?.id && mutation?.actionType === ACTION_TYPE.CREATE_PROJECT) {
       const benefitPlanRoute = modulesManager.getRef('socialProtection.route.benefitPlan');
-      const projectRoute = modulesManager.getRef('projectSocialProtection.route.project');
       const benefitPlanId = benefitPlanIdFromPath || benefitPlanIdFromState;
-      const newProjectId = mutation?.data?.createProject?.id;
-      if (newProjectId) {
-        history.replace(`/${benefitPlanRoute}/${benefitPlanId}/${projectRoute}/${newProjectId}`);
+      if (benefitPlanId) {
+        history.replace(`/${benefitPlanRoute}/${benefitPlanId}`);
       }
     }
   }, [submittingMutation, mutation, history, modulesManager, benefitPlanIdFromPath, benefitPlanIdFromState]);

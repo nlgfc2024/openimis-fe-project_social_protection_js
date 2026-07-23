@@ -16,16 +16,32 @@ function ProjectFilter({
     !!filters && !!filters[k] ? filters[k].value : null
   );
 
-  const handleRegionChange = (v) => {
+  const handleDistrictChange = (v) => {
     onChangeFilters([{
+      id: 'district',
+      value: v,
+      filter: null,
+    }, {
+      id: 'ta',
+      value: null,
+      filter: null,
+    }, {
       id: 'parentLocation',
       value: v,
       filter: v ? `parentLocation: "${v.uuid}", parentLocationLevel: 0` : null,
     }]);
   };
 
-  const handleDistrictChange = (v) => {
+  const handleTaChange = (v) => {
     onChangeFilters([{
+      id: 'district',
+      value: filterValue('district'),
+      filter: null,
+    }, {
+      id: 'ta',
+      value: v,
+      filter: null,
+    }, {
       id: 'parentLocation',
       value: v,
       filter: v ? `parentLocation: "${v.uuid}", parentLocationLevel: 1` : null,
@@ -55,19 +71,21 @@ function ProjectFilter({
       />
       <Grid item xs={6}>
         <PublishedComponent
-          pubRef="location.RegionPicker"
-          value={filterValue('parentLocation')}
+          pubRef="location.DistrictPicker"
+          value={filterValue('district')}
           withNull
-          onChange={(v) => handleRegionChange(v)}
+          onChange={(v) => handleDistrictChange(v)}
         />
       </Grid>
       <Grid item xs={6}>
         <PublishedComponent
-          pubRef="location.DistrictPicker"
-          value={filterValue('parentLocation')}
-          region={filterValue('parentLocation')}
+          pubRef="location.LocationPicker"
+          locationLevel={2}
+          label="project.ta"
+          parentLocation={filterValue('district')}
+          value={filterValue('ta')}
           withNull
-          onChange={(v) => handleDistrictChange(v)}
+          onChange={(v) => handleTaChange(v)}
         />
       </Grid>
     </Grid>

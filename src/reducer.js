@@ -407,8 +407,8 @@ function reducer(
         ...state,
         fetchingProjectExport: false,
         fetchedProjectExport: true,
-        projectExport: action.payload.data.projectExport,
-        projectExportPageInfo: pageInfo(action.payload.data.projectExport),
+        projectExport: action.payload.data?.projectExport || null,
+        projectExportPageInfo: {},
         errorProjectExport: formatGraphQLError(action.payload),
       };
     case ERROR(ACTION_TYPE.PROJECT_EXPORT):
@@ -440,8 +440,8 @@ function reducer(
         ...state,
         fetchingProjectHistoryExport: false,
         fetchedProjectHistoryExport: true,
-        projectHistoryExport: action.payload.data.projectExport,
-        projectHistoryExportPageInfo: pageInfo(action.payload.data.projectExport),
+        projectHistoryExport: action.payload.data?.projectHistoryExport || null,
+        projectHistoryExportPageInfo: {},
         errorProjectHistoryExport: formatGraphQLError(action.payload),
       };
     case ERROR(ACTION_TYPE.PROJECT_HISTORY_EXPORT):

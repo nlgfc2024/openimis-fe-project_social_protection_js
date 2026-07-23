@@ -72,6 +72,8 @@
   "export.label": "DOWNLOAD",
   "export.filename.projects": "projects_export",
   "export.filename.projectHistory": "project_history_export",
+  "export.error.title": "Export Failed",
+  "export.error.code": "Error Code: {code}",
 
   "editButtonTooltip": "Edit",
   "deleteButtonTooltip": "Delete",

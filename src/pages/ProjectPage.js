@@ -103,9 +103,18 @@ function ProjectPage({
         ACTION_TYPE.UNDO_DELETE_PROJECT,
       ].includes(mutation?.actionType)) {
         back();
+      } else if (mutation?.actionType === ACTION_TYPE.UPDATE_PROJECT) {
+        if (projectUuid) {
+          fetchProject(modulesManager, [`id: "${projectUuid}"`]);
+        }
+        const benefitPlanRoute = modulesManager.getRef('socialProtection.route.benefitPlan');
+        const benefitPlanId = project?.benefitPlan?.id || project?.benefit_plan?.id;
+        if (benefitPlanId) {
+          history.replace(`/${benefitPlanRoute}/${benefitPlanId}`);
+        }
       }
     }
-  }, [submittingMutation]);
+  }, [submittingMutation, mutation, history, modulesManager, project, projectUuid, fetchProject]);
 
   useEffect(() => {
     prevSubmittingMutationRef.current = submittingMutation;
