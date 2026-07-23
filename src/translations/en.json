@@ -4,6 +4,7 @@
   "projects.searcherAddAction": "Create Project",
 
   "project.pageTitle": "Project details",
+  "project.createPageTitle": "Create Project",
   "project.loading": "Loading...",
   "project.name": "Name",
   "project.name.alreadyTaken": "The name is already taken",

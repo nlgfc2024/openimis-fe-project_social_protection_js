@@ -5,8 +5,11 @@ import {
   NumberInput,
   PublishedComponent,
   TextInput,
+  formatMessage,
   withModulesManager,
 } from '@openimis/fe-core';
+
+const MODULE_NAME = 'projectSocialProtection';
 import { injectIntl } from 'react-intl';
 import { withTheme, withStyles } from '@material-ui/core/styles';
 import ProjectStatusPicker from '../pickers/ProjectStatusPicker';
@@ -71,7 +74,7 @@ class ProjectHeadPanel extends FormPanel {
             pubRef="location.LocationPicker"
             module="projectSocialProtection"
             locationLevel={0}
-            label="project.district"
+            label={formatMessage(intl, MODULE_NAME, 'project.district')}
             required
             withNull={false}
             readOnly={readOnly}
@@ -95,7 +98,7 @@ class ProjectHeadPanel extends FormPanel {
             pubRef="location.LocationPicker"
             module="projectSocialProtection"
             locationLevel={1}
-            label="project.ta"
+            label={formatMessage(intl, MODULE_NAME, 'project.ta')}
             required
             withNull={false}
             readOnly={readOnly || !district}
@@ -141,7 +144,7 @@ class ProjectHeadPanel extends FormPanel {
 
         <Grid item xs={4} className={classes.item}>
           <HotspotPicker
-            label="project.hotspot"
+            label={formatMessage(intl, MODULE_NAME, 'project.hotspot')}
             withLabel
             required
             readOnly={readOnly}
