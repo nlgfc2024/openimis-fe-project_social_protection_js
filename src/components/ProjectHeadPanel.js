@@ -65,10 +65,12 @@ class ProjectHeadPanel extends FormPanel {
         </Grid>
 
         <Grid item xs={4} className={classes.item}>
+          {/* Malawi hierarchy is 0-indexed over types [R, D, W, V]:
+              level 0 = R = District, level 1 = D = TA. */}
           <PublishedComponent
             pubRef="location.LocationPicker"
             module="projectSocialProtection"
-            locationLevel={1}
+            locationLevel={0}
             label="project.district"
             required
             withNull={false}
@@ -92,7 +94,7 @@ class ProjectHeadPanel extends FormPanel {
           <PublishedComponent
             pubRef="location.LocationPicker"
             module="projectSocialProtection"
-            locationLevel={2}
+            locationLevel={1}
             label="project.ta"
             required
             withNull={false}
