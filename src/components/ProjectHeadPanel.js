@@ -68,12 +68,9 @@ class ProjectHeadPanel extends FormPanel {
         </Grid>
 
         <Grid item xs={4} className={classes.item}>
-          {/* Malawi hierarchy is 0-indexed over types [R, D, W, V]:
-              level 0 = R = District, level 1 = D = TA. */}
           <PublishedComponent
-            pubRef="location.LocationPicker"
+            pubRef="location.MwDistrictPicker"
             module="projectSocialProtection"
-            locationLevel={0}
             label={formatMessage(intl, MODULE_NAME, 'project.district')}
             required
             withNull={false}
@@ -95,9 +92,8 @@ class ProjectHeadPanel extends FormPanel {
 
         <Grid item xs={4} className={classes.item}>
           <PublishedComponent
-            pubRef="location.LocationPicker"
+            pubRef="location.MwTAPicker"
             module="projectSocialProtection"
-            locationLevel={1}
             label={formatMessage(intl, MODULE_NAME, 'project.ta')}
             required
             withNull={false}
