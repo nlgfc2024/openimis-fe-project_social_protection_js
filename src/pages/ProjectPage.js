@@ -114,7 +114,7 @@ function ProjectPage({
         }
       }
     }
-  }, [submittingMutation, mutation, history, modulesManager, project, projectUuid, fetchProject]);
+  }, [submittingMutation, mutation, history, modulesManager, project, projectUuid]);
 
   useEffect(() => {
     prevSubmittingMutationRef.current = submittingMutation;
