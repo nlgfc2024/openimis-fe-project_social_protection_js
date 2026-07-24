@@ -179,8 +179,8 @@ function BenefitPlanProjectsSearcher({
         `${formatMessage(intl, MODULE_NAME, 'export.filename.projects')}.csv`,
       )();
       clearProjectExport();
+      setFailedExport(false);
     }
-    setFailedExport(false);
   }, [projectExport]);
 
   const openExportDialog = () => setExportDialogOpen(true);
@@ -236,14 +236,14 @@ function BenefitPlanProjectsSearcher({
   const exportFieldsColumns = {
     name: formatMessage(intl, MODULE_NAME, 'project.name'),
     status: formatMessage(intl, MODULE_NAME, 'project.status'),
-    'activity.name': formatMessage(intl, MODULE_NAME, 'project.activity'),
-    targetBeneficiaries: formatMessage(intl, MODULE_NAME, 'project.targetBeneficiaries'),
-    workingDays: formatMessage(intl, MODULE_NAME, 'project.workingDays'),
-    'location.name': formatMessage(intl, 'location', 'location'),
-    'hotspot.name': formatMessage(intl, MODULE_NAME, 'project.hotspot'),
-    knownPlace: formatMessage(intl, MODULE_NAME, 'project.knownPlace'),
-    'foreman.username': formatMessage(intl, MODULE_NAME, 'project.foreman'),
-    'supervisor.username': formatMessage(intl, MODULE_NAME, 'project.supervisor'),
+    activity__name: formatMessage(intl, MODULE_NAME, 'project.activity'),
+    target_beneficiaries: formatMessage(intl, MODULE_NAME, 'project.targetBeneficiaries'),
+    working_days: formatMessage(intl, MODULE_NAME, 'project.workingDays'),
+    location__name: formatMessage(intl, 'location', 'location'),
+    hotspot__name: formatMessage(intl, MODULE_NAME, 'project.hotspot'),
+    known_place: formatMessage(intl, MODULE_NAME, 'project.knownPlace'),
+    foreman__username: formatMessage(intl, MODULE_NAME, 'project.foreman'),
+    supervisor__username: formatMessage(intl, MODULE_NAME, 'project.supervisor'),
   };
 
   const itemFormatters = () => {
@@ -383,6 +383,8 @@ function BenefitPlanProjectsSearcher({
           exportFields={exportFields}
           exportFieldsColumns={exportFieldsColumns}
           exportFieldLabel={formatMessage(intl, MODULE_NAME, 'export.label')}
+          // exportFetch is a dialog opener here; the Searcher's built-in export flow is bypassed
+          // in favor of ExportWithFiltersDialog so active filters (e.g. benefitPlan scope) are preserved.
           exportFetch={openExportDialog}
           onDoubleClick={openProject}
           onFiltersApplied={onFiltersApplied}

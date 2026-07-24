@@ -28,9 +28,7 @@ export const locationFormatter = (location) => (
     let loc = location;
     const levels = [];
     while (loc) {
-      if (loc.type !== 'R') {
-        levels.unshift(loc.name); // ignore region so listing shows District / TA / ...
-      }
+      levels.unshift(loc.name);
       loc = loc.parent;
     }
     return levels[i] || '';

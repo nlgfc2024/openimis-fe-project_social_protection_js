@@ -331,22 +331,8 @@ export function downloadProjects(params) {
   return graphql(payload, ACTION_TYPE.PROJECT_EXPORT);
 }
 
-export function downloadProjectHistory(params) {
-  const payload = `
-    {
-      projectHistoryExport${!!params && params.length ? `(${params.join(',')})` : ''}
-    }`;
-  return graphql(payload, ACTION_TYPE.PROJECT_HISTORY_EXPORT);
-}
-
 export const clearProjectExport = () => (dispatch) => {
   dispatch({
     type: CLEAR(ACTION_TYPE.PROJECT_EXPORT),
-  });
-};
-
-export const clearProjectHistoryExport = () => (dispatch) => {
-  dispatch({
-    type: CLEAR(ACTION_TYPE.PROJECT_HISTORY_EXPORT),
   });
 };

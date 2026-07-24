@@ -10,7 +10,7 @@ import ActivityPicker from '../pickers/ActivityPicker';
 import HotspotPicker from '../pickers/HotspotPicker';
 
 function ProjectFilter({
-  filters, onChangeFilters,
+  filters, onChangeFilters = () => {},
 }) {
   const filterValue = (k) => (
     !!filters && !!filters[k] ? filters[k].value : null
@@ -71,7 +71,7 @@ function ProjectFilter({
       />
       <Grid item xs={6}>
         <PublishedComponent
-          pubRef="location.DistrictPicker"
+          pubRef="location.MwDistrictPicker"
           value={filterValue('district')}
           withNull
           onChange={(v) => handleDistrictChange(v)}
@@ -79,9 +79,7 @@ function ProjectFilter({
       </Grid>
       <Grid item xs={6}>
         <PublishedComponent
-          pubRef="location.LocationPicker"
-          locationLevel={2}
-          label="project.ta"
+          pubRef="location.MwTAPicker"
           parentLocation={filterValue('district')}
           value={filterValue('ta')}
           withNull

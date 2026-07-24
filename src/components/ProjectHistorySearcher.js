@@ -1,36 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { injectIntl } from 'react-intl';
 import {
-  clearConfirm,
-  coreConfirm,
   formatMessageWithValues,
-  journalize,
   Searcher,
   withHistory,
   formatDateFromISO,
   withModulesManager,
-  downloadExport,
 } from '@openimis/fe-core';
-import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogTitle,
-  DialogContent,
-} from '@material-ui/core';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import {
   DEFAULT_PAGE_SIZE,
   ROWS_PER_PAGE_OPTIONS,
 } from '../constants';
-import {
-  fetchProjectHistory,
-  downloadProjectHistory,
-  clearProjectHistoryExport,
-} from '../actions';
+import { fetchProjectHistory } from '../actions';
 import ProjectFilter from './BenefitPlanProjectsFilter';
-import ExportWithFiltersDialog from './ExportWithFiltersDialog';
 import {
   LOC_LEVELS,
   locationFormatter,
@@ -40,8 +24,6 @@ function ProjectHistorySearcher({
   intl,
   modulesManager,
   fetchProjectHistory,
-  downloadProjectHistory,
-  clearProjectHistoryExport,
   fetchingProjectsHistory,
   fetchedProjectsHistory,
   errorProjectsHistory,
@@ -49,34 +31,8 @@ function ProjectHistorySearcher({
   projectsHistoryPageInfo,
   projectsHistoryTotalCount,
   projectId,
-  projectHistoryExport,
-  errorProjectHistoryExport,
 }) {
   const fetch = (params) => fetchProjectHistory(modulesManager, params);
-
-  const [failedExport, setFailedExport] = useState(false);
-  const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [activeFilters, setActiveFilters] = useState(defaultFilters());
-
-  useEffect(() => {
-    if (errorProjectHistoryExport) {
-      setFailedExport(true);
-    }
-  }, [errorProjectHistoryExport]);
-
-  useEffect(() => {
-    if (projectHistoryExport) {
-      downloadExport(
-        projectHistoryExport,
-        `${formatMessage(intl, MODULE_NAME, 'export.filename.projectHistory')}.csv`,
-      )();
-      clearProjectHistoryExport();
-    }
-    setFailedExport(false);
-  }, [projectHistoryExport]);
-
-  const openExportDialog = () => setExportDialogOpen(true);
-  const closeExportDialog = () => setExportDialogOpen(false);
 
   const headers = () => {
     const baseHeaders = [
@@ -117,41 +73,6 @@ function ProjectHistorySearcher({
       ],
     ];
     return formatters;
-  };
-
-  const exportFields = [
-    'name',
-    'status',
-    'activity.name',
-    'targetBeneficiaries',
-    'workingDays',
-    'version',
-    'dateUpdated',
-    'userUpdated.username',
-  ];
-
-  const exportFieldsColumns = {
-    name: formatMessage(intl, MODULE_NAME, 'project.name'),
-    status: formatMessage(intl, MODULE_NAME, 'project.status'),
-    'activity.name': formatMessage(intl, MODULE_NAME, 'project.activity'),
-    targetBeneficiaries: formatMessage(intl, MODULE_NAME, 'project.targetBeneficiaries'),
-    workingDays: formatMessage(intl, MODULE_NAME, 'project.workingDays'),
-    version: formatMessage(intl, MODULE_NAME, 'project.version'),
-    dateUpdated: formatMessage(intl, MODULE_NAME, 'project.dateUpdated'),
-    'userUpdated.username': formatMessage(intl, MODULE_NAME, 'project.userUpdated'),
-  };
-
-  const exportWithFilters = (dialogFilters, selectedFields) => {
-    const filterParams = Object.keys(dialogFilters)
-      .filter((f) => !!dialogFilters[f]?.filter)
-      .map((f) => dialogFilters[f].filter);
-    const parameters = [...filterParams];
-    const fields = selectedFields?.length ? selectedFields : exportFields;
-    parameters.push(`fileFormat: "csv"`);
-    parameters.push(`fields: ${JSON.stringify(fields)}`);
-    parameters.push(`fieldsColumns: "${JSON.stringify(exportFieldsColumns).replace(/\"/g, '\\\"')}"`);
-    downloadProjectHistory(parameters);
-    closeExportDialog();
   };
 
   const rowIdentifier = (projectsHistory) => projectsHistory.id;
@@ -204,36 +125,7 @@ function ProjectHistorySearcher({
         defaultOrderBy="-version"
         rowIdentifier={rowIdentifier}
         defaultFilters={defaultFilters()}
-        exportable
-        exportFields={exportFields}
-        exportFieldsColumns={exportFieldsColumns}
-        exportFieldLabel={formatMessage(intl, MODULE_NAME, 'export.label')}
-        exportFetch={openExportDialog}
-        onFiltersApplied={(appliedFilters) => setActiveFilters(appliedFilters)}
       />
-      <ExportWithFiltersDialog
-        open={exportDialogOpen}
-        onClose={closeExportDialog}
-        onConfirm={exportWithFilters}
-        intl={intl}
-        filters={activeFilters}
-        exportFields={exportFields}
-        exportFieldsColumns={exportFieldsColumns}
-        module={MODULE_NAME}
-      />
-      {failedExport && (
-        <Dialog open={failedExport} fullWidth maxWidth="sm">
-          <DialogTitle>{formatMessage(intl, MODULE_NAME, 'export.error.title')}</DialogTitle>
-          <DialogContent>
-            <strong>{formatMessage(intl, MODULE_NAME, 'export.error.code', { code: errorProjectHistoryExport?.code })}</strong>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setFailedExport(false)} color="primary" variant="contained">
-              {formatMessage(intl, MODULE_NAME, 'ok')}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      )}
     </div>
   );
 }
@@ -245,21 +137,11 @@ const mapStateToProps = (state) => ({
   projectsHistory: state.projectSocialProtection.projectsHistory,
   projectsHistoryPageInfo: state.projectSocialProtection.projectsHistoryPageInfo,
   projectsHistoryTotalCount: state.projectSocialProtection.projectsHistoryTotalCount,
-  confirmed: state.core.confirmed,
-  submittingMutation: state.projectSocialProtection.submittingMutation,
-  mutation: state.projectSocialProtection.mutation,
-  projectHistoryExport: state.projectSocialProtection.projectHistoryExport,
-  errorProjectHistoryExport: state.projectSocialProtection.errorProjectHistoryExport,
 });
 
 const mapDispatchToProps = (dispatch) => bindActionCreators(
   {
     fetchProjectHistory,
-    downloadProjectHistory,
-    clearProjectHistoryExport,
-    coreConfirm,
-    clearConfirm,
-    journalize,
   },
   dispatch,
 );

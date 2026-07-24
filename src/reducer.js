@@ -39,7 +39,6 @@ export const ACTION_TYPE = {
   SEARCH_PROJECT_ELIGIBLE_BENEFICIARIES: 'PROJECT_SOCIAL_PROTECTION_ELIGIBLE_BENEFICIARIES',
   SEARCH_PROJECT_ELIGIBLE_GROUP_BENEFICIARIES: 'PROJECT_SOCIAL_PROTECTION_ELIGIBLE_GROUP_BENEFICIARIES',
   PROJECT_EXPORT: 'PROJECT_SOCIAL_PROTECTION_PROJECT_EXPORT',
-  PROJECT_HISTORY_EXPORT: 'PROJECT_SOCIAL_PROTECTION_PROJECT_HISTORY_EXPORT',
 };
 
 function reducer(
@@ -82,11 +81,6 @@ function reducer(
     projectExport: null,
     projectExportPageInfo: {},
     errorProjectExport: null,
-    fetchingProjectHistoryExport: false,
-    fetchedProjectHistoryExport: false,
-    projectHistoryExport: null,
-    projectHistoryExportPageInfo: {},
-    errorProjectHistoryExport: null,
   },
   action,
 ) {
@@ -416,39 +410,6 @@ function reducer(
         ...state,
         fetchingProjectExport: false,
         errorProjectExport: formatServerError(action.payload),
-      };
-    case CLEAR(ACTION_TYPE.PROJECT_HISTORY_EXPORT):
-      return {
-        ...state,
-        fetchingProjectHistoryExport: false,
-        fetchedProjectHistoryExport: false,
-        projectHistoryExport: null,
-        projectHistoryExportPageInfo: {},
-        errorProjectHistoryExport: null,
-      };
-    case REQUEST(ACTION_TYPE.PROJECT_HISTORY_EXPORT):
-      return {
-        ...state,
-        fetchingProjectHistoryExport: true,
-        fetchedProjectHistoryExport: false,
-        projectHistoryExport: null,
-        projectHistoryExportPageInfo: {},
-        errorProjectHistoryExport: null,
-      };
-    case SUCCESS(ACTION_TYPE.PROJECT_HISTORY_EXPORT):
-      return {
-        ...state,
-        fetchingProjectHistoryExport: false,
-        fetchedProjectHistoryExport: true,
-        projectHistoryExport: action.payload.data?.projectHistoryExport || null,
-        projectHistoryExportPageInfo: {},
-        errorProjectHistoryExport: formatGraphQLError(action.payload),
-      };
-    case ERROR(ACTION_TYPE.PROJECT_HISTORY_EXPORT):
-      return {
-        ...state,
-        fetchingProjectHistoryExport: false,
-        errorProjectHistoryExport: formatServerError(action.payload),
       };
     default:
       return state;

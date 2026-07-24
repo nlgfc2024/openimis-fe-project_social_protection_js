@@ -86,12 +86,12 @@ function ExportWithFiltersDialog({
       <DialogTitle>{formatMessage(intl, 'core', 'exportConfigDialog.title')}</DialogTitle>
       <DialogContent>
         <Typography variant="subtitle1" className={classes.sectionTitle}>
-          {formatMessage(intl, 'core', 'export.filterCriteriaTitle') || 'Filter criteria'}
+          {formatMessage(intl, module, 'exportDialog.filterCriteriaTitle')}
         </Typography>
         <ProjectFilter filters={dialogFilters} onChangeFilters={handleFilterChange} />
 
         <Typography variant="subtitle1" className={classes.sectionTitle}>
-          {formatMessage(intl, 'core', 'exportConfigDialog.selectColumns') || 'Select columns you want to export:'}
+          {formatMessage(intl, 'core', 'exportConfigDialog.selectColumns')}
         </Typography>
         <div className={classes.checkboxGrid}>
           {exportFields.map((field) => (
@@ -111,11 +111,11 @@ function ExportWithFiltersDialog({
       </DialogContent>
       <DialogActions className={classes.footerActions}>
         <Button onClick={handleUnselectAll} color="secondary">
-          {formatMessage(intl, 'core', 'exportConfigDialog.clearAllColsButton') || 'Unselect all columns'}
+          {formatMessage(intl, 'core', 'exportConfigDialog.clearAllColsButton')}
         </Button>
         <div>
           <Button onClick={onClose} color="primary">
-            {formatMessage(intl, 'core', 'cancel') || 'Cancel'}
+            {formatMessage(intl, module, 'exportDialog.cancelButton')}
           </Button>
           <Button onClick={handleConfirm} color="primary" variant="contained" startIcon={<GetAppIcon />}>
             {formatMessage(intl, module, 'export.label')}

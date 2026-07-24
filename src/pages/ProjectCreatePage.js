@@ -93,10 +93,11 @@ function ProjectCreatePage({
   }, [clearProject]);
 
   useEffect(() => {
-    if (!submittingMutation && mutation?.id && mutation?.actionType === ACTION_TYPE.CREATE_PROJECT) {
+    if (!submittingMutation && (mutation?.id || mutation?.clientMutationId) && mutation?.actionType === ACTION_TYPE.CREATE_PROJECT) {
       const benefitPlanRoute = modulesManager.getRef('socialProtection.route.benefitPlan');
       const benefitPlanId = benefitPlanIdFromPath || benefitPlanIdFromState;
       if (benefitPlanId) {
+        // On create, return to the benefit plan's project list instead of opening the detail view.
         history.replace(`/${benefitPlanRoute}/${benefitPlanId}`);
       }
     }
