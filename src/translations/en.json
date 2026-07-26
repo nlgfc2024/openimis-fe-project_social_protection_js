@@ -3,6 +3,7 @@
   "projects.searcherResultsTitle": "{projectsTotalCount} Projects",
   "projects.searcherAddAction": "Create Project",
 
+  "project.createPageTitle": "Create Project",
   "project.pageTitle": "Project details",
   "project.createPageTitle": "Create Project",
   "project.loading": "Loading...",
@@ -71,7 +72,10 @@
 
   "export.label": "DOWNLOAD",
   "export.filename.projects": "projects_export",
-  "export.filename.projectHistory": "project_history_export",
+  "export.error.title": "Export Failed",
+  "export.error.code": "Error Code: {code}",
+  "exportDialog.filterCriteriaTitle": "Filter criteria",
+  "exportDialog.cancelButton": "Cancel",
 
   "editButtonTooltip": "Edit",
   "deleteButtonTooltip": "Delete",

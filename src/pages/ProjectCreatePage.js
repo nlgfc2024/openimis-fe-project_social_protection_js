@@ -22,6 +22,7 @@ import ProjectHeadPanel from '../components/ProjectHeadPanel';
 import ProjectTabPanel from '../components/ProjectTabPanel';
 import {
   RIGHT_BENEFIT_PLAN_UPDATE,
+  BENEFIT_PLAN_PROJECTS_TAB_VALUE,
   PROJECT_BENEFICIARIES_TAB_VALUE,
 } from '../constants';
 
@@ -93,13 +94,14 @@ function ProjectCreatePage({
   }, [clearProject]);
 
   useEffect(() => {
-    if (!submittingMutation && mutation?.clientMutationId && mutation?.actionType === ACTION_TYPE.CREATE_PROJECT) {
+    if (!submittingMutation && (mutation?.id || mutation?.clientMutationId) && mutation?.actionType === ACTION_TYPE.CREATE_PROJECT) {
       const benefitPlanRoute = modulesManager.getRef('socialProtection.route.benefitPlan');
-      const projectRoute = modulesManager.getRef('projectSocialProtection.route.project');
       const benefitPlanId = benefitPlanIdFromPath || benefitPlanIdFromState;
-      const newProjectId = mutation?.data?.createProject?.id;
-      if (newProjectId) {
-        history.replace(`/${benefitPlanRoute}/${benefitPlanId}/${projectRoute}/${newProjectId}`);
+      if (benefitPlanId) {
+        // On create, return to the benefit plan's project list instead of opening the detail view.
+        history.replace(`/${benefitPlanRoute}/${benefitPlanId}`, {
+          activeTab: BENEFIT_PLAN_PROJECTS_TAB_VALUE,
+        });
       }
     }
   }, [submittingMutation, mutation, history, modulesManager, benefitPlanIdFromPath, benefitPlanIdFromState]);
