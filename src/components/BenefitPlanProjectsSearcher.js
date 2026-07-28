@@ -226,8 +226,8 @@ function BenefitPlanProjectsSearcher({
     'activity.name',
     'targetBeneficiaries',
     'workingDays',
-    'location.parent.parent.parent.name',
-    'location.parent.parent.name',
+    'location.parent.name',
+    'location.name',
     'microCatchment.name',
     'hotspot.name',
   ];
@@ -238,8 +238,8 @@ function BenefitPlanProjectsSearcher({
     activity__name: formatMessage(intl, MODULE_NAME, 'project.activity'),
     target_beneficiaries: formatMessage(intl, MODULE_NAME, 'project.targetBeneficiaries'),
     working_days: formatMessage(intl, MODULE_NAME, 'project.workingDays'),
-    location__parent__parent__parent__name: formatMessage(intl, MODULE_NAME, 'location.locationType.0'),
-    location__parent__parent__name: formatMessage(intl, MODULE_NAME, 'location.locationType.1'),
+    location__parent__name: formatMessage(intl, MODULE_NAME, 'location.locationType.0'),
+    location__name: formatMessage(intl, MODULE_NAME, 'location.locationType.1'),
     micro_catchment__name: formatMessage(intl, MODULE_NAME, 'project.microCatchment'),
     hotspot__name: formatMessage(intl, MODULE_NAME, 'project.hotspot'),
   };
