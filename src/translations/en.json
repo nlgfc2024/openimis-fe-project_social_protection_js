@@ -42,7 +42,7 @@
   "project.create.mutationLabel": "Create project {name}",
   "project.update.mutationLabel": "Update project {name}",
   "project.create.success.title": "Project created",
-  "project.create.success.message": "Project {name} has been created successfully.",
+  "project.create.success.message": "The project has been created successfully.",
   "project.update.success.title": "Project updated",
   "project.update.success.message": "Project {name} has been updated successfully.",
   "project.delete.mutationLabel": "Delete project {name}",

@@ -5,6 +5,7 @@ import {
   formatMessageWithValues,
   withModulesManager,
   useHistory,
+  coreAlert,
 } from '@openimis/fe-core';
 import { injectIntl } from 'react-intl';
 import { bindActionCreators } from 'redux';
@@ -41,6 +42,7 @@ function ProjectCreatePage({
   project,
   createProject,
   clearProject,
+  coreAlert,
   submittingMutation,
   mutation,
 }) {
@@ -59,10 +61,11 @@ function ProjectCreatePage({
   const [activeTab, setActiveTab] = useState(PROJECT_BENEFICIARIES_TAB_VALUE);
 
   const dispatch = useDispatch();
+  const prevSubmittingMutationRef = useRef();
 
   const [editedProject, setEditedProject] = useState({
     benefitPlan: { id: benefitPlanId, name: benefitPlanName },
-    status: 'INITIATED',
+    status: 'PREPARATION',
   });
 
   useEffect(() => {
@@ -94,7 +97,15 @@ function ProjectCreatePage({
   }, [clearProject]);
 
   useEffect(() => {
-    if (!submittingMutation && (mutation?.id || mutation?.clientMutationId) && mutation?.actionType === ACTION_TYPE.CREATE_PROJECT) {
+    if (
+      prevSubmittingMutationRef.current
+      && !submittingMutation
+      && mutation?.actionType === ACTION_TYPE.CREATE_PROJECT
+    ) {
+      coreAlert(
+        formatMessage(intl, 'projectSocialProtection', 'project.create.success.title'),
+        formatMessage(intl, 'projectSocialProtection', 'project.create.success.message'),
+      );
       const benefitPlanRoute = modulesManager.getRef('socialProtection.route.benefitPlan');
       const benefitPlanId = benefitPlanIdFromPath || benefitPlanIdFromState;
       if (benefitPlanId) {
@@ -104,7 +115,20 @@ function ProjectCreatePage({
         });
       }
     }
-  }, [submittingMutation, mutation, history, modulesManager, benefitPlanIdFromPath, benefitPlanIdFromState]);
+  }, [
+    submittingMutation,
+    mutation,
+    history,
+    modulesManager,
+    benefitPlanIdFromPath,
+    benefitPlanIdFromState,
+    intl,
+    coreAlert,
+  ]);
+
+  useEffect(() => {
+    prevSubmittingMutationRef.current = submittingMutation;
+  });
 
   const back = () => history.goBack();
 
@@ -180,6 +204,7 @@ const mapDispatchToProps = (dispatch) => bindActionCreators(
   {
     createProject,
     clearProject,
+    coreAlert,
   },
   dispatch,
 );
