@@ -190,7 +190,7 @@ function BenefitPlanProjectsSearcher({
       .filter((f) => !!dialogFilters[f]?.filter)
       .map((f) => dialogFilters[f].filter);
     const parameters = [...filterParams];
-    parameters.push(`fileFormat: "csv"`);
+    parameters.push('fileFormat: "csv"');
     parameters.push(`fields: ${JSON.stringify(selectedFields)}`);
     parameters.push(`fieldsColumns: "${JSON.stringify(exportFieldsColumns).replace(/\"/g, '\\\"')}"`);
     downloadProjects(parameters);
@@ -226,11 +226,10 @@ function BenefitPlanProjectsSearcher({
     'activity.name',
     'targetBeneficiaries',
     'workingDays',
+    'location.parent.name',
     'location.name',
+    'microCatchment.name',
     'hotspot.name',
-    'knownPlace',
-    'foreman.username',
-    'supervisor.username',
   ];
 
   const exportFieldsColumns = {
@@ -239,11 +238,10 @@ function BenefitPlanProjectsSearcher({
     activity__name: formatMessage(intl, MODULE_NAME, 'project.activity'),
     target_beneficiaries: formatMessage(intl, MODULE_NAME, 'project.targetBeneficiaries'),
     working_days: formatMessage(intl, MODULE_NAME, 'project.workingDays'),
-    location__name: formatMessage(intl, 'location', 'location'),
+    location__parent__name: formatMessage(intl, MODULE_NAME, 'location.locationType.0'),
+    location__name: formatMessage(intl, MODULE_NAME, 'location.locationType.1'),
+    micro_catchment__name: formatMessage(intl, MODULE_NAME, 'project.microCatchment'),
     hotspot__name: formatMessage(intl, MODULE_NAME, 'project.hotspot'),
-    known_place: formatMessage(intl, MODULE_NAME, 'project.knownPlace'),
-    foreman__username: formatMessage(intl, MODULE_NAME, 'project.foreman'),
-    supervisor__username: formatMessage(intl, MODULE_NAME, 'project.supervisor'),
   };
 
   const itemFormatters = () => {
