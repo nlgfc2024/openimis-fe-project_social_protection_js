@@ -72,6 +72,7 @@ function ProjectCreatePage({
 
   const [editedProject, setEditedProject] = useState({
     benefitPlan: { id: benefitPlanId, name: benefitPlanName },
+    status: 'PREPARATION',
   });
 
   useEffect(() => {

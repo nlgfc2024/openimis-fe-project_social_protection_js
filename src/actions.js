@@ -145,7 +145,8 @@ function formatProjectGQL(project) {
 }
 
 export function createProject(project, clientMutationLabel) {
-  const mutation = formatMutation('createProject', formatProjectGQL(project), clientMutationLabel);
+  const { status, ...projectWithoutStatus } = project || {};
+  const mutation = formatMutation('createProject', formatProjectGQL(projectWithoutStatus), clientMutationLabel);
   const requestedDateTime = new Date();
   return graphql(
     mutation.payload,
