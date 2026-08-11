@@ -3,6 +3,9 @@
   "projects.searcherResultsTitle": "{projectsTotalCount} Projects",
   "projects.searcherAddAction": "Create Project",
 
+  "project.picker.label": "Projects",
+  "project.picker.placeholder": "Select projects...",
+
   "project.pageTitle": "Project details",
   "project.createPageTitle": "Create Project",
   "project.loading": "Loading...",
