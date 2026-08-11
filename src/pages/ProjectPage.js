@@ -27,6 +27,7 @@ import ProjectHeadPanel from '../components/ProjectHeadPanel';
 import ProjectTabPanel from '../components/ProjectTabPanel';
 import {
   RIGHT_BENEFIT_PLAN_UPDATE,
+  BENEFIT_PLAN_PROJECTS_TAB_VALUE,
   PROJECT_BENEFICIARIES_TAB_VALUE,
 } from '../constants';
 
@@ -103,9 +104,17 @@ function ProjectPage({
         ACTION_TYPE.UNDO_DELETE_PROJECT,
       ].includes(mutation?.actionType)) {
         back();
+      } else if (mutation?.actionType === ACTION_TYPE.UPDATE_PROJECT) {
+        const benefitPlanRoute = modulesManager.getRef('socialProtection.route.benefitPlan');
+        const benefitPlanId = project?.benefitPlan?.id || project?.benefit_plan?.id;
+        if (benefitPlanId) {
+          history.replace(`/${benefitPlanRoute}/${benefitPlanId}`, {
+            activeTab: BENEFIT_PLAN_PROJECTS_TAB_VALUE,
+          });
+        }
       }
     }
-  }, [submittingMutation]);
+  }, [submittingMutation, mutation, history, modulesManager, project, projectUuid]);
 
   useEffect(() => {
     prevSubmittingMutationRef.current = submittingMutation;

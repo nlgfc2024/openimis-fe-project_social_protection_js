@@ -5,23 +5,27 @@ import {
   formatMessageWithValues,
   withModulesManager,
   useHistory,
+  coreAlert,
 } from '@openimis/fe-core';
 import { injectIntl } from 'react-intl';
 import { bindActionCreators } from 'redux';
 import { connect, useDispatch } from 'react-redux';
+import { Typography } from '@material-ui/core';
 import { withTheme, withStyles } from '@material-ui/core/styles';
-import _ from 'lodash';
 
 import {
   fetchBenefitPlan,
   createProject,
   clearProject,
+  projectNameValidationCheck,
+  projectNameValidationClear,
 } from '../actions';
 import { ACTION_TYPE } from '../reducer';
 import ProjectHeadPanel from '../components/ProjectHeadPanel';
 import ProjectTabPanel from '../components/ProjectTabPanel';
 import {
   RIGHT_BENEFIT_PLAN_UPDATE,
+  BENEFIT_PLAN_PROJECTS_TAB_VALUE,
   PROJECT_BENEFICIARIES_TAB_VALUE,
 } from '../constants';
 
@@ -40,8 +44,14 @@ function ProjectCreatePage({
   project,
   createProject,
   clearProject,
+  projectNameValidationCheck,
+  projectNameValidationClear,
+  coreAlert,
   submittingMutation,
   mutation,
+  projectNameIsValid,
+  projectNameIsValidating,
+  projectNameValidationError,
 }) {
   const history = useHistory();
   const locationState = history.location?.state;
@@ -58,10 +68,11 @@ function ProjectCreatePage({
   const [activeTab, setActiveTab] = useState(PROJECT_BENEFICIARIES_TAB_VALUE);
 
   const dispatch = useDispatch();
+  const prevSubmittingMutationRef = useRef();
 
   const [editedProject, setEditedProject] = useState({
     benefitPlan: { id: benefitPlanId, name: benefitPlanName },
-    status: 'INITIATED',
+    status: 'PREPARATION',
   });
 
   useEffect(() => {
@@ -93,16 +104,71 @@ function ProjectCreatePage({
   }, [clearProject]);
 
   useEffect(() => {
-    if (!submittingMutation && mutation?.clientMutationId && mutation?.actionType === ACTION_TYPE.CREATE_PROJECT) {
+    if (
+      prevSubmittingMutationRef.current
+      && !submittingMutation
+      && mutation?.actionType === ACTION_TYPE.CREATE_PROJECT
+    ) {
+      coreAlert(
+        formatMessage(intl, 'projectSocialProtection', 'project.create.success.title'),
+        formatMessage(intl, 'projectSocialProtection', 'project.create.success.message'),
+      );
       const benefitPlanRoute = modulesManager.getRef('socialProtection.route.benefitPlan');
-      const projectRoute = modulesManager.getRef('projectSocialProtection.route.project');
       const benefitPlanId = benefitPlanIdFromPath || benefitPlanIdFromState;
-      const newProjectId = mutation?.data?.createProject?.id;
-      if (newProjectId) {
-        history.replace(`/${benefitPlanRoute}/${benefitPlanId}/${projectRoute}/${newProjectId}`);
+      if (benefitPlanId) {
+        // On create, return to the benefit plan's project list instead of opening the detail view.
+        history.replace(`/${benefitPlanRoute}/${benefitPlanId}`, {
+          activeTab: BENEFIT_PLAN_PROJECTS_TAB_VALUE,
+        });
       }
     }
-  }, [submittingMutation, mutation, history, modulesManager, benefitPlanIdFromPath, benefitPlanIdFromState]);
+  }, [
+    submittingMutation,
+    mutation,
+    history,
+    modulesManager,
+    benefitPlanIdFromPath,
+    benefitPlanIdFromState,
+    intl,
+    coreAlert,
+  ]);
+
+  useEffect(() => {
+    prevSubmittingMutationRef.current = submittingMutation;
+  });
+
+  const generatedProjectName = [
+    editedProject?.hotspot?.name,
+    editedProject?.activity?.name,
+    editedProject?.benefitPlan?.name,
+  ].filter(Boolean).join('-');
+  const projectName = editedProject?.knownPlace
+    ? `${generatedProjectName} - ${editedProject.knownPlace}`
+    : generatedProjectName;
+  const canValidateProjectName = Boolean(projectName && editedProject?.benefitPlan?.id);
+
+  useEffect(() => {
+    if (!canValidateProjectName) {
+      projectNameValidationClear();
+      return undefined;
+    }
+
+    const validationTimeout = setTimeout(() => {
+      projectNameValidationCheck(modulesManager, {
+        projectName,
+        benefitPlanId: editedProject.benefitPlan.id,
+      });
+    }, 300);
+
+    return () => clearTimeout(validationTimeout);
+  }, [
+    canValidateProjectName,
+    editedProject?.benefitPlan?.id,
+    modulesManager,
+    projectName,
+    projectNameValidationCheck,
+    projectNameValidationClear,
+  ]);
 
   const back = () => history.goBack();
 
@@ -123,7 +189,12 @@ function ProjectCreatePage({
     });
   };
 
-  const canSave = () => !isMandatoryFieldsEmpty() && doesProjectChange();
+  const canSave = () => (
+    !isMandatoryFieldsEmpty()
+    && doesProjectChange()
+    && projectNameIsValid === true
+    && !projectNameIsValidating
+  );
 
   const handleSave = () => {
     createProject(
@@ -143,6 +214,15 @@ function ProjectCreatePage({
 
   return rights.includes(RIGHT_BENEFIT_PLAN_UPDATE) && (
     <div className={classes.page}>
+      {canValidateProjectName && !projectNameIsValidating && projectNameIsValid === false && (
+        <Typography color="error">
+          {projectNameValidationError || formatMessage(
+            intl,
+            'projectSocialProtection',
+            'project.name.alreadyTaken',
+          )}
+        </Typography>
+      )}
       <Form
         module="projectSocialProtection"
         className={classes.form}
@@ -172,12 +252,18 @@ const mapStateToProps = (state) => ({
   project: state.projectSocialProtection.project,
   submittingMutation: state.projectSocialProtection.submittingMutation,
   mutation: state.projectSocialProtection.mutation,
+  projectNameIsValid: state.projectSocialProtection.validationFields?.projectName?.isValid,
+  projectNameIsValidating: state.projectSocialProtection.validationFields?.projectName?.isValidating,
+  projectNameValidationError: state.projectSocialProtection.validationFields?.projectName?.validationError,
 });
 
 const mapDispatchToProps = (dispatch) => bindActionCreators(
   {
     createProject,
     clearProject,
+    projectNameValidationCheck,
+    projectNameValidationClear,
+    coreAlert,
   },
   dispatch,
 );

@@ -43,11 +43,13 @@ import {
   clearProjectExport,
 } from '../actions';
 import ProjectFilter from './BenefitPlanProjectsFilter';
+import ExportWithFiltersDialog from './ExportWithFiltersDialog';
 import { locationFormatter } from '../util/searcher-utils';
 
 function BenefitPlanProjectsSearcher({
   intl,
   fetchBenefitPlanProjects,
+  downloadProjects,
   deleteProject,
   undoDeleteProject,
   clearProjectExport,
@@ -77,7 +79,6 @@ function BenefitPlanProjectsSearcher({
   const [deletedProjectUuids, setDeletedProjectUuids] = useState([]);
   const [undoProjectUuids, setUndoProjectUuids] = useState([]);
   const prevSubmittingMutationRef = useRef();
-  const [activeFilters, setActiveFilters] = useState([]);
 
   const openDeleteProjectConfirmDialog = () => coreConfirm(
     formatMessageWithValues(intl, MODULE_NAME, 'project.delete.confirm.title', {
@@ -100,11 +101,27 @@ function BenefitPlanProjectsSearcher({
     + `/${benefitPlanId}`
     + `/${modulesManager.getRef('projectSocialProtection.route.project')}`;
 
-  const openProject = (project) => rights.includes(RIGHT_PROJECT_UPDATE)
-    && history.push(`${projectRouteBase()}/${project?.id}`);
-
   const onDelete = (project) => setProjectToDelete(project);
   const onUndo = (project) => setProjectToUndo(project);
+
+  const defaultFilters = () => ({
+    isDeleted: {
+      value: false,
+      filter: 'isDeleted: false',
+    },
+    ...(benefitPlanId && {
+      benefitPlan_Id: {
+        value: benefitPlanId,
+        filter: `benefitPlan_Id: "${benefitPlanId}"`,
+      },
+    }),
+  });
+
+  const [activeFilters, setActiveFilters] = useState(defaultFilters());
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+
+  const openProject = (project) => rights.includes(RIGHT_PROJECT_UPDATE)
+    && history.push(`${projectRouteBase()}/${project?.id}`);
 
   useEffect(() => projectToDelete && openDeleteProjectConfirmDialog(), [projectToDelete]);
   useEffect(() => projectToUndo && openUndoProjectConfirmDialog(), [projectToUndo]);
@@ -162,10 +179,23 @@ function BenefitPlanProjectsSearcher({
         `${formatMessage(intl, MODULE_NAME, 'export.filename.projects')}.csv`,
       )();
       clearProjectExport();
+      setFailedExport(false);
     }
-
-    return setFailedExport(false);
   }, [projectExport]);
+
+  const openExportDialog = () => setExportDialogOpen(true);
+  const closeExportDialog = () => setExportDialogOpen(false);
+  const exportWithFilters = (dialogFilters, selectedFields) => {
+    const filterParams = Object.keys(dialogFilters)
+      .filter((f) => !!dialogFilters[f]?.filter)
+      .map((f) => dialogFilters[f].filter);
+    const parameters = [...filterParams];
+    parameters.push('fileFormat: "csv"');
+    parameters.push(`fields: ${JSON.stringify(selectedFields)}`);
+    parameters.push(`fieldsColumns: "${JSON.stringify(exportFieldsColumns).replace(/\"/g, '\\\"')}"`);
+    downloadProjects(parameters);
+    closeExportDialog();
+  };
 
   const headers = () => {
     const baseHeaders = [
@@ -196,24 +226,22 @@ function BenefitPlanProjectsSearcher({
     'activity.name',
     'targetBeneficiaries',
     'workingDays',
+    'location.parent.name',
     'location.name',
+    'microCatchment.name',
     'hotspot.name',
-    'knownPlace',
-    'foreman.username',
-    'supervisor.username',
   ];
 
   const exportFieldsColumns = {
     name: formatMessage(intl, MODULE_NAME, 'project.name'),
     status: formatMessage(intl, MODULE_NAME, 'project.status'),
     activity__name: formatMessage(intl, MODULE_NAME, 'project.activity'),
-    targetBeneficiaries: formatMessage(intl, MODULE_NAME, 'project.targetBeneficiaries'),
-    workingDays: formatMessage(intl, MODULE_NAME, 'project.workingDays'),
-    location__name: formatMessage(intl, 'location', 'location'),
+    target_beneficiaries: formatMessage(intl, MODULE_NAME, 'project.targetBeneficiaries'),
+    working_days: formatMessage(intl, MODULE_NAME, 'project.workingDays'),
+    location__parent__name: formatMessage(intl, MODULE_NAME, 'location.locationType.0'),
+    location__name: formatMessage(intl, MODULE_NAME, 'location.locationType.1'),
+    micro_catchment__name: formatMessage(intl, MODULE_NAME, 'project.microCatchment'),
     hotspot__name: formatMessage(intl, MODULE_NAME, 'project.hotspot'),
-    knownPlace: formatMessage(intl, MODULE_NAME, 'project.knownPlace'),
-    foreman__username: formatMessage(intl, MODULE_NAME, 'project.foreman'),
-    supervisor__username: formatMessage(intl, MODULE_NAME, 'project.supervisor'),
   };
 
   const itemFormatters = () => {
@@ -284,19 +312,6 @@ function BenefitPlanProjectsSearcher({
     ['hotspot', true],
   ];
 
-  const defaultFilters = () => ({
-    isDeleted: {
-      value: false,
-      filter: 'isDeleted: false',
-    },
-    ...(benefitPlanId && {
-      benefitPlan_Id: {
-        value: benefitPlanId,
-        filter: `benefitPlan_Id: "${benefitPlanId}"`,
-      },
-    }),
-  });
-
   const benefitPlanProjectsFilter = (props) => (
     <ProjectFilter
       intl={props.intl}
@@ -366,15 +381,27 @@ function BenefitPlanProjectsSearcher({
           exportFields={exportFields}
           exportFieldsColumns={exportFieldsColumns}
           exportFieldLabel={formatMessage(intl, MODULE_NAME, 'export.label')}
-          exportFetch={downloadProjects}
+          // exportFetch is a dialog opener here; the Searcher's built-in export flow is bypassed
+          // in favor of ExportWithFiltersDialog so active filters (e.g. benefitPlan scope) are preserved.
+          exportFetch={openExportDialog}
           onDoubleClick={openProject}
           onFiltersApplied={onFiltersApplied}
         />
+        <ExportWithFiltersDialog
+          open={exportDialogOpen}
+          onClose={closeExportDialog}
+          onConfirm={exportWithFilters}
+          intl={intl}
+          filters={activeFilters}
+          exportFields={exportFields}
+          exportFieldsColumns={exportFieldsColumns}
+          module={MODULE_NAME}
+        />
         {failedExport && (
           <Dialog open={failedExport} fullWidth maxWidth="sm">
-            <DialogTitle>{errorProjectExport?.message}</DialogTitle>
+            <DialogTitle>{formatMessage(intl, MODULE_NAME, 'export.error.title')}</DialogTitle>
             <DialogContent>
-              <strong>{`${errorProjectExport?.code}: `}</strong>
+              <strong>{formatMessage(intl, MODULE_NAME, 'export.error.code', { code: errorProjectExport?.code })}</strong>
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setFailedExport(false)} color="primary" variant="contained">
