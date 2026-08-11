@@ -7,6 +7,7 @@ import ProjectPage from './pages/ProjectPage';
 import ProjectCreatePage from './pages/ProjectCreatePage';
 import ProjectHistorySearcher from './components/ProjectHistorySearcher';
 import BenefitPlanProjectsSearcher from './components/BenefitPlanProjectsSearcher';
+import ProjectPicker from './pickers/ProjectPicker';
 import {
   BenefitPlanProjectsTabLabel,
   BenefitPlanProjectsTabPanel,
@@ -45,6 +46,12 @@ const DEFAULT_CONFIG = {
     { key: 'projectSocialProtection.route.projectCreate', ref: ROUTE_PROJECT_CREATE },
     { key: 'projectSocialProtection.ProjectHistorySearcher', ref: ProjectHistorySearcher },
     { key: 'projectSocialProtection.BenefitPlanProjectsSearcher', ref: BenefitPlanProjectsSearcher },
+    { key: 'projectSocialProtection.ProjectPicker', ref: ProjectPicker },
+    // Legacy key: fe-payroll's payroll FilterDialog resolves the project filter through
+    // `socialProtection.ProjectPicker`, which social_protection registered until the project
+    // domain was extracted into this module. Registering it here keeps that filter working
+    // without forking fe-payroll. Remove once fe-payroll consumes the namespaced key above.
+    { key: 'socialProtection.ProjectPicker', ref: ProjectPicker },
   ],
   'benefitPlan.TabPanel.label': [
     BenefitPlanProjectsTabLabel,

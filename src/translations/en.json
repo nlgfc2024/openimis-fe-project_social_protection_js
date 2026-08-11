@@ -2,7 +2,8 @@
   "projects.label": "Projects",
   "projects.searcherResultsTitle": "{projectsTotalCount} Projects",
   "projects.searcherAddAction": "Create Project",
-
+  "project.picker.label": "Projects",
+  "project.picker.placeholder": "Select projects...",
   "project.createPageTitle": "Create Project",
   "project.pageTitle": "Project details",
   "project.createPageTitle": "Create Project",
