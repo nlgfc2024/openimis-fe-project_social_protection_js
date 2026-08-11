@@ -18,6 +18,7 @@ import {
   useModulesManager,
   decodeId,
   journalize,
+  coreAlert,
 } from '@openimis/fe-core';
 import {
   fetchBeneficiaries,
@@ -76,6 +77,7 @@ function ProjectEnrollmentDialog({
   submittingMutation,
   mutation,
   journalize,
+  coreAlert,
 }) {
   const prevSubmittingMutationRef = useRef();
   const modulesManager = useModulesManager();
@@ -259,6 +261,20 @@ function ProjectEnrollmentDialog({
   };
 
   const onSave = () => {
+    const targetBeneficiaries = Number(project?.targetBeneficiaries || 0);
+    if (selectedIds.size > targetBeneficiaries) {
+      coreAlert(
+        translate('projectBeneficiaries.target.validation.title'),
+        formatMessageWithValues(
+          intl,
+          MODULE_NAME,
+          'projectBeneficiaries.target.validation.message',
+          { target: targetBeneficiaries, selected: selectedIds.size },
+        ),
+      );
+      return;
+    }
+
     enroll(
       {
         projectId: project.id,
@@ -373,6 +389,7 @@ const mapDispatchToPropsBeneficiary = (dispatch) => bindActionCreators({
   fetchBeneficiaries,
   enroll: enrollProject,
   journalize,
+  coreAlert,
 }, dispatch);
 
 const mapStateToPropsGroupBeneficiary = (state) => ({
@@ -385,6 +402,7 @@ const mapDispatchToPropsGroupBeneficiary = (dispatch) => bindActionCreators({
   fetchBeneficiaries: fetchGroupBeneficiaries,
   enroll: enrollGroupProject,
   journalize,
+  coreAlert,
 }, dispatch);
 
 export const ProjectBeneficiariyEnrollmentDialog = injectIntl(

@@ -17,6 +17,8 @@ import ActivityPicker from '../pickers/ActivityPicker';
 import HotspotPicker from '../pickers/HotspotPicker';
 import UserPicker from '../pickers/UserPicker';
 
+const MAX_TARGET_BENEFICIARIES = 200;
+
 // Walk the location parent chain (from the flat projection) and return the
 // ancestor whose `type` matches. Used to derive District (R) / TA (D) from the
 // single location selected in the cascader so the Micro-Catchment / Hotspot
@@ -178,6 +180,7 @@ class ProjectHeadPanel extends FormPanel {
             required
             readOnly={readOnly}
             min={1}
+            max={MAX_TARGET_BENEFICIARIES}
             value={project?.targetBeneficiaries}
             onChange={(v) => this.updateAttribute('targetBeneficiaries', v)}
           />

@@ -203,6 +203,7 @@ function BenefitPlanProjectsSearcher({
       'project.status',
       'project.activity',
       'project.targetBeneficiaries',
+      'project.assignedBeneficiaries',
       'project.workingDays',
       'location.locationType.0',
       'location.locationType.1',
@@ -250,6 +251,7 @@ function BenefitPlanProjectsSearcher({
       (project) => formatMessage(intl, MODULE_NAME, `project.statusPicker.${project.status}`),
       (project) => project.activity?.name ?? '',
       (project) => project.targetBeneficiaries,
+      (project) => project.assignedBeneficiariesCount ?? 0,
       (project) => project.workingDays,
     ];
 
@@ -305,6 +307,7 @@ function BenefitPlanProjectsSearcher({
     ['status', true],
     ['activity', true],
     ['targetBeneficiaries', true],
+    ['assignedBeneficiariesCount', false],
     ['workingDays', true],
     ['location', true],
     ['location', true],

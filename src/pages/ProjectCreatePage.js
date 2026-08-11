@@ -29,6 +29,8 @@ import {
   PROJECT_BENEFICIARIES_TAB_VALUE,
 } from '../constants';
 
+const MAX_TARGET_BENEFICIARIES = 200;
+
 const styles = (theme) => ({
   page: theme.page,
   form: {
@@ -189,9 +191,15 @@ function ProjectCreatePage({
     });
   };
 
+  const isTargetBeneficiariesValid = () => {
+    const target = Number(editedProject?.targetBeneficiaries);
+    return Number.isFinite(target) && target >= 1 && target <= MAX_TARGET_BENEFICIARIES;
+  };
+
   const canSave = () => (
     !isMandatoryFieldsEmpty()
     && doesProjectChange()
+    && isTargetBeneficiariesValid()
     && projectNameIsValid === true
     && !projectNameIsValidating
   );
