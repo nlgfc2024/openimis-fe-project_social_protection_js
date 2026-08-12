@@ -263,15 +263,21 @@ function ProjectEnrollmentDialog({
 
   const onSave = () => {
     const targetBeneficiaries = Number(project?.targetBeneficiaries || 0);
+    const assignedCount = Number(project?.assignedBeneficiariesCount || 0);
     const selectedCount = selectedIds.size;
-    if (targetBeneficiaries > 0 && selectedCount > targetBeneficiaries) {
+    if (targetBeneficiaries > 0 && (assignedCount + selectedCount) > targetBeneficiaries) {
       showAlert(
         translate('projectBeneficiaries.target.validation.title'),
         formatMessageWithValues(
           intl,
           MODULE_NAME,
           'projectBeneficiaries.target.validation.message',
-          { selected: selectedCount, target: targetBeneficiaries },
+          {
+            selected: selectedCount,
+            assigned: assignedCount,
+            total: assignedCount + selectedCount,
+            target: targetBeneficiaries,
+          },
         ),
       );
       return;
@@ -392,7 +398,6 @@ const mapDispatchToPropsBeneficiary = (dispatch) => bindActionCreators({
   enroll: enrollProject,
   coreAlert,
   journalize,
-  coreAlert,
 }, dispatch);
 
 const mapStateToPropsGroupBeneficiary = (state) => ({
@@ -406,7 +411,6 @@ const mapDispatchToPropsGroupBeneficiary = (dispatch) => bindActionCreators({
   enroll: enrollGroupProject,
   coreAlert,
   journalize,
-  coreAlert,
 }, dispatch);
 
 export const ProjectBeneficiariyEnrollmentDialog = injectIntl(

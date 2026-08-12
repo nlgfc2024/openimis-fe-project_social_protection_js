@@ -27,9 +27,9 @@ import {
   RIGHT_BENEFIT_PLAN_UPDATE,
   BENEFIT_PLAN_PROJECTS_TAB_VALUE,
   PROJECT_BENEFICIARIES_TAB_VALUE,
+  MIN_TARGET_BENEFICIARIES,
+  getMaxTargetBeneficiaries,
 } from '../constants';
-
-const MAX_TARGET_BENEFICIARIES = 200;
 
 const styles = (theme) => ({
   page: theme.page,
@@ -56,6 +56,7 @@ function ProjectCreatePage({
   projectNameValidationError,
 }) {
   const history = useHistory();
+  const maxTargetBeneficiaries = getMaxTargetBeneficiaries(modulesManager);
   const locationState = history.location?.state;
 
   const benefitPlanIdFromState = locationState?.benefitPlanId;
@@ -184,7 +185,9 @@ function ProjectCreatePage({
 
   const isTargetBeneficiariesInRange = () => {
     const target = Number(editedProject?.targetBeneficiaries);
-    return Number.isFinite(target) && target >= 1 && target <= 200;
+    return Number.isFinite(target)
+      && target >= MIN_TARGET_BENEFICIARIES
+      && target <= maxTargetBeneficiaries;
   };
 
   const doesProjectChange = () => {
@@ -198,7 +201,9 @@ function ProjectCreatePage({
 
   const isTargetBeneficiariesValid = () => {
     const target = Number(editedProject?.targetBeneficiaries);
-    return Number.isFinite(target) && target >= 1 && target <= MAX_TARGET_BENEFICIARIES;
+    return Number.isFinite(target)
+      && target >= MIN_TARGET_BENEFICIARIES
+      && target <= maxTargetBeneficiaries;
   };
 
   const canSave = () => (
@@ -209,6 +214,9 @@ function ProjectCreatePage({
     && projectNameIsValid === true
     && !projectNameIsValidating
   );
+
+  const showTargetBeneficiariesRangeError = Boolean(editedProject?.targetBeneficiaries)
+    && !isTargetBeneficiariesInRange();
 
   const handleSave = () => {
     createProject(
@@ -228,6 +236,19 @@ function ProjectCreatePage({
 
   return rights.includes(RIGHT_BENEFIT_PLAN_UPDATE) && (
     <div className={classes.page}>
+      {showTargetBeneficiariesRangeError && (
+        <Typography color="error">
+          {formatMessageWithValues(
+            intl,
+            'projectSocialProtection',
+            'project.targetBeneficiaries.outOfRange',
+            {
+              min: MIN_TARGET_BENEFICIARIES,
+              max: maxTargetBeneficiaries,
+            },
+          )}
+        </Typography>
+      )}
       {canValidateProjectName && !projectNameIsValidating && projectNameIsValid === false && (
         <Typography color="error">
           {projectNameValidationError || formatMessage(

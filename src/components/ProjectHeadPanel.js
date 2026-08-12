@@ -16,8 +16,9 @@ import ProjectStatusPicker from '../pickers/ProjectStatusPicker';
 import ActivityPicker from '../pickers/ActivityPicker';
 import HotspotPicker from '../pickers/HotspotPicker';
 import UserPicker from '../pickers/UserPicker';
-
-const MAX_TARGET_BENEFICIARIES = 200;
+import {
+  getMaxTargetBeneficiaries,
+} from '../constants';
 
 // Walk the location parent chain (from the flat projection) and return the
 // ancestor whose `type` matches. Used to derive District (R) / TA (D) from the
@@ -52,6 +53,7 @@ class ProjectHeadPanel extends FormPanel {
 
     const project = { ...edited };
     const isNewProject = !project?.id;
+    const maxTargetBeneficiaries = getMaxTargetBeneficiaries(this.props.modulesManager);
     // The District is kept as a transient field; fall back to deriving it from the
     // stored TA (project.location) so it displays correctly when editing.
     const district = project?.district || findLocationByType(project?.location, 'R');
@@ -180,7 +182,7 @@ class ProjectHeadPanel extends FormPanel {
             required
             readOnly={readOnly}
             min={1}
-            max={200}
+            max={maxTargetBeneficiaries}
             value={project?.targetBeneficiaries}
             onChange={(v) => this.updateAttribute('targetBeneficiaries', v)}
           />

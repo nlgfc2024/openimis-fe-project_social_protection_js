@@ -13,6 +13,7 @@ import {
 import { injectIntl } from 'react-intl';
 import { bindActionCreators } from 'redux';
 import { connect, useDispatch } from 'react-redux';
+import { Typography } from '@material-ui/core';
 import { withTheme, withStyles } from '@material-ui/core/styles';
 import DeleteIcon from '@material-ui/icons/Delete';
 import UndoIcon from '@material-ui/icons/Undo';
@@ -30,6 +31,8 @@ import {
   RIGHT_BENEFIT_PLAN_UPDATE,
   BENEFIT_PLAN_PROJECTS_TAB_VALUE,
   PROJECT_BENEFICIARIES_TAB_VALUE,
+  MIN_TARGET_BENEFICIARIES,
+  getMaxTargetBeneficiaries,
 } from '../constants';
 
 const styles = (theme) => ({
@@ -59,6 +62,7 @@ function ProjectPage({
   journalize,
 }) {
   const history = useHistory();
+  const maxTargetBeneficiaries = getMaxTargetBeneficiaries(modulesManager);
 
   const [benefitPlanName, setBenefitPlanName] = useState();
   const [confirmedAction, setConfirmedAction] = useState(() => null);
@@ -144,7 +148,9 @@ function ProjectPage({
 
   const isTargetBeneficiariesInRange = () => {
     const target = Number(editedProject?.targetBeneficiaries);
-    return Number.isFinite(target) && target >= 1 && target <= 200;
+    return Number.isFinite(target)
+      && target >= MIN_TARGET_BENEFICIARIES
+      && target <= maxTargetBeneficiaries;
   };
 
   const doesProjectChange = () => {
@@ -155,6 +161,9 @@ function ProjectPage({
   const canSave = () => !isMandatoryFieldsEmpty()
     && isTargetBeneficiariesInRange()
     && doesProjectChange();
+
+  const showTargetBeneficiariesRangeError = Boolean(editedProject?.targetBeneficiaries)
+    && !isTargetBeneficiariesInRange();
 
   const handleSave = () => {
     updateProject(
@@ -219,6 +228,19 @@ function ProjectPage({
 
   return rights.includes(RIGHT_BENEFIT_PLAN_UPDATE) && (
     <div className={classes.page}>
+      {showTargetBeneficiariesRangeError && (
+        <Typography color="error">
+          {formatMessageWithValues(
+            intl,
+            'projectSocialProtection',
+            'project.targetBeneficiaries.outOfRange',
+            {
+              min: MIN_TARGET_BENEFICIARIES,
+              max: maxTargetBeneficiaries,
+            },
+          )}
+        </Typography>
+      )}
       <Form
         module="projectSocialProtection"
         className={classes.form}
