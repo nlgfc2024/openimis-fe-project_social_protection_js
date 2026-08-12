@@ -19,7 +19,6 @@ import {
   decodeId,
   coreAlert,
   journalize,
-  coreAlert,
 } from '@openimis/fe-core';
 import {
   fetchBeneficiaries,
