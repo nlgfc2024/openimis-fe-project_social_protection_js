@@ -21,7 +21,7 @@
   "project.status": "Status",
   "project.activity": "Sector",
   "project.targetBeneficiaries": "Target Beneficiaries",
-  "project.assignedBeneficiaries": "Assigned Beneficiaries",
+  "project.assignedBeneficiariesCount": "Assigned Beneficiaries",
   "project.workingDays": "Working Days",
   "project.location": "Location",
   "project.benefitPlan": "Program",
@@ -68,8 +68,8 @@
   "projectBeneficiaries.timeEntry.mutationLabel": "Updated {n} time entries for project {name}",
   "projectBeneficiaries.timeEntry.validation.title": "Invalid Time Entry",
   "projectBeneficiaries.timeEntry.validation.message": "Percent complete must be between 0 and 100.",
-  "projectBeneficiaries.target.validation.title": "Target Beneficiaries Exceeded",
-  "projectBeneficiaries.target.validation.message": "You selected {selected} beneficiaries, but the project target is {target}. Please reduce your selection.",
+  "projectBeneficiaries.target.validation.title": "Enrollment Limit Exceeded",
+  "projectBeneficiaries.target.validation.message": "Selected beneficiaries ({selected}) exceed the project target ({target}).",
 
   "projectChangelog.label": "Changelog",
 

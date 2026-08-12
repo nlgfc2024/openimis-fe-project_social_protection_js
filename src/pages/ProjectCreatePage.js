@@ -182,6 +182,11 @@ function ProjectCreatePage({
     || !editedProject?.workingDays
   );
 
+  const isTargetBeneficiariesInRange = () => {
+    const target = Number(editedProject?.targetBeneficiaries);
+    return Number.isFinite(target) && target >= 1 && target <= 200;
+  };
+
   const doesProjectChange = () => {
     return Object.keys(editedProject).some((key) => {
       const value = editedProject[key];
@@ -198,6 +203,7 @@ function ProjectCreatePage({
 
   const canSave = () => (
     !isMandatoryFieldsEmpty()
+    && isTargetBeneficiariesInRange()
     && doesProjectChange()
     && isTargetBeneficiariesValid()
     && projectNameIsValid === true

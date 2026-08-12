@@ -180,7 +180,7 @@ class ProjectHeadPanel extends FormPanel {
             required
             readOnly={readOnly}
             min={1}
-            max={MAX_TARGET_BENEFICIARIES}
+            max={200}
             value={project?.targetBeneficiaries}
             onChange={(v) => this.updateAttribute('targetBeneficiaries', v)}
           />

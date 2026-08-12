@@ -4,6 +4,7 @@ import {
   formatMessage,
   formatMessageWithValues,
   withModulesManager,
+  coreAlert,
   coreConfirm,
   clearConfirm,
   journalize,
@@ -51,6 +52,7 @@ function ProjectPage({
   undoDeleteProject,
   submittingMutation,
   mutation,
+  coreAlert,
   coreConfirm,
   clearConfirm,
   confirmed,
@@ -105,16 +107,28 @@ function ProjectPage({
       ].includes(mutation?.actionType)) {
         back();
       } else if (mutation?.actionType === ACTION_TYPE.UPDATE_PROJECT) {
-        const benefitPlanRoute = modulesManager.getRef('socialProtection.route.benefitPlan');
-        const benefitPlanId = project?.benefitPlan?.id || project?.benefit_plan?.id;
-        if (benefitPlanId) {
-          history.replace(`/${benefitPlanRoute}/${benefitPlanId}`, {
-            activeTab: BENEFIT_PLAN_PROJECTS_TAB_VALUE,
-          });
+        coreAlert(
+          formatMessage(intl, 'projectSocialProtection', 'project.update.success.title'),
+          formatMessageWithValues(intl, 'projectSocialProtection', 'project.update.success.message', {
+            name: editedProject?.name || project?.name,
+          }),
+        );
+        if (project?.id) {
+          fetchProject(modulesManager, [`id: "${project.id}"`]);
         }
       }
     }
-  }, [submittingMutation, mutation, history, modulesManager, project, projectUuid]);
+  }, [
+    submittingMutation,
+    mutation,
+    modulesManager,
+    project,
+    projectUuid,
+    fetchProject,
+    coreAlert,
+    intl,
+    editedProject?.name,
+  ]);
 
   useEffect(() => {
     prevSubmittingMutationRef.current = submittingMutation;
@@ -128,12 +142,19 @@ function ProjectPage({
     || !editedProject?.workingDays
   );
 
+  const isTargetBeneficiariesInRange = () => {
+    const target = Number(editedProject?.targetBeneficiaries);
+    return Number.isFinite(target) && target >= 1 && target <= 200;
+  };
+
   const doesProjectChange = () => {
     if (_.isEqual(project, editedProject)) return false;
     return true;
   };
 
-  const canSave = () => !isMandatoryFieldsEmpty() && doesProjectChange();
+  const canSave = () => !isMandatoryFieldsEmpty()
+    && isTargetBeneficiariesInRange()
+    && doesProjectChange();
 
   const handleSave = () => {
     updateProject(
@@ -241,6 +262,7 @@ const mapDispatchToProps = (dispatch) => bindActionCreators(
     updateProject,
     deleteProject,
     undoDeleteProject,
+    coreAlert,
     coreConfirm,
     clearConfirm,
     journalize,
