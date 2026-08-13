@@ -29,7 +29,6 @@ import ProjectHeadPanel from '../components/ProjectHeadPanel';
 import ProjectTabPanel from '../components/ProjectTabPanel';
 import {
   RIGHT_BENEFIT_PLAN_UPDATE,
-  BENEFIT_PLAN_PROJECTS_TAB_VALUE,
   PROJECT_BENEFICIARIES_TAB_VALUE,
   MIN_TARGET_BENEFICIARIES,
   getMaxTargetBeneficiaries,

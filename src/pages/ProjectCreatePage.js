@@ -199,18 +199,10 @@ function ProjectCreatePage({
     });
   };
 
-  const isTargetBeneficiariesValid = () => {
-    const target = Number(editedProject?.targetBeneficiaries);
-    return Number.isFinite(target)
-      && target >= MIN_TARGET_BENEFICIARIES
-      && target <= maxTargetBeneficiaries;
-  };
-
   const canSave = () => (
     !isMandatoryFieldsEmpty()
     && isTargetBeneficiariesInRange()
     && doesProjectChange()
-    && isTargetBeneficiariesValid()
     && projectNameIsValid === true
     && !projectNameIsValidating
   );
