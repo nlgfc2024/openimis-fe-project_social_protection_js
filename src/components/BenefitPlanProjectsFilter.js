@@ -14,6 +14,9 @@ function ProjectFilter({
   onChangeFilters = () => {},
   standalone = false,
 }) {
+  const filterValue = (key) => (
+    filters?.[key]?.value ?? null
+  );
 
   const handleDistrictChange = (v) => {
     onChangeFilters([{
@@ -49,7 +52,7 @@ function ProjectFilter({
 
   const pickerFields = [
     ...(standalone ? [{
-      name: 'benefitPlan_Id',
+      name: 'benefitPlan',
       component: PublishedComponent,
       props: {
         pubRef: 'socialProtection.BenefitPlanPicker',

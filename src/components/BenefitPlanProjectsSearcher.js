@@ -11,7 +11,7 @@ import {
   clearConfirm,
   journalize,
   downloadExport,
-  publishedComponents
+  PublishedComponent,
 } from '@openimis/fe-core';
 import {
   Button,
