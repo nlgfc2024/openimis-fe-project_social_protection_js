@@ -90,5 +90,13 @@
   "socialProtection.beneficiary.firstName": "First Name",
   "socialProtection.beneficiary.lastName": "Last Name",
   "socialProtection.beneficiary.dob": "Date of Birth",
-  "socialProtection.groupBeneficiary.code": "Group Code"
+  "socialProtection.groupBeneficiary.code": "Group Code",
+
+  "projectSocialProtection.menu.projects": "Projects",
+  "projectSocialProtection.projects.pageTitle": "Projects",
+  "projectSocialProtection.project.benefitPlan": "Program",
+  "projectSocialProtection.projects.selectProgram.title": "Select Program",
+  "projectSocialProtection.projects.selectProgram.message": "Select the Program that will own the new Project.",
+  "projectSocialProtection.cancel": "Cancel",
+  "projectSocialProtection.continue": "Continue"
 }

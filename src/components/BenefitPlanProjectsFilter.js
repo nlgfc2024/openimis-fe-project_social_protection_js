@@ -10,11 +10,10 @@ import ActivityPicker from '../pickers/ActivityPicker';
 import HotspotPicker from '../pickers/HotspotPicker';
 
 function ProjectFilter({
-  filters, onChangeFilters = () => {},
+  filters,
+  onChangeFilters = () => {},
+  standalone = false,
 }) {
-  const filterValue = (k) => (
-    !!filters && !!filters[k] ? filters[k].value : null
-  );
 
   const handleDistrictChange = (v) => {
     onChangeFilters([{
@@ -49,6 +48,14 @@ function ProjectFilter({
   };
 
   const pickerFields = [
+    ...(standalone ? [{
+      name: 'benefitPlan_Id',
+      component: PublishedComponent,
+      props: {
+        pubRef: 'socialProtection.BenefitPlanPicker',
+        withNull: true,
+      },
+    }] : []),
     { name: 'status', component: ProjectStatusPicker, props: { nullLabel: 'any', withNull: true } },
     { name: 'activity', component: ActivityPicker },
     { name: 'microCatchment', component: PublishedComponent, props: { pubRef: 'location.MicroCatchmentPicker' } },

@@ -11,6 +11,7 @@ import {
   clearConfirm,
   journalize,
   downloadExport,
+  publishedComponents
 } from '@openimis/fe-core';
 import {
   Button,
@@ -18,6 +19,7 @@ import {
   DialogActions,
   DialogTitle,
   DialogContent,
+  DialogContentText,
   IconButton,
   Tooltip,
 } from '@material-ui/core';
@@ -62,6 +64,7 @@ function BenefitPlanProjectsSearcher({
   benefitPlanId,
   benefitPlanName,
   rights,
+  standalone = false,
   confirmed,
   coreConfirm,
   clearConfirm,
@@ -79,6 +82,8 @@ function BenefitPlanProjectsSearcher({
   const [deletedProjectUuids, setDeletedProjectUuids] = useState([]);
   const [undoProjectUuids, setUndoProjectUuids] = useState([]);
   const prevSubmittingMutationRef = useRef();
+  const [programDialogOpen, setProgramDialogOpen] = useState(false);
+  const [selectedBenefitPlan, setSelectedBenefitPlan] = useState(null);
 
   const openDeleteProjectConfirmDialog = () => coreConfirm(
     formatMessageWithValues(intl, MODULE_NAME, 'project.delete.confirm.title', {
@@ -97,9 +102,15 @@ function BenefitPlanProjectsSearcher({
   // Absolute base for a project route nested under its benefit plan, e.g.
   // /benefitPlans/benefitPlan/<benefitPlanId>/project — built from route refs so it
   // is independent of the current URL (relative pushes broke after visiting a project).
-  const projectRouteBase = () => `/${modulesManager.getRef('socialProtection.route.benefitPlan')}`
-    + `/${benefitPlanId}`
-    + `/${modulesManager.getRef('projectSocialProtection.route.project')}`;
+  const projectRouteBase = (project = null, selectedPlan = null) => {
+    const effectiveBenefitPlanId = benefitPlanId
+      || selectedPlan?.id
+      || project?.benefitPlan?.id;
+  
+    return `/${modulesManager.getRef('socialProtection.route.benefitPlan')}`
+      + `/${effectiveBenefitPlanId}`
+      + `/${modulesManager.getRef('projectSocialProtection.route.project')}`;
+  };
 
   const onDelete = (project) => setProjectToDelete(project);
   const onUndo = (project) => setProjectToUndo(project);
@@ -121,7 +132,7 @@ function BenefitPlanProjectsSearcher({
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
   const openProject = (project) => rights.includes(RIGHT_PROJECT_UPDATE)
-    && history.push(`${projectRouteBase()}/${project?.id}`);
+    && history.push(`${projectRouteBase(project)}/${project?.id}`);
 
   useEffect(() => projectToDelete && openDeleteProjectConfirmDialog(), [projectToDelete]);
   useEffect(() => projectToUndo && openUndoProjectConfirmDialog(), [projectToUndo]);
@@ -199,6 +210,7 @@ function BenefitPlanProjectsSearcher({
 
   const headers = () => {
     const baseHeaders = [
+      ...(standalone ? ['project.benefitPlan'] : []),
       'project.name',
       'project.status',
       'project.activity',
@@ -246,6 +258,9 @@ function BenefitPlanProjectsSearcher({
 
   const itemFormatters = () => {
     const baseFormatters = [
+      ...(standalone
+        ? [(project) => project.benefitPlan?.name ?? '']
+        : []),
       (project) => project.name,
       (project) => formatMessage(intl, MODULE_NAME, `project.statusPicker.${project.status}`),
       (project) => project.activity?.name ?? '',
@@ -301,6 +316,7 @@ function BenefitPlanProjectsSearcher({
   const rowIdentifier = (project) => project.id;
 
   const sorts = () => [
+    ...(standalone ? [['benefitPlan__name', true]] : []),
     ['name', true],
     ['status', true],
     ['activity', true],
@@ -318,17 +334,37 @@ function BenefitPlanProjectsSearcher({
       classes={props.classes}
       filters={props.filters}
       onChangeFilters={props.onChangeFilters}
+      standalone={standalone}
     />
   );
 
-  const onAdd = () => {
+  const navigateToCreate = (plan) => {
     history.push({
-      pathname: `${projectRouteBase()}/create`,
+      pathname: `${projectRouteBase(null, plan)}/create`,
       state: {
-        benefitPlanId,
-        benefitPlanName,
+        benefitPlanId: plan.id,
+        benefitPlanName: plan.name,
       },
     });
+  };
+  
+  const onAdd = () => {
+    if (benefitPlanId) {
+      navigateToCreate({
+        id: benefitPlanId,
+        name: benefitPlanName,
+      });
+      return;
+    }
+  
+    setSelectedBenefitPlan(null);
+    setProgramDialogOpen(true);
+  };
+  
+  const confirmProgramSelection = () => {
+    if (!selectedBenefitPlan?.id) return;
+    setProgramDialogOpen(false);
+    navigateToCreate(selectedBenefitPlan);
   };
 
   const onFiltersApplied = (appliedFilters) => {
@@ -352,66 +388,110 @@ function BenefitPlanProjectsSearcher({
   ));
 
   return (
-    !!benefitPlanId && (
-      <div>
-        <Searcher
-          module={MODULE_NAME}
-          FilterPane={benefitPlanProjectsFilter}
-          fetch={fetch}
-          items={items}
-          itemsPageInfo={projectsPageInfo}
-          fetchingItems={fetchingProjects}
-          fetchedItems={fetchedProjects}
-          errorItems={errorProjects}
-          tableTitle={formatMessageWithValues(intl, MODULE_NAME, 'projects.searcherResultsTitle', {
-            projectsTotalCount,
-          })}
-          headers={headers}
-          itemFormatters={itemFormatters}
-          sorts={sorts}
-          rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
-          defaultPageSize={DEFAULT_PAGE_SIZE}
-          defaultOrderBy="-name"
-          rowIdentifier={rowIdentifier}
-          defaultFilters={defaultFilters()}
-          searcherActions={searcherActions}
-          enableActionButtons
-          searcherActionsPosition="header-right"
-          exportable
-          exportFields={exportFields}
-          exportFieldsColumns={exportFieldsColumns}
-          exportFieldLabel={formatMessage(intl, MODULE_NAME, 'export.label')}
-          // exportFetch is a dialog opener here; the Searcher's built-in export flow is bypassed
-          // in favor of ExportWithFiltersDialog so active filters (e.g. benefitPlan scope) are preserved.
-          exportFetch={openExportDialog}
-          onDoubleClick={openProject}
-          onFiltersApplied={onFiltersApplied}
-        />
-        <ExportWithFiltersDialog
-          open={exportDialogOpen}
-          onClose={closeExportDialog}
-          onConfirm={exportWithFilters}
-          intl={intl}
-          filters={activeFilters}
-          exportFields={exportFields}
-          exportFieldsColumns={exportFieldsColumns}
-          module={MODULE_NAME}
-        />
-        {failedExport && (
-          <Dialog open={failedExport} fullWidth maxWidth="sm">
-            <DialogTitle>{formatMessage(intl, MODULE_NAME, 'export.error.title')}</DialogTitle>
-            <DialogContent>
-              <strong>{formatMessage(intl, MODULE_NAME, 'export.error.code', { code: errorProjectExport?.code })}</strong>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setFailedExport(false)} color="primary" variant="contained">
-                {formatMessage(intl, MODULE_NAME, 'ok')}
-              </Button>
-            </DialogActions>
-          </Dialog>
-        )}
-      </div>
-    )
+    <div>
+      <Searcher
+        module={MODULE_NAME}
+        FilterPane={benefitPlanProjectsFilter}
+        fetch={fetch}
+        items={items}
+        itemsPageInfo={projectsPageInfo}
+        fetchingItems={fetchingProjects}
+        fetchedItems={fetchedProjects}
+        errorItems={errorProjects}
+        tableTitle={formatMessageWithValues(intl, MODULE_NAME, 'projects.searcherResultsTitle', {
+          projectsTotalCount,
+        })}
+        headers={headers}
+        itemFormatters={itemFormatters}
+        sorts={sorts}
+        rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
+        defaultPageSize={DEFAULT_PAGE_SIZE}
+        defaultOrderBy="-name"
+        rowIdentifier={rowIdentifier}
+        defaultFilters={defaultFilters()}
+        searcherActions={searcherActions}
+        enableActionButtons
+        searcherActionsPosition="header-right"
+        exportable
+        exportFields={exportFields}
+        exportFieldsColumns={exportFieldsColumns}
+        exportFieldLabel={formatMessage(intl, MODULE_NAME, 'export.label')}
+        exportFetch={openExportDialog}
+        onDoubleClick={openProject}
+        onFiltersApplied={onFiltersApplied}
+      />
+  
+      <ExportWithFiltersDialog
+        open={exportDialogOpen}
+        onClose={closeExportDialog}
+        onConfirm={exportWithFilters}
+        intl={intl}
+        filters={activeFilters}
+        exportFields={exportFields}
+        exportFieldsColumns={exportFieldsColumns}
+        module={MODULE_NAME}
+      />
+  
+      <Dialog
+        open={programDialogOpen}
+        onClose={() => setProgramDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          {formatMessage(intl, MODULE_NAME, 'projects.selectProgram.title')}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {formatMessage(intl, MODULE_NAME, 'projects.selectProgram.message')}
+          </DialogContentText>
+          <PublishedComponent
+            pubRef="socialProtection.BenefitPlanPicker"
+            withNull
+            required
+            value={selectedBenefitPlan}
+            onChange={setSelectedBenefitPlan}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setProgramDialogOpen(false)}>
+            {formatMessage(intl, MODULE_NAME, 'cancel')}
+          </Button>
+          <Button
+            color="primary"
+            variant="contained"
+            disabled={!selectedBenefitPlan?.id}
+            onClick={confirmProgramSelection}
+          >
+            {formatMessage(intl, MODULE_NAME, 'continue')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+  
+      {failedExport && (
+        <Dialog open={failedExport} fullWidth maxWidth="sm">
+          <DialogTitle>
+            {formatMessage(intl, MODULE_NAME, 'export.error.title')}
+          </DialogTitle>
+          <DialogContent>
+            <strong>
+              {formatMessage(intl, MODULE_NAME, 'export.error.code', {
+                code: errorProjectExport?.code,
+              })}
+            </strong>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => setFailedExport(false)}
+              color="primary"
+              variant="contained"
+            >
+              {formatMessage(intl, MODULE_NAME, 'ok')}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
+    </div>
   );
 }
 
