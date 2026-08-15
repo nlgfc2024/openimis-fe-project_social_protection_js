@@ -1,10 +1,15 @@
 import React from 'react';
 import { Grid } from '@material-ui/core';
 import {
+  decodeId,
   Filter,
   PublishedComponent,
 } from '@openimis/fe-core';
-import { CONTAINS_LOOKUP, MODULE_NAME } from '../constants';
+import {
+  BENEFIT_PLAN_TYPE,
+  CONTAINS_LOOKUP,
+  MODULE_NAME,
+} from '../constants';
 import ProjectStatusPicker from '../pickers/ProjectStatusPicker';
 import ActivityPicker from '../pickers/ActivityPicker';
 import HotspotPicker from '../pickers/HotspotPicker';
@@ -50,6 +55,30 @@ function ProjectFilter({
     }]);
   };
 
+  const handleBenefitPlanChange = (v) => {
+    onChangeFilters([{
+      id: 'benefitPlan',
+      value: v,
+      filter: v?.id ? `benefitPlan_Id: "${decodeId(v.id)}"` : null,
+    }]);
+  };
+
+  const handleMicroCatchmentChange = (v) => {
+    onChangeFilters([{
+      id: 'microCatchment',
+      value: v,
+      filter: v?.id ? `microCatchment_Id: "${v.id}"` : null,
+    }]);
+  };
+
+  const handleHotspotChange = (v) => {
+    onChangeFilters([{
+      id: 'hotspot',
+      value: v,
+      filter: v?.gqlId ? `hotspot_Id: "${v.gqlId}"` : null,
+    }]);
+  };
+
   const pickerFields = [
     ...(standalone ? [{
       name: 'benefitPlan',
@@ -57,13 +86,26 @@ function ProjectFilter({
       props: {
         type: BENEFIT_PLAN_TYPE.EVERY_TYPE,
         pubRef: 'socialProtection.BenefitPlanPicker',
+        label: 'Phase',
         withNull: true,
+        onChange: handleBenefitPlanChange,
       },
     }] : []),
     { name: 'status', component: ProjectStatusPicker, props: { nullLabel: 'any', withNull: true } },
     { name: 'activity', component: ActivityPicker },
-    { name: 'microCatchment', component: PublishedComponent, props: { pubRef: 'location.MicroCatchmentPicker' } },
-    { name: 'hotspot', component: HotspotPicker },
+    {
+      name: 'microCatchment',
+      component: PublishedComponent,
+      props: {
+        pubRef: 'location.MicroCatchmentPicker',
+        onChange: handleMicroCatchmentChange,
+      },
+    },
+    {
+      name: 'hotspot',
+      component: HotspotPicker,
+      props: { onChange: handleHotspotChange },
+    },
   ];
 
   return (

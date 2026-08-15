@@ -12,6 +12,7 @@ import {
   journalize,
   downloadExport,
   PublishedComponent,
+  decodeId,
 } from '@openimis/fe-core';
 import {
   Button,
@@ -36,6 +37,7 @@ import {
   RIGHT_PROJECT_CREATE,
   RIGHT_PROJECT_UPDATE,
   RIGHT_PROJECT_DELETE,
+  BENEFIT_PLAN_TYPE,
 } from '../constants';
 import {
   fetchBenefitPlanProjects,
@@ -364,7 +366,10 @@ function BenefitPlanProjectsSearcher({
   const confirmProgramSelection = () => {
     if (!selectedBenefitPlan?.id) return;
     setProgramDialogOpen(false);
-    navigateToCreate(selectedBenefitPlan);
+    navigateToCreate({
+      ...selectedBenefitPlan,
+      id: decodeId(selectedBenefitPlan.id),
+    });
   };
 
   const onFiltersApplied = (appliedFilters) => {

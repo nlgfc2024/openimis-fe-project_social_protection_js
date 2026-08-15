@@ -102,7 +102,10 @@ function reducer(
         fetchedProjects: true,
         projects: parseData(action.payload.data.project)?.map((project) => ({
           ...project,
-          benefitPlan: { id: project?.benefitPlan?.id ? decodeId(project.benefitPlan.id) : null },
+          benefitPlan: project?.benefitPlan ? {
+            ...project.benefitPlan,
+            id: project.benefitPlan.id ? decodeId(project.benefitPlan.id) : null,
+          } : null,
           microCatchment: project?.microCatchment?.id
             ? { ...project.microCatchment, id: decodeId(project.microCatchment.id) } : null,
           id: decodeId(project.id),
@@ -325,7 +328,7 @@ function reducer(
           ...state.validationFields,
           projectName: {
             isValidating: false,
-            isValid: action.payload?.data.isValid.isValid,
+            isValid: action.payload?.data?.isValid?.isValid ?? false,
             validationError: formatGraphQLError(action.payload),
           },
         },
