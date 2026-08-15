@@ -447,6 +447,7 @@ function BenefitPlanProjectsSearcher({
           </DialogContentText>
           <PublishedComponent
             pubRef="socialProtection.BenefitPlanPicker"
+            type={BENEFIT_PLAN_TYPE.EVERY_TYPE}
             withNull
             required
             value={selectedBenefitPlan}

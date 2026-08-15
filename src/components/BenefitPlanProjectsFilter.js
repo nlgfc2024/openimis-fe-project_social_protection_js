@@ -55,6 +55,7 @@ function ProjectFilter({
       name: 'benefitPlan',
       component: PublishedComponent,
       props: {
+        type: BENEFIT_PLAN_TYPE.EVERY_TYPE,
         pubRef: 'socialProtection.BenefitPlanPicker',
         withNull: true,
       },
