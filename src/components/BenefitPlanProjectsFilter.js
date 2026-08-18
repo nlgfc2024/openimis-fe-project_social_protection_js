@@ -67,7 +67,7 @@ function ProjectFilter({
     onChangeFilters([{
       id: 'microCatchment',
       value: v,
-      filter: v?.id ? `microCatchment_Id: "${v.id}"` : null,
+      filter: v?.id ? `microCatchment_Id: "${decodeId(v.id)}"` : null,
     }]);
   };
 
@@ -75,7 +75,7 @@ function ProjectFilter({
     onChangeFilters([{
       id: 'hotspot',
       value: v,
-      filter: v?.gqlId ? `hotspot_Id: "${v.gqlId}"` : null,
+      filter: v?.id ? `hotspot_Id: "${v.id}"` : null,
     }]);
   };
 
@@ -86,7 +86,6 @@ function ProjectFilter({
       props: {
         type: BENEFIT_PLAN_TYPE.EVERY_TYPE,
         pubRef: 'socialProtection.BenefitPlanPicker',
-        label: 'Phase',
         withNull: true,
         onChange: handleBenefitPlanChange,
       },

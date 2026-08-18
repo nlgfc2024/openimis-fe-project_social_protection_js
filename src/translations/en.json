@@ -24,7 +24,7 @@
   "project.targetBeneficiaries": "Target Beneficiaries",
   "project.workingDays": "Working Days",
   "project.location": "Location",
-  "project.benefitPlan": "Phase",
+  "project.benefitPlan": "Program",
   "project.day": "Day",
   "project.isDeleted": "Show Deleted",
   "project.version": "Version",
@@ -94,9 +94,9 @@
 
   "projectSocialProtection.menu.projects": "Projects",
   "projectSocialProtection.projects.pageTitle": "Projects",
-  "projectSocialProtection.project.benefitPlan": "Phase",
-  "projectSocialProtection.projects.selectProgram.title": "Select Phase",
-  "projectSocialProtection.projects.selectProgram.message": "Select the Phase that will own the new Project.",
+  "projectSocialProtection.project.benefitPlan": "Program",
+  "projectSocialProtection.projects.selectProgram.title": "Select Program",
+  "projectSocialProtection.projects.selectProgram.message": "Select the Program that will own the new Project.",
   "projectSocialProtection.cancel": "Cancel",
   "projectSocialProtection.continue": "Continue"
 }

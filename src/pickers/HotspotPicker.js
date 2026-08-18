@@ -53,7 +53,6 @@ function HotspotPicker({
   const hotspots = data?.hotspots?.edges?.map((edge) => (
     {
       ...edge.node,
-      gqlId: edge.node.id,
       id: decodeId(edge.node.id),
     }
   )) ?? [];
