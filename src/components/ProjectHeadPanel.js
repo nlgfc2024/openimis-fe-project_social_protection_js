@@ -46,10 +46,17 @@ class ProjectHeadPanel extends FormPanel {
       edited,
       classes,
       readOnly,
+      previewProjectName,
     } = this.props;
 
     const project = { ...edited };
     const isNewProject = !project?.id;
+<<<<<<< HEAD
+=======
+    const canPreviewGeneratedName = Boolean(project?.hotspot?.name && project?.activity?.name);
+    const displayProjectName = project?.name || (canPreviewGeneratedName ? previewProjectName : '') || '';
+    const maxTargetBeneficiaries = getMaxTargetBeneficiaries(this.props.modulesManager);
+>>>>>>> 68bd098 (Improve Create Project Name UX with clear auto-generated hint and safer live preview)
     // The District is kept as a transient field; fall back to deriving it from the
     // stored TA (project.location) so it displays correctly when editing.
     const district = project?.district || findLocationByType(project?.location, 'R');
@@ -61,9 +68,10 @@ class ProjectHeadPanel extends FormPanel {
           <TextInput
             module="projectSocialProtection"
             label="project.name"
-            value={project?.name ?? ''}
-            readOnly
-            placeholder={intl.formatMessage({ id: 'projectSocialProtection.project.name.autoHint' })}
+            value={displayProjectName}
+            readOnly={false}
+            inputProps={{ readOnly: true }}
+            placeholder={formatMessage(intl, MODULE_NAME, 'project.name.autoHint')}
           />
         </Grid>
 
