@@ -8,14 +8,13 @@ import {
   formatMessage,
   withModulesManager,
 } from '@openimis/fe-core';
-
-const MODULE_NAME = 'projectSocialProtection';
 import { injectIntl } from 'react-intl';
 import { withTheme, withStyles } from '@material-ui/core/styles';
 import ProjectStatusPicker from '../pickers/ProjectStatusPicker';
 import ActivityPicker from '../pickers/ActivityPicker';
 import HotspotPicker from '../pickers/HotspotPicker';
 import UserPicker from '../pickers/UserPicker';
+import { MODULE_NAME } from '../constants';
 
 // Walk the location parent chain (from the flat projection) and return the
 // ancestor whose `type` matches. Used to derive District (R) / TA (D) from the
@@ -51,12 +50,8 @@ class ProjectHeadPanel extends FormPanel {
 
     const project = { ...edited };
     const isNewProject = !project?.id;
-<<<<<<< HEAD
-=======
     const canPreviewGeneratedName = Boolean(project?.hotspot?.name && project?.activity?.name);
     const displayProjectName = project?.name || (canPreviewGeneratedName ? previewProjectName : '') || '';
-    const maxTargetBeneficiaries = getMaxTargetBeneficiaries(this.props.modulesManager);
->>>>>>> 68bd098 (Improve Create Project Name UX with clear auto-generated hint and safer live preview)
     // The District is kept as a transient field; fall back to deriving it from the
     // stored TA (project.location) so it displays correctly when editing.
     const district = project?.district || findLocationByType(project?.location, 'R');
