@@ -67,7 +67,7 @@ function ProjectFilter({
     onChangeFilters([{
       id: 'microCatchment',
       value: v,
-      filter: v?.id ? `microCatchment_Id: "${decodeId(v.id)}"` : null,
+      filter: v?.id ? `microCatchment_Id: "${v.id}"` : null,
     }]);
   };
 
@@ -75,7 +75,7 @@ function ProjectFilter({
     onChangeFilters([{
       id: 'hotspot',
       value: v,
-      filter: v?.id ? `hotspot_Id: "${v.id}"` : null,
+      filter: v?.gqlId ? `hotspot_Id: "${v.gqlId}"` : null,
     }]);
   };
 
