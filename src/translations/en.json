@@ -10,7 +10,7 @@
   "project.loading": "Loading...",
   "project.name": "Name",
   "project.name.alreadyTaken": "The name is already taken",
-  "project.name.autoHint": "Auto-generated on save",
+  "project.name.autoHint": "Name will be auto-generated after selecting Hotspot, Sector, Program, and Known Place",
   "project.hotspot": "Hotspot",
   "project.microCatchment": "Micro-Catchment",
   "project.district": "District",
