@@ -51,7 +51,11 @@ function HotspotPicker({
   );
 
   const hotspots = data?.hotspots?.edges?.map((edge) => (
-    { ...edge.node, id: decodeId(edge.node.id) }
+    {
+      ...edge.node,
+      gqlId: edge.node.id, // Relay global ID: location *_Id filters require the encoded form.
+      id: decodeId(edge.node.id),
+    }
   )) ?? [];
 
   return (
