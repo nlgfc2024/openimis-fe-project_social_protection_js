@@ -70,6 +70,17 @@ class ProjectHeadPanel extends FormPanel {
           />
         </Grid>
 
+        {!isNewProject && (
+          <Grid item xs={4} className={classes.item}>
+            <TextInput
+              module="projectSocialProtection"
+              label="project.code"
+              value={project?.code ?? ''}
+              readOnly
+            />
+          </Grid>
+        )}
+
         <Grid item xs={4} className={classes.item}>
           <PublishedComponent
             pubRef="location.MwDistrictPicker"

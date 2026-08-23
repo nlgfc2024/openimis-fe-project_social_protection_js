@@ -22,6 +22,8 @@ const BENEFIT_PLAN_PROJECTION = () => [
 
 const PROJECT_FULL_PROJECTION = (modulesManager) => [
   'id',
+  'code',
+  'assignedBeneficiariesCount',
   'benefitPlan {id, name, type}',
   'name',
   'status',
@@ -41,6 +43,9 @@ const PROJECT_FULL_PROJECTION = (modulesManager) => [
   'dateCreated',
   'dateUpdated',
 ];
+
+const PROJECT_HISTORY_PROJECTION = (modulesManager) => PROJECT_FULL_PROJECTION(modulesManager)
+  .filter((field) => field !== 'assignedBeneficiariesCount');
 
 const BENEFICIARY_PROJECTION = (modulesManager) => [
   'id',
@@ -86,7 +91,7 @@ export function fetchProject(modulesManager, params) {
 }
 
 export function fetchProjectHistory(modulesManager, params) {
-  const payload = formatPageQueryWithCount('projectHistory', params, PROJECT_FULL_PROJECTION(modulesManager));
+  const payload = formatPageQueryWithCount('projectHistory', params, PROJECT_HISTORY_PROJECTION(modulesManager));
   return graphql(payload, ACTION_TYPE.SEARCH_PROJECTS_HISTORY);
 }
 
