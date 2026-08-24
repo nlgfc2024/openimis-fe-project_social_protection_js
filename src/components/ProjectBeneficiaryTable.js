@@ -326,6 +326,7 @@ function BaseProjectBeneficiaryTable({
           onClose={() => setEnrollmentDialogOpen(false)}
           project={project}
           enrolledBeneficiaries={beneficiaries}
+          fetchingEnrolledBeneficiaries={fetchingBeneficiaries}
           isGroup={isGroup}
           orderBy={orderBy}
         />

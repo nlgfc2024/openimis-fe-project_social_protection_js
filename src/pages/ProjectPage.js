@@ -4,6 +4,7 @@ import {
   formatMessage,
   formatMessageWithValues,
   withModulesManager,
+  coreAlert,
   coreConfirm,
   clearConfirm,
   journalize,
@@ -12,6 +13,7 @@ import {
 import { injectIntl } from 'react-intl';
 import { bindActionCreators } from 'redux';
 import { connect, useDispatch } from 'react-redux';
+import { Typography } from '@material-ui/core';
 import { withTheme, withStyles } from '@material-ui/core/styles';
 import DeleteIcon from '@material-ui/icons/Delete';
 import UndoIcon from '@material-ui/icons/Undo';
@@ -27,8 +29,9 @@ import ProjectHeadPanel from '../components/ProjectHeadPanel';
 import ProjectTabPanel from '../components/ProjectTabPanel';
 import {
   RIGHT_BENEFIT_PLAN_UPDATE,
-  BENEFIT_PLAN_PROJECTS_TAB_VALUE,
   PROJECT_BENEFICIARIES_TAB_VALUE,
+  MIN_TARGET_BENEFICIARIES,
+  getMaxTargetBeneficiaries,
 } from '../constants';
 
 const styles = (theme) => ({
@@ -51,12 +54,14 @@ function ProjectPage({
   undoDeleteProject,
   submittingMutation,
   mutation,
+  coreAlert,
   coreConfirm,
   clearConfirm,
   confirmed,
   journalize,
 }) {
   const history = useHistory();
+  const maxTargetBeneficiaries = getMaxTargetBeneficiaries(modulesManager);
 
   const [benefitPlanName, setBenefitPlanName] = useState();
   const [confirmedAction, setConfirmedAction] = useState(() => null);
@@ -105,16 +110,28 @@ function ProjectPage({
       ].includes(mutation?.actionType)) {
         back();
       } else if (mutation?.actionType === ACTION_TYPE.UPDATE_PROJECT) {
-        const benefitPlanRoute = modulesManager.getRef('socialProtection.route.benefitPlan');
-        const benefitPlanId = project?.benefitPlan?.id || project?.benefit_plan?.id;
-        if (benefitPlanId) {
-          history.replace(`/${benefitPlanRoute}/${benefitPlanId}`, {
-            activeTab: BENEFIT_PLAN_PROJECTS_TAB_VALUE,
-          });
+        coreAlert(
+          formatMessage(intl, 'projectSocialProtection', 'project.update.success.title'),
+          formatMessageWithValues(intl, 'projectSocialProtection', 'project.update.success.message', {
+            name: editedProject?.name || project?.name,
+          }),
+        );
+        if (project?.id) {
+          fetchProject(modulesManager, [`id: "${project.id}"`]);
         }
       }
     }
-  }, [submittingMutation, mutation, history, modulesManager, project, projectUuid]);
+  }, [
+    submittingMutation,
+    mutation,
+    modulesManager,
+    project,
+    projectUuid,
+    fetchProject,
+    coreAlert,
+    intl,
+    editedProject?.name,
+  ]);
 
   useEffect(() => {
     prevSubmittingMutationRef.current = submittingMutation;
@@ -128,12 +145,24 @@ function ProjectPage({
     || !editedProject?.workingDays
   );
 
+  const isTargetBeneficiariesInRange = () => {
+    const target = Number(editedProject?.targetBeneficiaries);
+    return Number.isFinite(target)
+      && target >= MIN_TARGET_BENEFICIARIES
+      && target <= maxTargetBeneficiaries;
+  };
+
   const doesProjectChange = () => {
     if (_.isEqual(project, editedProject)) return false;
     return true;
   };
 
-  const canSave = () => !isMandatoryFieldsEmpty() && doesProjectChange();
+  const canSave = () => !isMandatoryFieldsEmpty()
+    && isTargetBeneficiariesInRange()
+    && doesProjectChange();
+
+  const showTargetBeneficiariesRangeError = Boolean(editedProject?.targetBeneficiaries)
+    && !isTargetBeneficiariesInRange();
 
   const handleSave = () => {
     updateProject(
@@ -198,6 +227,19 @@ function ProjectPage({
 
   return rights.includes(RIGHT_BENEFIT_PLAN_UPDATE) && (
     <div className={classes.page}>
+      {showTargetBeneficiariesRangeError && (
+        <Typography color="error">
+          {formatMessageWithValues(
+            intl,
+            'projectSocialProtection',
+            'project.targetBeneficiaries.outOfRange',
+            {
+              min: MIN_TARGET_BENEFICIARIES,
+              max: maxTargetBeneficiaries,
+            },
+          )}
+        </Typography>
+      )}
       <Form
         module="projectSocialProtection"
         className={classes.form}
@@ -241,6 +283,7 @@ const mapDispatchToProps = (dispatch) => bindActionCreators(
     updateProject,
     deleteProject,
     undoDeleteProject,
+    coreAlert,
     coreConfirm,
     clearConfirm,
     journalize,

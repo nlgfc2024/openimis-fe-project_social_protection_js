@@ -17,6 +17,7 @@ import {
   formatMessageWithValues,
   useModulesManager,
   decodeId,
+  coreAlert,
   journalize,
 } from '@openimis/fe-core';
 import {
@@ -72,7 +73,9 @@ function ProjectEnrollmentDialog({
   isGroup,
   fetchBeneficiaries,
   fetchingBeneficiaries,
+  fetchingEnrolledBeneficiaries,
   enroll,
+  coreAlert: showAlert,
   submittingMutation,
   mutation,
   journalize,
@@ -259,6 +262,31 @@ function ProjectEnrollmentDialog({
   };
 
   const onSave = () => {
+    const targetBeneficiaries = Number(project?.targetBeneficiaries || 0);
+    const assignedCount = Number(project?.assignedBeneficiariesCount || 0);
+    const alreadyEnrolledOfThisType = enrolledBeneficiaries?.length ?? 0;
+    const otherTypeAssigned = Math.max(0, assignedCount - alreadyEnrolledOfThisType);
+    const selectedCount = selectedIds.size;
+    const projectedTotal = otherTypeAssigned + selectedCount;
+
+    if (targetBeneficiaries > 0 && projectedTotal > targetBeneficiaries) {
+      showAlert(
+        translate('projectBeneficiaries.target.validation.title'),
+        formatMessageWithValues(
+          intl,
+          MODULE_NAME,
+          'projectBeneficiaries.target.validation.message',
+          {
+            selected: selectedCount,
+            assigned: otherTypeAssigned,
+            total: projectedTotal,
+            target: targetBeneficiaries,
+          },
+        ),
+      );
+      return;
+    }
+
     enroll(
       {
         projectId: project.id,
@@ -300,21 +328,19 @@ function ProjectEnrollmentDialog({
   });
 
   useEffect(() => {
-    if (enrolledBeneficiaries?.length) {
-      const enrolledIds = new Set(enrolledBeneficiaries.map((b) => b.id));
-      setSelectedIds(enrolledIds);
+    const enrolledIds = new Set((enrolledBeneficiaries || []).map((b) => b.id));
+    setSelectedIds(enrolledIds);
 
-      // Update current page data if it exists
-      if (pageData.length) {
-        const updatedData = pageData.map((row) => ({
-          ...row,
-          tableData: {
-            ...row.tableData,
-            checked: enrolledIds.has(row.id),
-          },
-        }));
-        setPageData(updatedData);
-      }
+    // Update current page data if it exists
+    if (pageData.length) {
+      const updatedData = pageData.map((row) => ({
+        ...row,
+        tableData: {
+          ...row.tableData,
+          checked: enrolledIds.has(row.id),
+        },
+      }));
+      setPageData(updatedData);
     }
   }, [enrolledBeneficiaries]);
 
@@ -355,6 +381,7 @@ function ProjectEnrollmentDialog({
           color="primary"
           autoFocus
           className={classes.saveButton}
+          disabled={fetchingEnrolledBeneficiaries || fetchingBeneficiaries || submittingMutation}
         >
           {translate('projectBeneficiaries.save')}
         </Button>
@@ -372,6 +399,7 @@ const mapStateToPropsBeneficiary = (state) => ({
 const mapDispatchToPropsBeneficiary = (dispatch) => bindActionCreators({
   fetchBeneficiaries,
   enroll: enrollProject,
+  coreAlert,
   journalize,
 }, dispatch);
 
@@ -384,6 +412,7 @@ const mapStateToPropsGroupBeneficiary = (state) => ({
 const mapDispatchToPropsGroupBeneficiary = (dispatch) => bindActionCreators({
   fetchBeneficiaries: fetchGroupBeneficiaries,
   enroll: enrollGroupProject,
+  coreAlert,
   journalize,
 }, dispatch);
 
