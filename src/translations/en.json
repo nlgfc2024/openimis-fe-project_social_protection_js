@@ -2,13 +2,14 @@
   "projects.label": "Projects",
   "projects.searcherResultsTitle": "{projectsTotalCount} Projects",
   "projects.searcherAddAction": "Create Project",
-
+  "project.picker.label": "Projects",
+  "project.picker.placeholder": "Select projects...",
   "project.createPageTitle": "Create Project",
   "project.pageTitle": "Project details",
   "project.loading": "Loading...",
   "project.name": "Name",
   "project.name.alreadyTaken": "The name is already taken",
-  "project.name.autoHint": "Auto-generated on save",
+  "project.name.autoHint": "Name will be auto-generated after selecting Hotspot, Sector, Program, and Known Place",
   "project.hotspot": "Hotspot",
   "project.microCatchment": "Micro-Catchment",
   "project.district": "District",
@@ -92,5 +93,13 @@
   "socialProtection.beneficiary.firstName": "First Name",
   "socialProtection.beneficiary.lastName": "Last Name",
   "socialProtection.beneficiary.dob": "Date of Birth",
-  "socialProtection.groupBeneficiary.code": "Group Code"
+  "socialProtection.groupBeneficiary.code": "Group Code",
+
+  "projectSocialProtection.menu.projects": "Projects",
+  "projectSocialProtection.projects.pageTitle": "Projects",
+  "projectSocialProtection.project.benefitPlan": "Program",
+  "projectSocialProtection.projects.selectProgram.title": "Select Program",
+  "projectSocialProtection.projects.selectProgram.message": "Select the Program that will own the new Project.",
+  "projectSocialProtection.cancel": "Cancel",
+  "projectSocialProtection.continue": "Continue"
 }

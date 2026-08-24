@@ -262,6 +262,7 @@ function ProjectCreatePage({
         canSave={canSave}
         save={handleSave}
         HeadPanel={ProjectHeadPanel}
+        previewProjectName={projectName}
         Panels={[ProjectTabPanel]}
         onActiveTabChange={setActiveTab}
         activeTab={activeTab}
