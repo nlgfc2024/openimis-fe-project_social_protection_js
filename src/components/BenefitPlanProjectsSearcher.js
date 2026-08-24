@@ -213,10 +213,12 @@ function BenefitPlanProjectsSearcher({
   const headers = () => {
     const baseHeaders = [
       ...(standalone ? ['project.benefitPlan'] : []),
+      'project.code',
       'project.name',
       'project.status',
       'project.activity',
       'project.targetBeneficiaries',
+      'project.assignedBeneficiaries',
       'project.workingDays',
       'location.locationType.0',
       'location.locationType.1',
@@ -235,6 +237,7 @@ function BenefitPlanProjectsSearcher({
   };
 
   const exportFields = [
+    'code',
     'name',
     'status',
     'activity.name',
@@ -247,6 +250,7 @@ function BenefitPlanProjectsSearcher({
   ];
 
   const exportFieldsColumns = {
+    code: formatMessage(intl, MODULE_NAME, 'project.code'),
     name: formatMessage(intl, MODULE_NAME, 'project.name'),
     status: formatMessage(intl, MODULE_NAME, 'project.status'),
     activity__name: formatMessage(intl, MODULE_NAME, 'project.activity'),
@@ -263,10 +267,12 @@ function BenefitPlanProjectsSearcher({
       ...(standalone
         ? [(project) => project.benefitPlan?.name ?? '']
         : []),
+      (project) => project.code ?? '',
       (project) => project.name,
       (project) => formatMessage(intl, MODULE_NAME, `project.statusPicker.${project.status}`),
       (project) => project.activity?.name ?? '',
       (project) => project.targetBeneficiaries,
+      (project) => project.assignedBeneficiariesCount ?? 0,
       (project) => project.workingDays,
     ];
 
@@ -319,10 +325,12 @@ function BenefitPlanProjectsSearcher({
 
   const sorts = () => [
     ...(standalone ? [['benefitPlan__name', true]] : []),
+    ['code', true],
     ['name', true],
     ['status', true],
     ['activity', true],
     ['targetBeneficiaries', true],
+    null,
     ['workingDays', true],
     ['location', true],
     ['location', true],
