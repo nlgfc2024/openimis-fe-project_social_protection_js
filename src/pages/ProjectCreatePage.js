@@ -27,6 +27,8 @@ import {
   RIGHT_BENEFIT_PLAN_UPDATE,
   BENEFIT_PLAN_PROJECTS_TAB_VALUE,
   PROJECT_BENEFICIARIES_TAB_VALUE,
+  MIN_TARGET_BENEFICIARIES,
+  getMaxTargetBeneficiaries,
 } from '../constants';
 
 const styles = (theme) => ({
@@ -54,6 +56,7 @@ function ProjectCreatePage({
   projectNameValidationError,
 }) {
   const history = useHistory();
+  const maxTargetBeneficiaries = getMaxTargetBeneficiaries(modulesManager);
   const locationState = history.location?.state;
 
   const benefitPlanIdFromState = locationState?.benefitPlanId;
@@ -180,6 +183,13 @@ function ProjectCreatePage({
     || !editedProject?.workingDays
   );
 
+  const isTargetBeneficiariesInRange = () => {
+    const target = Number(editedProject?.targetBeneficiaries);
+    return Number.isFinite(target)
+      && target >= MIN_TARGET_BENEFICIARIES
+      && target <= maxTargetBeneficiaries;
+  };
+
   const doesProjectChange = () => {
     return Object.keys(editedProject).some((key) => {
       const value = editedProject[key];
@@ -191,10 +201,14 @@ function ProjectCreatePage({
 
   const canSave = () => (
     !isMandatoryFieldsEmpty()
+    && isTargetBeneficiariesInRange()
     && doesProjectChange()
     && projectNameIsValid === true
     && !projectNameIsValidating
   );
+
+  const showTargetBeneficiariesRangeError = Boolean(editedProject?.targetBeneficiaries)
+    && !isTargetBeneficiariesInRange();
 
   const handleSave = () => {
     createProject(
@@ -214,6 +228,19 @@ function ProjectCreatePage({
 
   return rights.includes(RIGHT_BENEFIT_PLAN_UPDATE) && (
     <div className={classes.page}>
+      {showTargetBeneficiariesRangeError && (
+        <Typography color="error">
+          {formatMessageWithValues(
+            intl,
+            'projectSocialProtection',
+            'project.targetBeneficiaries.outOfRange',
+            {
+              min: MIN_TARGET_BENEFICIARIES,
+              max: maxTargetBeneficiaries,
+            },
+          )}
+        </Typography>
+      )}
       {canValidateProjectName && !projectNameIsValidating && projectNameIsValid === false && (
         <Typography color="error">
           {projectNameValidationError || formatMessage(

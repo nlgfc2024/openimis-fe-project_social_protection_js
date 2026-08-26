@@ -6,7 +6,6 @@
   "project.picker.placeholder": "Select projects...",
   "project.createPageTitle": "Create Project",
   "project.pageTitle": "Project details",
-  "project.createPageTitle": "Create Project",
   "project.loading": "Loading...",
   "project.name": "Name",
   "project.name.alreadyTaken": "The name is already taken",
@@ -22,6 +21,8 @@
   "project.status": "Status",
   "project.activity": "Sector",
   "project.targetBeneficiaries": "Target Beneficiaries",
+  "project.targetBeneficiaries.outOfRange": "Target beneficiaries must be between {min} and {max}.",
+  "project.assignedBeneficiariesCount": "Assigned Beneficiaries",
   "project.workingDays": "Working Days",
   "project.location": "Location",
   "project.benefitPlan": "Program",
@@ -68,6 +69,8 @@
   "projectBeneficiaries.timeEntry.mutationLabel": "Updated {n} time entries for project {name}",
   "projectBeneficiaries.timeEntry.validation.title": "Invalid Time Entry",
   "projectBeneficiaries.timeEntry.validation.message": "Percent complete must be between 0 and 100.",
+  "projectBeneficiaries.target.validation.title": "Enrollment Limit Exceeded",
+  "projectBeneficiaries.target.validation.message": "Assigned ({assigned}) + selected ({selected}) beneficiaries would total {total}, exceeding the project target ({target}).",
 
   "projectChangelog.label": "Changelog",
 

@@ -7,6 +7,20 @@ export const EMPTY_STRING = '';
 export const ROWS_PER_PAGE_OPTIONS = [10, 20, 50, 100];
 export const MAX_CODE_LENGTH = 8;
 export const MIN_TARGET_BENEFICIARIES = 5;
+export const DEFAULT_MAX_TARGET_BENEFICIARIES = 200;
+export const MODULE_CONF_NAME = 'fe-project_social_protection';
+
+export const getMaxTargetBeneficiaries = (modulesManager) => {
+  const configuredValue = modulesManager?.getConf(
+    MODULE_CONF_NAME,
+    'maxTargetBeneficiaries',
+    DEFAULT_MAX_TARGET_BENEFICIARIES,
+  );
+  const parsedValue = Number(configuredValue);
+  return Number.isFinite(parsedValue) && parsedValue >= MIN_TARGET_BENEFICIARIES
+    ? parsedValue
+    : DEFAULT_MAX_TARGET_BENEFICIARIES;
+};
 
 // Project rights (owned by project_social_protection BE config).
 export const RIGHT_PROJECT_SEARCH = 209001;
