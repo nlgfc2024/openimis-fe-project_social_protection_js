@@ -6,6 +6,7 @@ export const DEFAULT_PAGE_SIZE = 10;
 export const EMPTY_STRING = '';
 export const ROWS_PER_PAGE_OPTIONS = [10, 20, 50, 100];
 export const MAX_CODE_LENGTH = 8;
+export const MIN_TARGET_BENEFICIARIES = 5;
 
 // Project rights (owned by project_social_protection BE config).
 export const RIGHT_PROJECT_SEARCH = 209001;
