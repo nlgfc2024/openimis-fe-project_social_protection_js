@@ -6,7 +6,7 @@ export const DEFAULT_PAGE_SIZE = 10;
 export const EMPTY_STRING = '';
 export const ROWS_PER_PAGE_OPTIONS = [10, 20, 50, 100];
 export const MAX_CODE_LENGTH = 8;
-export const MIN_TARGET_BENEFICIARIES = 1;
+export const MIN_TARGET_BENEFICIARIES = 5;
 export const DEFAULT_MAX_TARGET_BENEFICIARIES = 200;
 export const MODULE_CONF_NAME = 'fe-project_social_protection';
 
