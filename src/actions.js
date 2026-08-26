@@ -28,7 +28,6 @@ const PROJECT_FULL_PROJECTION = (modulesManager) => [
   'name',
   'status',
   'targetBeneficiaries',
-  'assignedBeneficiariesCount',
   'workingDays',
   'activity {id, name}',
   'location' + modulesManager.getProjection('location.Location.FlatProjection'),
