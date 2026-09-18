@@ -8,8 +8,6 @@ import {
   Select,
   MenuItem,
   Paper,
-  TextField,
-  InputAdornment,
 } from '@material-ui/core';
 import {
   withTheme,
@@ -158,14 +156,13 @@ const getDynamicColumns = (translateFn, customFilters = []) => {
     });
 };
 
-function PercentageEditField({
+function AttendanceEditField({
   value, onChange, columnDef, rowData, onTimeEntryChange, dayKey,
 }) {
-  const numValue = value === undefined || value === null || value === '' ? '' : Number(value);
-  const isInvalid = numValue !== '' && (numValue < 0 || numValue > 100);
+  const normalizedValue = value === 0 || value === 100 ? value : '';
 
   const handleChange = (e) => {
-    const newValue = e.target.value;
+    const newValue = Number(e.target.value);
     onChange(newValue);
 
     const effectiveDayKey = dayKey || columnDef?.dayKey;
@@ -176,20 +173,16 @@ function PercentageEditField({
   };
 
   return (
-    <TextField
-      type="number"
-      value={numValue}
+    <Select
+      value={normalizedValue}
       onChange={handleChange}
-      error={isInvalid}
-      helperText={isInvalid ? '0-100' : ''}
-      placeholder={columnDef?.title}
-      InputProps={{
-        min: 0,
-        max: 100,
-        endAdornment: <InputAdornment position="end">%</InputAdornment>,
-      }}
-      size="small"
-    />
+      displayEmpty
+      fullWidth
+    >
+      <MenuItem value="" disabled>{columnDef?.notRecordedLabel}</MenuItem>
+      <MenuItem value={100}>{columnDef?.presentLabel}</MenuItem>
+      <MenuItem value={0}>{columnDef?.absentLabel}</MenuItem>
+    </Select>
   );
 }
 
@@ -211,26 +204,26 @@ const getWorkDayColumns = (translateFn, onTimeEntryChange, workingDays = 0, maxC
       title: `${translateFn('project.day')} ${dayNumber}`,
       field: `projectTimeEntriesDict.${dayKey}.percentComplete`,
       dayKey,
-      type: 'numeric',
+      presentLabel: translateFn('projectBeneficiaries.present'),
+      absentLabel: translateFn('projectBeneficiaries.absent'),
+      notRecordedLabel: translateFn('projectBeneficiaries.notRecorded'),
       render: (rowData) => {
         const value = rowData.projectTimeEntriesDict?.[dayKey]?.percentComplete;
-        return value !== undefined && value !== null ? `${value}%` : '';
+        if (value === 100) return translateFn('projectBeneficiaries.present');
+        if (value === 0) return translateFn('projectBeneficiaries.absent');
+        return translateFn('projectBeneficiaries.notRecorded');
       },
-      filterComponent: NumberFilter,
       editComponent: (props) => (
         // eslint-disable-next-line react/jsx-props-no-spreading
-        <PercentageEditField {...props} onTimeEntryChange={onTimeEntryChange} dayKey={dayKey} />
-      ),
-      customFilterAndSearch: createNumericFilterFn(
-        (rowData) => rowData.projectTimeEntriesDict?.[dayKey]?.percentComplete,
+        <AttendanceEditField {...props} onTimeEntryChange={onTimeEntryChange} dayKey={dayKey} />
       ),
       customSort: (a, b) => {
-        const aVal = a.projectTimeEntriesDict?.[dayKey]?.percentComplete ?? 0;
-        const bVal = b.projectTimeEntriesDict?.[dayKey]?.percentComplete ?? 0;
+        const aVal = a.projectTimeEntriesDict?.[dayKey]?.percentComplete ?? -1;
+        const bVal = b.projectTimeEntriesDict?.[dayKey]?.percentComplete ?? -1;
         return aVal - bVal;
       },
       align: 'center',
-      width: '100px',
+      width: '120px',
     };
   });
 };
