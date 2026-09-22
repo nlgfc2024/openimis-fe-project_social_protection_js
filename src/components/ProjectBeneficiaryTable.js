@@ -58,6 +58,8 @@ function BaseProjectBeneficiaryTable({
   const materialTableRef = useRef();
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [pendingChanges, setPendingChanges] = useState({});
+  const pendingChangesRef = useRef({});
+  const attendanceSnapshotRef = useRef({});
 
   const dispatch = useDispatch();
 
@@ -79,10 +81,16 @@ function BaseProjectBeneficiaryTable({
         },
       };
 
-      return {
+      const nextChanges = {
         ...prev,
         [enrollmentId]: { oldData, newData },
       };
+
+      // The table toolbar actions are memoized by MaterialTable. Keep a live
+      // reference so the save action always reads the latest accumulated edits
+      // instead of the empty state captured when the toolbar was created.
+      pendingChangesRef.current = nextChanges;
+      return nextChanges;
     });
   }, []);
 
@@ -174,19 +182,15 @@ function BaseProjectBeneficiaryTable({
     const isEditing = materialTable.dataManager.bulkEditOpen;
 
     if (isEditing) {
-      const bulkEditRows = Object.values(materialTable.dataManager.bulkEditChangedRows || {});
-      const processedIds = new Set(bulkEditRows.map(({ newData }) => newData.enrollmentId));
-
-      // Merge MaterialTable's tracked changes from bulkEditRows
-      // with pendingChanges tracking rows edited the filtered out
-      const pendingRows = Object.values(pendingChanges)
-        .filter(({ newData }) => !processedIds.has(newData.enrollmentId));
-      const allChangedRows = [...bulkEditRows, ...pendingRows];
-
       const timeEntries = [];
-      allChangedRows.forEach(({ newData, oldData }) => {
+      // Read the rows directly from MaterialTable. These are the values visible
+      // in the editor and include every cell changed during the edit session.
+      // bulkEditChangedRows only keeps the latest change for a row, while React
+      // callbacks can be stale when invoked from memoized toolbar actions.
+      const editedRows = materialTable.dataManager.data || [];
+      editedRows.forEach((newData) => {
         const newEntries = newData.projectTimeEntriesDict || {};
-        const oldEntries = oldData.projectTimeEntriesDict || {};
+        const oldEntries = attendanceSnapshotRef.current[newData.enrollmentId] || {};
 
         const allDayKeys = new Set([
           ...Object.keys(newEntries).filter((k) => k.startsWith('day')),
@@ -199,9 +203,12 @@ function BaseProjectBeneficiaryTable({
           const oldPercent = oldEntry?.percentComplete;
           const newPercent = newEntry?.percentComplete;
 
-          const normalizedNew = newPercent === '' || newPercent === undefined || newPercent === null
-            ? 0
-            : Number(newPercent);
+          const isBlank = newPercent === '' || newPercent === undefined || newPercent === null;
+
+          // A missing entry means "not recorded" and must not be converted to absence.
+          if (isBlank) return;
+
+          const normalizedNew = Number(newPercent);
 
           if (oldPercent !== normalizedNew) {
             timeEntries.push({
@@ -215,7 +222,7 @@ function BaseProjectBeneficiaryTable({
       });
 
       const hasInvalidEntries = timeEntries.some(
-        (e) => e.percentComplete < 0 || e.percentComplete > 100,
+        (e) => ![0, 100].includes(e.percentComplete),
       );
 
       if (hasInvalidEntries) {
@@ -241,6 +248,8 @@ function BaseProjectBeneficiaryTable({
         dispatch(action);
       }
 
+      pendingChangesRef.current = {};
+      attendanceSnapshotRef.current = {};
       setPendingChanges({});
     }
 
@@ -252,6 +261,19 @@ function BaseProjectBeneficiaryTable({
     setBulkEditOpen(newState);
 
     if (newState) {
+      // Preserve immutable values from the beginning of the edit session.
+      // MaterialTable updates nested row fields in place, so comparing against
+      // the Redux rows after editing can otherwise hide genuine changes.
+      attendanceSnapshotRef.current = (materialTable.dataManager.data || []).reduce((snapshot, row) => ({
+        ...snapshot,
+        [row.enrollmentId]: Object.entries(row.projectTimeEntriesDict || {}).reduce(
+          (entries, [dayKey, entry]) => ({
+            ...entries,
+            [dayKey]: { ...entry },
+          }),
+          {},
+        ),
+      }), {});
       setTimeout(() => {
         scrollToFirstWorkingDayColumn();
       }, 300);
@@ -275,6 +297,8 @@ function BaseProjectBeneficiaryTable({
       ...materialTable.dataManager.getRenderState(),
     });
     setBulkEditOpen(false);
+    pendingChangesRef.current = {};
+    attendanceSnapshotRef.current = {};
     setPendingChanges({});
   };
 
