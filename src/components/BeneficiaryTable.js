@@ -160,12 +160,16 @@ function AttendanceEditField({
   value, onChange, columnDef, rowData, onTimeEntryChange, dayKey,
 }) {
   const normalizedValue = value === 0 || value === 100 ? value : '';
+  const effectiveDayKey = dayKey || columnDef?.dayKey;
+  const currentEntry = rowData?.projectTimeEntriesDict?.[effectiveDayKey];
+  const canRestoreNotRecorded = !currentEntry?.id;
 
   const handleChange = (e) => {
-    const newValue = Number(e.target.value);
+    // Keep an empty selection empty. Number('') is 0 and would silently turn
+    // a restored "Not recorded" value into an absence.
+    const newValue = e.target.value === '' ? '' : Number(e.target.value);
     onChange(newValue);
 
-    const effectiveDayKey = dayKey || columnDef?.dayKey;
     if (onTimeEntryChange && rowData?.enrollmentId && effectiveDayKey) {
       const originalEntry = rowData.projectTimeEntriesDict?.[effectiveDayKey];
       onTimeEntryChange(rowData.enrollmentId, effectiveDayKey, newValue, originalEntry, rowData);
@@ -179,7 +183,7 @@ function AttendanceEditField({
       displayEmpty
       fullWidth
     >
-      <MenuItem value="" disabled>{columnDef?.notRecordedLabel}</MenuItem>
+      <MenuItem value="" disabled={!canRestoreNotRecorded}>{columnDef?.notRecordedLabel}</MenuItem>
       <MenuItem value={100}>{columnDef?.presentLabel}</MenuItem>
       <MenuItem value={0}>{columnDef?.absentLabel}</MenuItem>
     </Select>
