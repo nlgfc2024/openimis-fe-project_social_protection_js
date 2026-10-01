@@ -393,6 +393,7 @@ function BenefitPlanProjectsSearcher({
       label: formatMessage(intl, MODULE_NAME, 'projects.searcherAddAction'),
       icon: <AddIcon />,
       authorized: rights.includes(RIGHT_PROJECT_CREATE),
+      variant: "contained",
       onClick: onAdd,
     },
   ];
