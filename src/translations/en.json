@@ -63,6 +63,8 @@
   "projectBeneficiaries.filterPlaceholder": "Filter...",
   "projectBeneficiaries.activeSelected": "{n} active beneficiaries selected",
   "projectBeneficiaries.enrolled": "{n} Beneficiaries Assigned",
+  "projectBeneficiaries.formNumber": "Form Number",
+  "projectBeneficiaries.nationalId": "National ID",
   "projectBeneficiaries.enterTime": "Record Attendance",
   "projectBeneficiaries.saveTime": "Save Attendance",
   "projectBeneficiaries.cancelEdit": "Cancel",

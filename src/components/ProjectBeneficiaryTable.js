@@ -160,11 +160,10 @@ function BaseProjectBeneficiaryTable({
     if (!scrollContainer) return;
 
     const headerCells = scrollContainer.querySelectorAll('thead th');
-    const firstDayTitle = `${formatMessage(intl, MODULE_NAME, 'project.day')} 1`;
-    const targetHeader = Array.from(headerCells).find((th) => th.textContent.includes(firstDayTitle));
+    const targetHeader = Array.from(headerCells).find((th) => th.textContent.trim().startsWith('1'));
 
     if (targetHeader) {
-      const numFrozenCols = isGroup ? 3 : 2;
+      const numFrozenCols = 4;
       const frozenColumns = Array.from(headerCells).slice(0, numFrozenCols);
       const frozenWidth = frozenColumns.reduce((sum, th) => sum + th.offsetWidth, 0);
 
@@ -344,6 +343,7 @@ function BaseProjectBeneficiaryTable({
           workingDays={project.workingDays}
           tableRef={materialTableRef}
           onTimeEntryChange={handleTimeEntryChange}
+          attendanceMode
         />
         <EnrollmentDialogComponent
           open={enrollmentDialogOpen}
