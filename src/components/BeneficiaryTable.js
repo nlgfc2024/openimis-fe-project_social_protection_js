@@ -5,6 +5,7 @@ import { injectIntl } from 'react-intl';
 import MaterialTable from 'material-table';
 import _ from 'lodash';
 import {
+  Checkbox,
   Select,
   MenuItem,
   Paper,
@@ -159,15 +160,12 @@ const getDynamicColumns = (translateFn, customFilters = []) => {
 function AttendanceEditField({
   value, onChange, columnDef, rowData, onTimeEntryChange, dayKey,
 }) {
-  const normalizedValue = value === 0 || value === 100 ? value : '';
   const effectiveDayKey = dayKey || columnDef?.dayKey;
-  const currentEntry = rowData?.projectTimeEntriesDict?.[effectiveDayKey];
-  const canRestoreNotRecorded = !currentEntry?.id;
 
-  const handleChange = (e) => {
-    // Keep an empty selection empty. Number('') is 0 and would silently turn
-    // a restored "Not recorded" value into an absence.
-    const newValue = e.target.value === '' ? '' : Number(e.target.value);
+  const handleChange = ({ target: { checked } }) => {
+    // The empty state remains untouched until a user clicks a cell. This keeps
+    // an unrecorded day distinct from an explicitly recorded absence.
+    const newValue = checked ? 100 : 0;
     onChange(newValue);
 
     if (onTimeEntryChange && rowData?.enrollmentId && effectiveDayKey) {
@@ -177,16 +175,12 @@ function AttendanceEditField({
   };
 
   return (
-    <Select
-      value={normalizedValue}
+    <Checkbox
+      checked={value === 100}
+      color="primary"
+      inputProps={{ 'aria-label': columnDef?.title }}
       onChange={handleChange}
-      displayEmpty
-      fullWidth
-    >
-      <MenuItem value="" disabled={!canRestoreNotRecorded}>{columnDef?.notRecordedLabel}</MenuItem>
-      <MenuItem value={100}>{columnDef?.presentLabel}</MenuItem>
-      <MenuItem value={0}>{columnDef?.absentLabel}</MenuItem>
-    </Select>
+    />
   );
 }
 
@@ -198,14 +192,21 @@ function TableContainer({ children, className }) {
   );
 }
 
-const getWorkDayColumns = (translateFn, onTimeEntryChange, workingDays = 0, maxColumns = DEFAULT_MAX_WORKING_DAYS) => {
+const getWorkDayColumns = (
+  translateFn,
+  onTimeEntryChange,
+  workingDays = 0,
+  maxColumns = DEFAULT_MAX_WORKING_DAYS,
+  attendanceMode = false,
+  theme,
+) => {
   if (!workingDays) return [];
   const cappedDays = Math.min(workingDays, maxColumns);
   return Array.from({ length: cappedDays }, (_, i) => {
     const dayNumber = i + 1;
     const dayKey = `day${dayNumber}`;
     return {
-      title: `${translateFn('project.day')} ${dayNumber}`,
+      title: attendanceMode ? String(dayNumber) : `${translateFn('project.day')} ${dayNumber}`,
       field: `projectTimeEntriesDict.${dayKey}.percentComplete`,
       dayKey,
       presentLabel: translateFn('projectBeneficiaries.present'),
@@ -213,6 +214,16 @@ const getWorkDayColumns = (translateFn, onTimeEntryChange, workingDays = 0, maxC
       notRecordedLabel: translateFn('projectBeneficiaries.notRecorded'),
       render: (rowData) => {
         const value = rowData.projectTimeEntriesDict?.[dayKey]?.percentComplete;
+        if (attendanceMode) {
+          return (
+            <Checkbox
+              checked={value === 100}
+              color="primary"
+              disabled
+              style={{ color: value === 100 ? theme.palette.primary.main : undefined }}
+            />
+          );
+        }
         if (value === 100) return translateFn('projectBeneficiaries.present');
         if (value === 0) return translateFn('projectBeneficiaries.absent');
         return translateFn('projectBeneficiaries.notRecorded');
@@ -227,7 +238,19 @@ const getWorkDayColumns = (translateFn, onTimeEntryChange, workingDays = 0, maxC
         return aVal - bVal;
       },
       align: 'center',
-      width: '120px',
+      width: attendanceMode ? '48px' : '120px',
+      ...(attendanceMode && {
+        headerStyle: {
+          borderLeft: `1px solid ${theme.palette.primary.dark}`,
+          padding: 0,
+          textAlign: 'center',
+        },
+        cellStyle: {
+          borderLeft: `1px solid ${theme.palette.divider}`,
+          padding: 0,
+          textAlign: 'center',
+        },
+      }),
     };
   });
 };
@@ -248,6 +271,7 @@ function BeneficiaryTable({
   tableRef,
   classes,
   onTimeEntryChange,
+  attendanceMode = false,
 }) {
   const nameDoBFieldPrefix = isGroup ? 'group.head' : 'individual';
   const locationFieldPrefix = isGroup ? 'group' : 'individual';
@@ -347,7 +371,15 @@ function BeneficiaryTable({
   });
 
   const columns = useMemo(() => {
-    const additionalColumns = isGroup ? [
+    const additionalColumns = attendanceMode ? [
+      {
+        title: translateRef.current('projectBeneficiaries.formNumber'),
+        field: isGroup ? 'group.code' : 'jsonExt.form_number',
+        editable: 'never',
+        defaultSort: 'asc',
+        render: (rowData) => (isGroup ? rowData.group?.code : rowData.jsonExt?.form_number) || '',
+      },
+    ] : isGroup ? [
       {
         title: translateRef.current('socialProtection.groupBeneficiary.code'),
         field: 'group.code',
@@ -355,7 +387,14 @@ function BeneficiaryTable({
         defaultSort: 'asc',
       },
     ] : [];
-    const workDayColumns = getWorkDayColumns(translateRef.current, onTimeEntryChange, workingDays, maxWorkingDays);
+    const workDayColumns = getWorkDayColumns(
+      translateRef.current,
+      onTimeEntryChange,
+      workingDays,
+      maxWorkingDays,
+      attendanceMode,
+      theme,
+    );
     const allColumns = [
       ...additionalColumns,
       {
@@ -371,6 +410,12 @@ function BeneficiaryTable({
         ...(!isGroup && { defaultSort: 'asc' }),
         ...(isGroup && { orderField: 'head_last_name' }),
       },
+      ...(attendanceMode ? [{
+        title: translateRef.current('projectBeneficiaries.nationalId'),
+        field: 'jsonExt.national_id',
+        editable: 'never',
+        render: (rowData) => rowData.jsonExt?.national_id || rowData.jsonExt?.nationalId || '',
+      }] : []),
       {
         title: translateRef.current('socialProtection.beneficiary.dob'),
         field: `${nameDoBFieldPrefix}.dob`,
@@ -407,12 +452,12 @@ function BeneficiaryTable({
 
     return allColumns.map((c) => ({
       ...c,
-      width: typeof c.field === 'string' && c.field.includes('email') ? '200px' : '140px',
+      width: c.width || (typeof c.field === 'string' && c.field.includes('email') ? '200px' : '140px'),
       tableData: { filterValue: initialFiltersRef.current[c.title] || '' },
     }));
   }, [
     isGroup, nameDoBFieldPrefix, locationFieldPrefix,
-    dynamicColumns, workingDays, onTimeEntryChange, maxWorkingDays,
+    dynamicColumns, workingDays, onTimeEntryChange, maxWorkingDays, attendanceMode, theme,
   ]);
 
   const isSelectable = !!onSelectionChange;
@@ -443,7 +488,7 @@ function BeneficiaryTable({
             color: 'primary',
           },
           search: true,
-          filtering: true,
+          filtering: !attendanceMode,
           paging: true,
           pageSize: appliedPageSize || DEFAULT_PAGE_SIZE,
           pageSizeOptions: [10, 50, 100],
@@ -451,24 +496,30 @@ function BeneficiaryTable({
           headerStyle: {
             padding: cellPadding,
             fontWeight: 500,
-            color: theme.palette.primary.main,
+            color: attendanceMode ? theme.palette.primary.contrastText : theme.palette.primary.main,
+            backgroundColor: attendanceMode ? theme.palette.primary.main : undefined,
+            whiteSpace: 'nowrap',
           },
           cellStyle: {
             padding: cellPadding,
             fontWeight: 400,
             color: theme.palette.primary.main,
+            whiteSpace: 'nowrap',
           },
           filterCellStyle: {
             padding: cellPadding,
             color: theme.palette.primary.main,
           },
-          rowStyle: {
-            height: '42px',
-          },
+          rowStyle: (rowData, index) => ({
+            height: attendanceMode ? '40px' : '42px',
+            backgroundColor: attendanceMode && index % 2 === 1
+              ? theme.palette.action.hover
+              : undefined,
+          }),
           doubleHorizontalScroll: false,
           tableLayout: 'fixed',
           emptyRowsWhenPaging: false,
-          fixedColumns: { left: isGroup ? 3 : 2, right: 0 },
+          fixedColumns: { left: attendanceMode ? 4 : (isGroup ? 3 : 2), right: 0 },
           actionsColumnIndex: -1,
         }}
         localization={{
