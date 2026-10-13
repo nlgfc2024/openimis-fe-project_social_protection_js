@@ -233,7 +233,8 @@ function AttendanceEditField({
   const handleChange = () => {
     // The empty state remains untouched until a user clicks a cell. This keeps
     // an unrecorded day distinct from an explicitly recorded absence.
-    const newValue = attendanceState(value) === 'present' ? 0 : 100;
+    const currentState = attendanceState(value);
+    const newValue = currentState === 'notRecorded' ? 100 : currentState === 'present' ? 0 : undefined;
     onChange(newValue);
 
     if (onTimeEntryChange && rowData?.enrollmentId && effectiveDayKey) {

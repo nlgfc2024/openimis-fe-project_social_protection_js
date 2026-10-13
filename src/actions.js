@@ -287,7 +287,11 @@ function formatTimeEntriesGQL(timeEntries) {
     }
     fields.push(`enrollmentId: "${entry.enrollmentId}"`);
     fields.push(`dayNumber: ${entry.dayNumber}`);
-    fields.push(`percentComplete: ${entry.percentComplete}`);
+    if (entry.clear) {
+      fields.push('clear: true');
+    } else {
+      fields.push(`percentComplete: ${entry.percentComplete}`);
+    }
     return `{ ${fields.join(', ')} }`;
   });
   return `[${formatted.join(', ')}]`;

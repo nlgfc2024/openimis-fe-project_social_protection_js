@@ -204,8 +204,20 @@ function BaseProjectBeneficiaryTable({
 
           const isBlank = newPercent === '' || newPercent === undefined || newPercent === null;
 
-          // A missing entry means "not recorded" and must not be converted to absence.
-          if (isBlank) return;
+          // A missing entry means "not recorded".  Persist a clear operation
+          // only when an attendance entry already exists; a newly created blank
+          // cell has nothing to save.
+          if (isBlank) {
+            if (oldEntry?.id) {
+              timeEntries.push({
+                id: oldEntry.id,
+                enrollmentId: newData.enrollmentId,
+                dayNumber: parseInt(dayKey.replace('day', ''), 10),
+                clear: true,
+              });
+            }
+            return;
+          }
 
           const normalizedNew = Number(newPercent);
 
@@ -221,7 +233,7 @@ function BaseProjectBeneficiaryTable({
       });
 
       const hasInvalidEntries = timeEntries.some(
-        (e) => ![0, 100].includes(e.percentComplete),
+        (e) => !e.clear && ![0, 100].includes(e.percentComplete),
       );
 
       if (hasInvalidEntries) {
