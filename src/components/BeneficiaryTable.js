@@ -45,11 +45,34 @@ const HIDDEN_DYNAMIC_FIELDS = new Set([
   'validation_notes',
   'disability',
   'marital_status',
+  'able_bodied',
+  'chronic_illness',
+  'educated_level',
+  'beneficiary_data_source',
+  'number_of_children',
+  'number_of_elderly',
+  'email',
+  'group_village_head_code',
+  'group_village_head_name',
+  'traditional_authority_code',
+  'traditional_authority_name',
+  'location_code',
+  'location_name',
+  'recipient_info',
+  'last_verified_date',
 ]);
 
 const isHiddenDynamicField = (field) => (
-  HIDDEN_DYNAMIC_FIELDS.has(field) || field.startsWith('business_')
+  HIDDEN_DYNAMIC_FIELDS.has(field)
+  || field.startsWith('business_')
+  || (field.startsWith('validation_') && field !== 'validation_status')
 );
+
+const formatFitForWork = (value, translateFn) => {
+  if ([1, '1', true, 'true', 'yes', 'YES'].includes(value)) return translateFn('common.true');
+  if ([0, '0', false, 'false', 'no', 'NO'].includes(value)) return translateFn('common.false');
+  return value === null || value === undefined ? '' : String(value);
+};
 
 const createNumericFilterFn = (getValue) => (filter, rowData) => {
   const value = getValue(rowData);
@@ -113,6 +136,10 @@ const getDynamicColumns = (translateFn, customFilters = []) => {
         return String(value).toLowerCase().includes(term.toLowerCase());
       };
       let filterComponent;
+
+      if (field === 'fit_for_work') {
+        renderFn = (rowData) => formatFitForWork(rowData.jsonExt?.[field], translateFn);
+      }
 
       switch (type) {
         case 'boolean':
