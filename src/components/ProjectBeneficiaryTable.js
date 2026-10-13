@@ -94,6 +94,15 @@ function BaseProjectBeneficiaryTable({
     });
   }, []);
 
+  const handleMarkAllPresent = useCallback((dayKey) => {
+    const rows = materialTableRef.current?.dataManager?.data || [];
+    rows.forEach((row) => {
+      const originalEntry = attendanceSnapshotRef.current[row.enrollmentId]?.[dayKey]
+        || row.projectTimeEntriesDict?.[dayKey];
+      handleTimeEntryChange(row.enrollmentId, dayKey, 100, originalEntry, row);
+    });
+  }, [handleTimeEntryChange]);
+
   const mergedBeneficiaries = useMemo(() => (beneficiaries || []).map((row) => {
     const changes = pendingChanges[row.enrollmentId];
     if (!changes?.newData) return row;
@@ -343,7 +352,9 @@ function BaseProjectBeneficiaryTable({
           workingDays={project.workingDays}
           tableRef={materialTableRef}
           onTimeEntryChange={handleTimeEntryChange}
+          onMarkAllPresent={handleMarkAllPresent}
           attendanceMode
+          attendanceEditing={bulkEditOpen}
         />
         <EnrollmentDialogComponent
           open={enrollmentDialogOpen}
