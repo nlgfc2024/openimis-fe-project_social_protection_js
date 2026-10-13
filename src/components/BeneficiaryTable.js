@@ -54,6 +54,7 @@ const HIDDEN_DYNAMIC_FIELDS = new Set([
   'email',
   'ubr_id',
   'national_id_type',
+  'validation_status',
   'group_village_head_code',
   'group_village_head_name',
   'traditional_authority_code',
