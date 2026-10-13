@@ -358,6 +358,24 @@ function BeneficiaryTable({
     getDynamicColumns(translateRef.current, jsonExtFilters)
   ), [jsonExtFilters]);
 
+  // Project attendance rows are fetched in batches and may arrive in the
+  // database's default order. Keep the displayed individual list predictable
+  // regardless of the backend ordering.
+  const sortedRows = useMemo(() => {
+    if (!attendanceMode || isGroup || !Array.isArray(allRows)) return allRows;
+
+    return [...allRows].sort((left, right) => {
+      const firstName = left.individual?.firstName || '';
+      const otherFirstName = right.individual?.firstName || '';
+      const firstNameOrder = firstName.localeCompare(otherFirstName, undefined, { sensitivity: 'base' });
+      if (firstNameOrder !== 0) return firstNameOrder;
+
+      return (left.individual?.lastName || '').localeCompare(
+        right.individual?.lastName || '', undefined, { sensitivity: 'base' },
+      );
+    });
+  }, [allRows, attendanceMode, isGroup]);
+
   useEffect(() => {
     if (appliedFilters) {
       initialFiltersRef.current = appliedFilters;
@@ -545,7 +563,7 @@ function BeneficiaryTable({
         components={tableComponents}
         title={tableTitle}
         columns={columns}
-        data={onQueryChange || allRows}
+        data={onQueryChange || sortedRows}
         isLoading={fetchingBeneficiaries}
         options={{
           selection: isSelectable,
