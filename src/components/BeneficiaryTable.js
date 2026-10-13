@@ -442,7 +442,6 @@ function BeneficiaryTable({
         title: translateRef.current('projectBeneficiaries.formNumber'),
         field: isGroup ? 'group.code' : 'jsonExt.form_number',
         editable: 'never',
-        defaultSort: 'asc',
         render: (rowData) => (isGroup ? rowData.group?.code : rowData.jsonExt?.form_number) || '',
       },
     ] : isGroup ? [
