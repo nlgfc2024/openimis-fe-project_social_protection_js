@@ -227,13 +227,24 @@ function reducer(
           projectTimeEntriesDict,
         };
       });
+      const projectBeneficiaries = (action.meta?.isBatch
+        ? [...state.projectBeneficiaries, ...parsedBeneficiaries]
+        : parsedBeneficiaries
+      ).sort((left, right) => {
+        const firstNameOrder = (left.individual?.firstName || '').localeCompare(
+          right.individual?.firstName || '', undefined, { sensitivity: 'base' },
+        );
+        if (firstNameOrder !== 0) return firstNameOrder;
+
+        return (left.individual?.lastName || '').localeCompare(
+          right.individual?.lastName || '', undefined, { sensitivity: 'base' },
+        );
+      });
       return {
         ...state,
         fetchingProjectBeneficiaries: false,
         fetchedProjectBeneficiaries: true,
-        projectBeneficiaries: action.meta?.isBatch
-          ? [...state.projectBeneficiaries, ...parsedBeneficiaries]
-          : parsedBeneficiaries,
+        projectBeneficiaries,
         projectBeneficiariesPageInfo: pageInfo(action.payload.data.beneficiaryProjectEnrollment),
         projectBeneficiariesTotalCount: action.payload.data.beneficiaryProjectEnrollment
           ? action.payload.data.beneficiaryProjectEnrollment.totalCount

@@ -376,6 +376,15 @@ function BeneficiaryTable({
     });
   }, [allRows, attendanceMode, isGroup]);
 
+  // MaterialTable keeps an internal copy of its initial data. Re-key the
+  // attendance table once the fetched beneficiary set changes so it receives
+  // the sorted list rather than retaining the pre-fetch row order.
+  const attendanceTableKey = useMemo(() => (
+    attendanceMode && Array.isArray(sortedRows)
+      ? `attendance-${sortedRows.map((row) => row.id || row.enrollmentId).join('-')}`
+      : undefined
+  ), [attendanceMode, sortedRows]);
+
   useEffect(() => {
     if (appliedFilters) {
       initialFiltersRef.current = appliedFilters;
@@ -543,6 +552,22 @@ function BeneficiaryTable({
     dynamicColumns, workingDays, onTimeEntryChange, maxWorkingDays, attendanceMode, theme,
   ]);
 
+  const defaultSortSignature = useRef();
+  useEffect(() => {
+    if (!attendanceMode || !Array.isArray(sortedRows) || sortedRows.length === 0) return;
+
+    const signature = sortedRows.map((row) => row.id || row.enrollmentId).join('-');
+    if (defaultSortSignature.current === signature) return;
+
+    const materialTable = tableRef?.current;
+    const firstNameColumn = columns.findIndex((column) => column.field === `${nameDoBFieldPrefix}.firstName`);
+    if (!materialTable?.dataManager || firstNameColumn < 0) return;
+
+    materialTable.dataManager.changeOrder(firstNameColumn, 'asc');
+    materialTable.setState(materialTable.dataManager.getRenderState());
+    defaultSortSignature.current = signature;
+  }, [attendanceMode, sortedRows, tableRef, columns, nameDoBFieldPrefix]);
+
   const isSelectable = !!onSelectionChange;
 
   const cellPadding = isSelectable ? '0' : DEFAULT_CELL_PADDING;
@@ -560,6 +585,7 @@ function BeneficiaryTable({
   return (
     <ThemeProvider theme={tableTheme}>
       <MaterialTable
+        key={attendanceTableKey}
         components={tableComponents}
         title={tableTitle}
         columns={columns}
