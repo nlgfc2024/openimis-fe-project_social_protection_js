@@ -71,7 +71,6 @@
   "projectBeneficiaries.present": "Yes",
   "projectBeneficiaries.absent": "No",
   "projectBeneficiaries.notRecorded": "Not recorded",
-  "projectBeneficiaries.markAllPresent": "Mark all beneficiaries present",
   "projectBeneficiaries.timeEntry.mutationLabel": "Updated {n} attendance entries for project {name}",
   "projectBeneficiaries.timeEntry.validation.title": "Invalid Attendance Entry",
   "projectBeneficiaries.timeEntry.validation.message": "Select Yes or No.",

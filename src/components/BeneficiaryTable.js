@@ -9,13 +9,10 @@ import {
   Select,
   MenuItem,
   Paper,
-  IconButton,
-  Tooltip,
 } from '@material-ui/core';
 import CheckBoxIcon from '@material-ui/icons/CheckBox';
 import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank';
 import IndeterminateCheckBoxIcon from '@material-ui/icons/IndeterminateCheckBox';
-import DoneAllIcon from '@material-ui/icons/DoneAll';
 import {
   withTheme,
   withStyles,
@@ -265,29 +262,6 @@ function TableContainer({ children, className }) {
   );
 }
 
-function AttendanceDayHeader({ dayNumber, onMarkAllPresent, title }) {
-  if (!onMarkAllPresent) return String(dayNumber);
-
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-      {dayNumber}
-      <Tooltip title={title}>
-        <IconButton
-          size="small"
-          aria-label={title}
-          style={{ color: 'inherit', padding: 1 }}
-          onClick={(event) => {
-            event.stopPropagation();
-            onMarkAllPresent();
-          }}
-        >
-          <DoneAllIcon style={{ fontSize: 16 }} />
-        </IconButton>
-      </Tooltip>
-    </span>
-  );
-}
-
 const getWorkDayColumns = (
   translateFn,
   onTimeEntryChange,
@@ -295,8 +269,6 @@ const getWorkDayColumns = (
   maxColumns = DEFAULT_MAX_WORKING_DAYS,
   attendanceMode = false,
   theme,
-  attendanceEditing = false,
-  onMarkAllPresent,
 ) => {
   if (!workingDays) return [];
   const cappedDays = Math.min(workingDays, maxColumns);
@@ -304,13 +276,7 @@ const getWorkDayColumns = (
     const dayNumber = i + 1;
     const dayKey = `day${dayNumber}`;
     return {
-      title: attendanceMode ? (
-        <AttendanceDayHeader
-          dayNumber={dayNumber}
-          onMarkAllPresent={attendanceEditing ? () => onMarkAllPresent(dayKey) : null}
-          title={translateFn('projectBeneficiaries.markAllPresent')}
-        />
-      ) : `${translateFn('project.day')} ${dayNumber}`,
+      title: attendanceMode ? String(dayNumber) : `${translateFn('project.day')} ${dayNumber}`,
       field: `projectTimeEntriesDict.${dayKey}.percentComplete`,
       dayKey,
       presentLabel: translateFn('projectBeneficiaries.present'),
@@ -371,8 +337,6 @@ function BeneficiaryTable({
   classes,
   onTimeEntryChange,
   attendanceMode = false,
-  attendanceEditing = false,
-  onMarkAllPresent,
 }) {
   const nameDoBFieldPrefix = isGroup ? 'group.head' : 'individual';
   const locationFieldPrefix = isGroup ? 'group' : 'individual';
@@ -495,8 +459,6 @@ function BeneficiaryTable({
       maxWorkingDays,
       attendanceMode,
       theme,
-      attendanceEditing,
-      onMarkAllPresent,
     );
     const allColumns = [
       ...additionalColumns,
@@ -561,7 +523,6 @@ function BeneficiaryTable({
   }, [
     isGroup, nameDoBFieldPrefix, locationFieldPrefix,
     dynamicColumns, workingDays, onTimeEntryChange, maxWorkingDays, attendanceMode, theme,
-    attendanceEditing, onMarkAllPresent,
   ]);
 
   const isSelectable = !!onSelectionChange;
