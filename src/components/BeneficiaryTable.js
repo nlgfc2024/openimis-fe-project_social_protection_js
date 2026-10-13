@@ -35,6 +35,22 @@ import NumberFilter from './MaterialTableNumberFilter';
 
 const DEFAULT_CELL_PADDING = '0 0 0 10px';
 
+// These fields are used during household validation and eligibility assessment,
+// but are not needed when reviewing beneficiaries already assigned to a project.
+const HIDDEN_DYNAMIC_FIELDS = new Set([
+  'household_pmt_score',
+  'business_period',
+  'type_of_business',
+  'business_experience',
+  'validation_notes',
+  'disability',
+  'marital_status',
+]);
+
+const isHiddenDynamicField = (field) => (
+  HIDDEN_DYNAMIC_FIELDS.has(field) || field.startsWith('business_')
+);
+
 const createNumericFilterFn = (getValue) => (filter, rowData) => {
   const value = getValue(rowData);
   const numValue = (value === null || value === undefined) ? 0 : Number(value);
@@ -84,6 +100,7 @@ const getDynamicColumns = (translateFn, customFilters = []) => {
   if (!customFilters || !customFilters.length) return [];
 
   return customFilters
+    .filter(({ field }) => !isHiddenDynamicField(field))
     .map((filter) => {
       const { field, type } = filter;
       let renderFn = (rowData) => {
