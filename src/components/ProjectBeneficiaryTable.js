@@ -43,7 +43,7 @@ function BaseProjectBeneficiaryTable({
   submittingMutation,
   coreAlert: showAlert,
 }) {
-  const orderBy = isGroup ? 'orderBy: ["group__code"]' : 'orderBy: ["individual__last_name", "individual__first_name"]';
+  const orderBy = isGroup ? 'orderBy: ["group__code"]' : 'orderBy: ["individual__first_name", "individual__last_name"]';
   const actionType = isGroup
     ? ACTION_TYPE.SEARCH_PROJECT_GROUP_BENEFICIARIES
     : ACTION_TYPE.SEARCH_PROJECT_BENEFICIARIES;

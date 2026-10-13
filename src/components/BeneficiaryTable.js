@@ -467,13 +467,13 @@ function BeneficiaryTable({
         title: translateRef.current('socialProtection.beneficiary.firstName'),
         field: `${nameDoBFieldPrefix}.firstName`,
         editable: 'never',
+        ...(!isGroup && { defaultSort: 'asc' }),
         ...(isGroup && { orderField: 'head_first_name' }),
       },
       {
         title: translateRef.current('socialProtection.beneficiary.lastName'),
         field: `${nameDoBFieldPrefix}.lastName`,
         editable: 'never',
-        ...(!isGroup && { defaultSort: 'asc' }),
         ...(isGroup && { orderField: 'head_last_name' }),
       },
       ...(attendanceMode ? [{

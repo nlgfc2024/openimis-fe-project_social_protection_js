@@ -25,7 +25,7 @@ const projectBeneficiariesMiddleware = (store) => (next) => (action) => {
 
     const orderBy = isGroup
       ? 'orderBy: ["groupBeneficiary__group__code"]'
-      : 'orderBy: ["beneficiary__individual__last_name", "beneficiary__individual__first_name"]';
+      : 'orderBy: ["beneficiary__individual__first_name", "beneficiary__individual__last_name"]';
 
     const batchSize = 100;
     const offset = action?.meta?.offset || 0;
