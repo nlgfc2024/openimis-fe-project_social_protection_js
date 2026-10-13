@@ -10,6 +10,9 @@ import {
   MenuItem,
   Paper,
 } from '@material-ui/core';
+import CheckBoxIcon from '@material-ui/icons/CheckBox';
+import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank';
+import IndeterminateCheckBoxIcon from '@material-ui/icons/IndeterminateCheckBox';
 import {
   withTheme,
   withStyles,
@@ -34,6 +37,7 @@ import {
 import NumberFilter from './MaterialTableNumberFilter';
 
 const DEFAULT_CELL_PADDING = '0 0 0 10px';
+const ABSENT_COLOR = '#e573a4';
 
 // These fields are used during household validation and eligibility assessment,
 // but are not needed when reviewing beneficiaries already assigned to a project.
@@ -204,15 +208,32 @@ const getDynamicColumns = (translateFn, customFilters = []) => {
     });
 };
 
+const attendanceState = (value) => {
+  if (Number(value) === 100) return 'present';
+  if (Number(value) === 0 && value !== null && value !== undefined && value !== '') return 'absent';
+  return 'notRecorded';
+};
+
+function AttendanceStatusIcon({ value, theme }) {
+  switch (attendanceState(value)) {
+    case 'present':
+      return <CheckBoxIcon style={{ color: theme.palette.primary.main }} />;
+    case 'absent':
+      return <IndeterminateCheckBoxIcon style={{ color: ABSENT_COLOR }} />;
+    default:
+      return <CheckBoxOutlineBlankIcon color="disabled" />;
+  }
+}
+
 function AttendanceEditField({
   value, onChange, columnDef, rowData, onTimeEntryChange, dayKey,
 }) {
   const effectiveDayKey = dayKey || columnDef?.dayKey;
 
-  const handleChange = ({ target: { checked } }) => {
+  const handleChange = () => {
     // The empty state remains untouched until a user clicks a cell. This keeps
     // an unrecorded day distinct from an explicitly recorded absence.
-    const newValue = checked ? 100 : 0;
+    const newValue = attendanceState(value) === 'present' ? 0 : 100;
     onChange(newValue);
 
     if (onTimeEntryChange && rowData?.enrollmentId && effectiveDayKey) {
@@ -223,7 +244,9 @@ function AttendanceEditField({
 
   return (
     <Checkbox
-      checked={value === 100}
+      checked={attendanceState(value) === 'present'}
+      indeterminate={attendanceState(value) === 'absent'}
+      indeterminateIcon={<IndeterminateCheckBoxIcon style={{ color: ABSENT_COLOR }} />}
       color="primary"
       inputProps={{ 'aria-label': columnDef?.title }}
       onChange={handleChange}
@@ -263,12 +286,7 @@ const getWorkDayColumns = (
         const value = rowData.projectTimeEntriesDict?.[dayKey]?.percentComplete;
         if (attendanceMode) {
           return (
-            <Checkbox
-              checked={value === 100}
-              color="primary"
-              disabled
-              style={{ color: value === 100 ? theme.palette.primary.main : undefined }}
-            />
+            <AttendanceStatusIcon value={value} theme={theme} />
           );
         }
         if (value === 100) return translateFn('projectBeneficiaries.present');
