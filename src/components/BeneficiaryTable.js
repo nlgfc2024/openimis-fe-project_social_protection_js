@@ -227,9 +227,10 @@ const getDynamicColumns = (translateFn, customFilters = []) => {
 };
 
 const attendanceState = (value) => {
-  if (Number(value) === 100) return 'present';
-  if (Number(value) === 0 && value !== null && value !== undefined && value !== '') return 'absent';
-  return 'notRecorded';
+  if (value === null || value === undefined || value === '') return 'notRecorded';
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return 'notRecorded';
+  return numericValue === 0 ? 'absent' : 'present';
 };
 
 function AttendanceStatusIcon({ value, theme }) {
@@ -587,6 +588,10 @@ function BeneficiaryTable({
   }, [attendanceMode, sortedRows, tableRef, columns, nameDoBFieldPrefix]);
 
   const isSelectable = !!onSelectionChange;
+  const firstWorkingDayColumn = columns.findIndex((column) => column.dayKey);
+  const frozenColumnCount = attendanceMode && firstWorkingDayColumn >= 0
+    ? firstWorkingDayColumn
+    : (isGroup ? 3 : 2);
 
   const cellPadding = isSelectable ? '0' : DEFAULT_CELL_PADDING;
 
@@ -650,7 +655,7 @@ function BeneficiaryTable({
           doubleHorizontalScroll: false,
           tableLayout: 'fixed',
           emptyRowsWhenPaging: false,
-          fixedColumns: { left: attendanceMode ? 4 : (isGroup ? 3 : 2), right: 0 },
+          fixedColumns: { left: frozenColumnCount, right: 0 },
           actionsColumnIndex: -1,
         }}
         localization={{
