@@ -15,6 +15,7 @@ import {
   Typography,
 } from '@material-ui/core';
 import AddIcon from '@material-ui/icons/Add';
+import DownloadIcon from '@material-ui/icons/CloudDownload';
 import {
   MODULE_NAME,
   RIGHT_PROJECT_UPDATE,
@@ -30,6 +31,7 @@ import {
   bulkUpdateBeneficiaryTimeEntries,
   bulkUpdateGroupBeneficiaryTimeEntries,
 } from '../actions';
+import { downloadLogSheetPdf } from '../util/log-sheet-export';
 
 function BaseProjectBeneficiaryTable({
   project,
@@ -153,6 +155,23 @@ function BaseProjectBeneficiaryTable({
         </Typography>
       </Button>
     );
+  };
+
+  const downloadLogSheetComponentFn = () => (
+    <Button startIcon={<DownloadIcon />} variant="contained" color="primary">
+      <Typography variant="body2">
+        {formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.downloadLogSheet')}
+      </Typography>
+    </Button>
+  );
+
+  const handleDownloadLogSheet = () => {
+    downloadLogSheetPdf({
+      project,
+      beneficiaries: mergedBeneficiaries,
+      isGroup,
+      translate: (key) => formatMessage(intl, MODULE_NAME, key),
+    });
   };
 
   function scrollToFirstWorkingDayColumn() {
@@ -314,10 +333,16 @@ function BaseProjectBeneficiaryTable({
   };
 
   function getTableActions() {
-    if (!rights.includes(RIGHT_PROJECT_UPDATE)) return [];
-
     const materialTable = materialTableRef.current;
-    const tableActions = [
+    const tableActions = [{
+      icon: downloadLogSheetComponentFn,
+      isFreeAction: true,
+      onClick: handleDownloadLogSheet,
+    }];
+
+    if (!rights.includes(RIGHT_PROJECT_UPDATE)) return tableActions;
+
+    tableActions.push(
       {
         icon: assignButtonComponentFn,
         isFreeAction: true,
@@ -328,7 +353,7 @@ function BaseProjectBeneficiaryTable({
         isFreeAction: true,
         onClick: handleToggleEdit,
       },
-    ];
+    );
 
     if (materialTable?.dataManager?.bulkEditOpen) {
       tableActions.push({
@@ -341,7 +366,7 @@ function BaseProjectBeneficiaryTable({
     return tableActions;
   }
 
-  const actions = useMemo(getTableActions, [rights, bulkEditOpen]);
+  const actions = useMemo(getTableActions, [rights, bulkEditOpen, mergedBeneficiaries, project, isGroup]);
 
   return (
     !!project?.id && (

@@ -30,5 +30,6 @@ export const beneficiaryIdentifiers = (row, isGroup = false) => {
   return {
     formNumber: firstValue(formNumberSources, ['form_number', 'formNumber']),
     nationalId: firstValue(personSources, ['national_id', 'nationalId']),
+    sex: firstValue(personSources, ['sex', 'gender']),
   };
 };
