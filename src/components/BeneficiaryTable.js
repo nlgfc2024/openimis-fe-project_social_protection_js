@@ -28,6 +28,7 @@ import {
   LOC_LEVELS,
   locationFormatter,
 } from '../util/searcher-utils';
+import { beneficiaryIdentifiers } from '../util/beneficiary-identifiers';
 import {
   MODULE_NAME,
   DEFAULT_PAGE_SIZE,
@@ -451,9 +452,9 @@ function BeneficiaryTable({
     const additionalColumns = attendanceMode ? [
       {
         title: translateRef.current('projectBeneficiaries.formNumber'),
-        field: isGroup ? 'group.code' : 'jsonExt.form_number',
+        field: 'beneficiaryFormNumber',
         editable: 'never',
-        render: (rowData) => (isGroup ? rowData.group?.code : rowData.jsonExt?.form_number) || '',
+        render: (rowData) => beneficiaryIdentifiers(rowData, isGroup).formNumber,
       },
     ] : isGroup ? [
       {
@@ -488,9 +489,9 @@ function BeneficiaryTable({
       },
       ...(attendanceMode ? [{
         title: translateRef.current('projectBeneficiaries.nationalId'),
-        field: 'jsonExt.national_id',
+        field: 'beneficiaryNationalId',
         editable: 'never',
-        render: (rowData) => rowData.jsonExt?.national_id || rowData.jsonExt?.nationalId || '',
+        render: (rowData) => beneficiaryIdentifiers(rowData, isGroup).nationalId,
       }] : []),
       ...(attendanceMode && workLogEditMode ? workDayColumns : []),
       {
