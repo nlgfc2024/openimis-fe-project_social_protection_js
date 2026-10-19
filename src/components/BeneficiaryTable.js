@@ -544,6 +544,22 @@ function BeneficiaryTable({
     dynamicColumns, workingDays, onTimeEntryChange, maxWorkingDays, attendanceMode, workLogEditMode, theme,
   ]);
 
+  const fixedLeftColumnCount = useMemo(() => {
+    if (attendanceMode) {
+      // Attendance days are inserted immediately after the identity columns while recording.
+      // Deriving the boundary keeps the frozen section correct if those columns change.
+      const firstAttendanceDay = columns.findIndex((column) => column.dayKey);
+      if (workLogEditMode && firstAttendanceDay > 0) return firstAttendanceDay;
+
+      // Outside recording mode, keep the same identity columns frozen without
+      // depending on a hard-coded column count.
+      const nationalIdColumn = columns.findIndex((column) => column.field === 'beneficiaryNationalId');
+      return nationalIdColumn >= 0 ? nationalIdColumn + 1 : 0;
+    }
+
+    return isGroup ? 3 : 2;
+  }, [attendanceMode, workLogEditMode, columns, isGroup]);
+
   const defaultSortSignature = useRef();
   useEffect(() => {
     if (!attendanceMode || !Array.isArray(sortedRows) || sortedRows.length === 0) return;
@@ -620,7 +636,7 @@ function BeneficiaryTable({
           doubleHorizontalScroll: false,
           tableLayout: 'fixed',
           emptyRowsWhenPaging: false,
-          fixedColumns: { left: attendanceMode ? 4 : (isGroup ? 3 : 2), right: 0 },
+          fixedColumns: { left: fixedLeftColumnCount, right: 0 },
           actionsColumnIndex: -1,
         }}
         localization={{
