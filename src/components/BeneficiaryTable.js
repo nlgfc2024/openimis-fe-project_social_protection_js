@@ -123,6 +123,38 @@ const styles = (theme) => ({
       padding: DEFAULT_CELL_PADDING,
     },
   },
+  attendanceContainerWrapper: {
+    '& [class*="MTableToolbar-root"], & [class*="MTableToolbar-toolbar"]': {
+      display: 'flex',
+      flexWrap: 'nowrap',
+      alignItems: 'center',
+      minHeight: '64px',
+      padding: '8px 12px',
+    },
+    '& [class*="MTableToolbar-title"]': {
+      flex: '0 1 220px',
+      minWidth: 0,
+      overflow: 'hidden',
+    },
+    '& [class*="MTableToolbar-spacer"]': {
+      flex: '1 1 0',
+      minWidth: 0,
+    },
+    '& [class*="MTableToolbar-search"]': {
+      flex: '0 1 210px',
+      minWidth: '170px',
+    },
+    '& [class*="MTableToolbar-actions"]': {
+      display: 'flex',
+      flex: '0 0 auto',
+      flexWrap: 'nowrap',
+      alignItems: 'center',
+      gap: theme.spacing(1),
+    },
+    '& [class*="MTableToolbar-actions"] > *': {
+      margin: '0 !important',
+    },
+  },
 });
 
 const getDynamicColumns = (translateFn, customFilters = []) => {
@@ -581,8 +613,14 @@ function BeneficiaryTable({
   const cellPadding = isSelectable ? '0' : DEFAULT_CELL_PADDING;
 
   const ContainerComponent = useCallback(
-    (props) => <TableContainer className={classes.containerWrapper}>{props.children}</TableContainer>,
-    [classes.containerWrapper],
+    (props) => (
+      <TableContainer
+        className={`${classes.containerWrapper} ${attendanceMode ? classes.attendanceContainerWrapper : ''}`}
+      >
+        {props.children}
+      </TableContainer>
+    ),
+    [classes.containerWrapper, classes.attendanceContainerWrapper, attendanceMode],
   );
 
   const tableComponents = useMemo(

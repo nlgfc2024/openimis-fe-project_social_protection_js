@@ -135,6 +135,7 @@ function BaseProjectBeneficiaryTable({
       startIcon={<AddIcon />}
       variant="contained"
       color="primary"
+      size="small"
     >
       <Typography variant="body2">{formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.enroll')}</Typography>
     </Button>
@@ -147,6 +148,7 @@ function BaseProjectBeneficiaryTable({
       <Button
         variant="contained"
         color="primary"
+        size="small"
       >
         <Typography variant="body2">
           {isEditing
@@ -158,8 +160,8 @@ function BaseProjectBeneficiaryTable({
   };
 
   const downloadLogSheetComponentFn = () => (
-    <Button startIcon={<DownloadIcon />} variant="contained" color="primary">
-      <Typography variant="body2">
+    <Button startIcon={<DownloadIcon />} variant="contained" color="primary" size="small">
+      <Typography variant="body2" noWrap>
         {formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.downloadLogSheet')}
       </Typography>
     </Button>
@@ -311,7 +313,7 @@ function BaseProjectBeneficiaryTable({
   };
 
   const cancelEditButtonFn = () => (
-    <Button variant="outlined" color="default">
+    <Button variant="outlined" color="default" size="small">
       <Typography variant="body2">
         {formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.cancelEdit')}
       </Typography>
