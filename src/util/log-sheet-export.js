@@ -27,7 +27,19 @@ export const downloadLogSheetPdf = ({
     index + staticHeaders.length,
     { cellWidth: 5 },
   ]).reduce((styles, [index, style]) => ({ ...styles, [index]: style }), {});
-  const body = (beneficiaries || []).map((row, index) => {
+  const sortedBeneficiaries = [...(beneficiaries || [])].sort((left, right) => {
+    const leftPerson = isGroup ? left.group?.head : left.individual;
+    const rightPerson = isGroup ? right.group?.head : right.individual;
+    const firstNameOrder = (leftPerson?.firstName || '').localeCompare(
+      rightPerson?.firstName || '', undefined, { sensitivity: 'base' },
+    );
+    if (firstNameOrder !== 0) return firstNameOrder;
+
+    return (leftPerson?.lastName || '').localeCompare(
+      rightPerson?.lastName || '', undefined, { sensitivity: 'base' },
+    );
+  });
+  const body = sortedBeneficiaries.map((row, index) => {
     const person = isGroup ? row.group?.head : row.individual;
     const identifiers = beneficiaryIdentifiers(row, isGroup);
     const location = locationFormatter(isGroup ? row.group?.location : row.individual?.location);

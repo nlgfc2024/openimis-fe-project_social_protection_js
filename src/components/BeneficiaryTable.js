@@ -487,6 +487,9 @@ function BeneficiaryTable({
         field: 'beneficiaryFormNumber',
         editable: 'never',
         render: (rowData) => beneficiaryIdentifiers(rowData, isGroup).formNumber,
+        customSort: (left, right) => String(beneficiaryIdentifiers(left, isGroup).formNumber || '').localeCompare(
+          String(beneficiaryIdentifiers(right, isGroup).formNumber || ''), undefined, { numeric: true, sensitivity: 'base' },
+        ),
       },
     ] : isGroup ? [
       {
@@ -524,6 +527,9 @@ function BeneficiaryTable({
         field: 'beneficiaryNationalId',
         editable: 'never',
         render: (rowData) => beneficiaryIdentifiers(rowData, isGroup).nationalId,
+        customSort: (left, right) => String(beneficiaryIdentifiers(left, isGroup).nationalId || '').localeCompare(
+          String(beneficiaryIdentifiers(right, isGroup).nationalId || ''), undefined, { numeric: true, sensitivity: 'base' },
+        ),
       }] : []),
       ...(attendanceMode && workLogEditMode ? workDayColumns : []),
       {
