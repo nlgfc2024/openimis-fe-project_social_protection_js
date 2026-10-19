@@ -356,6 +356,7 @@ function BaseProjectBeneficiaryTable({
           tableRef={materialTableRef}
           onTimeEntryChange={handleTimeEntryChange}
           attendanceMode
+          workLogEditMode={bulkEditOpen}
         />
         <EnrollmentDialogComponent
           open={enrollmentDialogOpen}

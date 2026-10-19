@@ -12,7 +12,6 @@ import {
 } from '@material-ui/core';
 import CheckBoxIcon from '@material-ui/icons/CheckBox';
 import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank';
-import IndeterminateCheckBoxIcon from '@material-ui/icons/IndeterminateCheckBox';
 import {
   withTheme,
   withStyles,
@@ -37,7 +36,6 @@ import {
 import NumberFilter from './MaterialTableNumberFilter';
 
 const DEFAULT_CELL_PADDING = '0 0 0 10px';
-const ABSENT_COLOR = '#e573a4';
 
 // These fields are used during household validation and eligibility assessment,
 // but are not needed when reviewing beneficiaries already assigned to a project.
@@ -208,21 +206,12 @@ const getDynamicColumns = (translateFn, customFilters = []) => {
     });
 };
 
-const attendanceState = (value) => {
-  if (Number(value) === 100) return 'present';
-  if (Number(value) === 0 && value !== null && value !== undefined && value !== '') return 'absent';
-  return 'notRecorded';
-};
+const isAttended = (value) => Number.isFinite(Number(value)) && Number(value) > 0;
 
 function AttendanceStatusIcon({ value, theme }) {
-  switch (attendanceState(value)) {
-    case 'present':
-      return <CheckBoxIcon style={{ color: theme.palette.primary.main }} />;
-    case 'absent':
-      return <IndeterminateCheckBoxIcon style={{ color: ABSENT_COLOR }} />;
-    default:
-      return <CheckBoxOutlineBlankIcon color="disabled" />;
-  }
+  return isAttended(value)
+    ? <CheckBoxIcon style={{ color: theme.palette.primary.main }} />
+    : <CheckBoxOutlineBlankIcon color="disabled" />;
 }
 
 function AttendanceEditField({
@@ -230,11 +219,8 @@ function AttendanceEditField({
 }) {
   const effectiveDayKey = dayKey || columnDef?.dayKey;
 
-  const handleChange = () => {
-    // The empty state remains untouched until a user clicks a cell. This keeps
-    // an unrecorded day distinct from an explicitly recorded absence.
-    const currentState = attendanceState(value);
-    const newValue = currentState === 'notRecorded' ? 100 : currentState === 'present' ? 0 : undefined;
+  const handleChange = (event) => {
+    const newValue = event.target.checked ? 100 : 0;
     onChange(newValue);
 
     if (onTimeEntryChange && rowData?.enrollmentId && effectiveDayKey) {
@@ -245,9 +231,7 @@ function AttendanceEditField({
 
   return (
     <Checkbox
-      checked={attendanceState(value) === 'present'}
-      indeterminate={attendanceState(value) === 'absent'}
-      indeterminateIcon={<IndeterminateCheckBoxIcon style={{ color: ABSENT_COLOR }} />}
+      checked={isAttended(value)}
       color="primary"
       inputProps={{ 'aria-label': columnDef?.title }}
       onChange={handleChange}
@@ -281,7 +265,6 @@ const getWorkDayColumns = (
       field: `projectTimeEntriesDict.${dayKey}.percentComplete`,
       dayKey,
       presentLabel: translateFn('projectBeneficiaries.present'),
-      absentLabel: translateFn('projectBeneficiaries.absent'),
       notRecordedLabel: translateFn('projectBeneficiaries.notRecorded'),
       render: (rowData) => {
         const value = rowData.projectTimeEntriesDict?.[dayKey]?.percentComplete;
@@ -338,6 +321,7 @@ function BeneficiaryTable({
   classes,
   onTimeEntryChange,
   attendanceMode = false,
+  workLogEditMode = false,
 }) {
   const nameDoBFieldPrefix = isGroup ? 'group.head' : 'individual';
   const locationFieldPrefix = isGroup ? 'group' : 'individual';
@@ -508,6 +492,7 @@ function BeneficiaryTable({
         editable: 'never',
         render: (rowData) => rowData.jsonExt?.national_id || rowData.jsonExt?.nationalId || '',
       }] : []),
+      ...(attendanceMode && workLogEditMode ? workDayColumns : []),
       {
         title: translateRef.current('socialProtection.beneficiary.dob'),
         field: `${nameDoBFieldPrefix}.dob`,
@@ -539,17 +524,23 @@ function BeneficiaryTable({
         };
       }),
       ...dynamicColumns,
-      ...workDayColumns,
+      ...(!attendanceMode || !workLogEditMode ? workDayColumns : []),
     ];
 
     return allColumns.map((c) => ({
       ...c,
+      ...(attendanceMode && {
+        searchable: [
+          `${nameDoBFieldPrefix}.firstName`,
+          `${nameDoBFieldPrefix}.lastName`,
+        ].includes(c.field),
+      }),
       width: c.width || (typeof c.field === 'string' && c.field.includes('email') ? '200px' : '140px'),
       tableData: { filterValue: initialFiltersRef.current[c.title] || '' },
     }));
   }, [
     isGroup, nameDoBFieldPrefix, locationFieldPrefix,
-    dynamicColumns, workingDays, onTimeEntryChange, maxWorkingDays, attendanceMode, theme,
+    dynamicColumns, workingDays, onTimeEntryChange, maxWorkingDays, attendanceMode, workLogEditMode, theme,
   ]);
 
   const defaultSortSignature = useRef();
