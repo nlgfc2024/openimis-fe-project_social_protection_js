@@ -1,15 +1,7 @@
 import { locationFormatter } from './searcher-utils';
+import { attendanceIdentifiers } from './attendance-identifiers';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-
-const parseJson = (value) => {
-  if (typeof value !== 'string') return value || {};
-  try {
-    return JSON.parse(value);
-  } catch (error) {
-    return {};
-  }
-};
 
 export const downloadAttendancePdf = ({ project, beneficiaries, isGroup = false }) => {
   const workingDays = Math.max(0, Number(project?.workingDays) || 0);
@@ -25,19 +17,18 @@ export const downloadAttendancePdf = ({ project, beneficiaries, isGroup = false 
   ]).reduce((styles, [index, style]) => ({ ...styles, [index]: style }), {});
   const body = (beneficiaries || []).map((row, index) => {
     const person = isGroup ? row.group?.head : row.individual;
-    const jsonExt = row.jsonExt || {};
-    const individualJsonExt = parseJson(person?.jsonExt);
+    const identifiers = attendanceIdentifiers(row, isGroup);
     const location = locationFormatter(isGroup ? row.group?.location : row.individual?.location);
 
     return [
       index + 1,
       [person?.firstName, person?.lastName].filter(Boolean).join(' '),
-      jsonExt.national_id || jsonExt.nationalId || '',
-      jsonExt.sex || jsonExt.gender || individualJsonExt.sex || individualJsonExt.gender || '',
+      identifiers.nationalId,
+      identifiers.sex,
       location[1] || '',
       location[2] || '',
       location[3] || '',
-      isGroup ? row.group?.code : jsonExt.form_number || individualJsonExt.form_number || '',
+      identifiers.formNumber,
       ...Array(workingDays).fill(''),
       '',
     ];
