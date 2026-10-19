@@ -124,23 +124,6 @@ const styles = (theme) => ({
       padding: DEFAULT_CELL_PADDING,
     },
   },
-  attendanceContainerWrapper: {
-    '& .MuiToolbar-root > div:first-child': {
-      maxWidth: '150px',
-    },
-    '& .MuiToolbar-root .MuiInputBase-root': {
-      width: '150px',
-    },
-    '& .MuiToolbar-root > div:last-child, & .MuiToolbar-root > div:last-child > div': {
-      display: 'flex',
-      flexWrap: 'nowrap',
-      alignItems: 'center',
-      whiteSpace: 'nowrap',
-    },
-    '& .MuiToolbar-root > div:last-child .MuiIconButton-root': {
-      padding: '2px',
-    },
-  },
 });
 
 const getDynamicColumns = (translateFn, customFilters = []) => {
@@ -590,12 +573,8 @@ function BeneficiaryTable({
   const cellPadding = isSelectable ? '0' : DEFAULT_CELL_PADDING;
 
   const ContainerComponent = useCallback(
-    (props) => (
-      <TableContainer className={`${classes.containerWrapper} ${attendanceMode ? classes.attendanceContainerWrapper : ''}`}>
-        {props.children}
-      </TableContainer>
-    ),
-    [attendanceMode, classes.attendanceContainerWrapper, classes.containerWrapper],
+    (props) => <TableContainer className={classes.containerWrapper}>{props.children}</TableContainer>,
+    [classes.containerWrapper],
   );
 
   const tableComponents = useMemo(

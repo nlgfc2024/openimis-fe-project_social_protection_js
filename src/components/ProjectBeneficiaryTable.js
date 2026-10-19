@@ -15,7 +15,6 @@ import {
   Typography,
 } from '@material-ui/core';
 import AddIcon from '@material-ui/icons/Add';
-import DownloadIcon from '@material-ui/icons/CloudDownload';
 import {
   MODULE_NAME,
   RIGHT_PROJECT_UPDATE,
@@ -31,7 +30,6 @@ import {
   bulkUpdateBeneficiaryTimeEntries,
   bulkUpdateGroupBeneficiaryTimeEntries,
 } from '../actions';
-import { downloadAttendancePdf } from '../util/attendance-export';
 
 function BaseProjectBeneficiaryTable({
   project,
@@ -135,10 +133,8 @@ function BaseProjectBeneficiaryTable({
       startIcon={<AddIcon />}
       variant="contained"
       color="primary"
-      size="small"
-      style={{ whiteSpace: 'nowrap', padding: '2px 5px' }}
     >
-      <Typography variant="body2" style={{ fontSize: '0.75rem' }}>{formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.enroll')}</Typography>
+      <Typography variant="body2">{formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.enroll')}</Typography>
     </Button>
   );
 
@@ -149,36 +145,14 @@ function BaseProjectBeneficiaryTable({
       <Button
         variant="contained"
         color="primary"
-        size="small"
-        style={{ whiteSpace: 'nowrap', padding: '2px 5px' }}
       >
-        <Typography variant="body2" style={{ fontSize: '0.75rem' }}>
+        <Typography variant="body2">
           {isEditing
             ? formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.saveTime')
             : formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.enterTime')}
         </Typography>
       </Button>
     );
-  };
-
-  const downloadAttendanceComponentFn = () => (
-    <Button
-      startIcon={<DownloadIcon />}
-      variant="contained"
-      color="primary"
-      size="small"
-      style={{ whiteSpace: 'nowrap', padding: '2px 5px' }}
-    >
-      <Typography variant="body2" style={{ fontSize: '0.75rem' }}>{formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.downloadAttendance')}</Typography>
-    </Button>
-  );
-
-  const handleDownloadAttendance = () => {
-    downloadAttendancePdf({
-      project,
-      beneficiaries: mergedBeneficiaries,
-      isGroup,
-    });
   };
 
   function scrollToFirstWorkingDayColumn() {
@@ -340,16 +314,10 @@ function BaseProjectBeneficiaryTable({
   };
 
   function getTableActions() {
+    if (!rights.includes(RIGHT_PROJECT_UPDATE)) return [];
+
     const materialTable = materialTableRef.current;
-    const tableActions = [{
-      icon: downloadAttendanceComponentFn,
-      isFreeAction: true,
-      onClick: handleDownloadAttendance,
-    }];
-
-    if (!rights.includes(RIGHT_PROJECT_UPDATE)) return tableActions;
-
-    tableActions.push(
+    const tableActions = [
       {
         icon: assignButtonComponentFn,
         isFreeAction: true,
@@ -360,7 +328,7 @@ function BaseProjectBeneficiaryTable({
         isFreeAction: true,
         onClick: handleToggleEdit,
       },
-    );
+    ];
 
     if (materialTable?.dataManager?.bulkEditOpen) {
       tableActions.push({
@@ -373,7 +341,7 @@ function BaseProjectBeneficiaryTable({
     return tableActions;
   }
 
-  const actions = useMemo(getTableActions, [rights, bulkEditOpen, mergedBeneficiaries, project, isGroup]);
+  const actions = useMemo(getTableActions, [rights, bulkEditOpen]);
 
   return (
     !!project?.id && (
