@@ -39,7 +39,7 @@
   ],
   "dependencies": {
     "flat": "5.0.2",
-    "jspdf": "4.2.1",
-    "jspdf-autotable": "5.0.9"
+    "jspdf": "2.1.0",
+    "jspdf-autotable": "3.5.9"
   }
 }

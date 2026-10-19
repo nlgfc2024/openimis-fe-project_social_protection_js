@@ -178,7 +178,6 @@ function BaseProjectBeneficiaryTable({
       project,
       beneficiaries: mergedBeneficiaries,
       isGroup,
-      translate: (key) => formatMessage(intl, MODULE_NAME, key),
     });
   };
 

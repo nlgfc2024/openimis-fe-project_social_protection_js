@@ -1,28 +1,16 @@
 import { locationFormatter } from './searcher-utils';
 import { attendanceIdentifiers } from './attendance-identifiers';
 import { jsPDF } from 'jspdf';
-import { autoTable } from 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
-export const downloadAttendancePdf = ({
-  project, beneficiaries, isGroup = false, translate,
-}) => {
+export const downloadAttendancePdf = ({ project, beneficiaries, isGroup = false }) => {
   const workingDays = Math.max(0, Number(project?.workingDays) || 0);
   const projectLocation = locationFormatter(project?.location);
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const staticHeaders = [
-    translate('projectBeneficiaries.attendancePdf.number'),
-    translate('projectBeneficiaries.attendancePdf.beneficiary'),
-    translate('projectBeneficiaries.nationalId'),
-    translate('projectBeneficiaries.attendancePdf.sex'),
-    translate('location.locationType.1'),
-    translate('location.locationType.2'),
-    translate('location.locationType.3'),
-    translate('projectBeneficiaries.attendancePdf.formNumber'),
+    'No.', 'Beneficiary', 'National ID', 'Sex', 'TA', 'GVH', 'Village', 'Form No.',
   ];
-  const dayHeaders = Array.from(
-    { length: workingDays },
-    (_, index) => `${translate('project.day')}\n${index + 1}`,
-  );
+  const dayHeaders = Array.from({ length: workingDays }, (_, index) => `Day\n${index + 1}`);
   const workColumnStyles = Array.from({ length: workingDays + 1 }, (_, index) => [
     index + staticHeaders.length,
     { cellWidth: 5 },
@@ -47,25 +35,22 @@ export const downloadAttendancePdf = ({
   });
 
   doc.setFontSize(16);
-  doc.text(translate('projectBeneficiaries.attendancePdf.title'), 148.5, 13, { align: 'center' });
+  doc.text('Project Log Sheet', 148.5, 13, { align: 'center' });
   doc.setFontSize(7);
-  doc.text(translate('projectBeneficiaries.attendancePdf.subtitle'), 148.5, 19, { align: 'center' });
+  doc.text('Monthly Works Register for Beneficiaries', 148.5, 19, { align: 'center' });
   doc.setFontSize(6);
-  doc.text(`${translate('location.locationType.0')}: ${projectLocation[0] || ''}`, 10, 27);
-  doc.text(`${translate('projectBeneficiaries.attendancePdf.microCatchment')}: ${project?.microCatchment?.name || ''}`, 58, 27);
-  doc.text(`${translate('projectBeneficiaries.attendancePdf.sector')}: ${project?.activity?.name || ''}`, 118, 27);
-  doc.text(`${translate('projectBeneficiaries.attendancePdf.projectName')}: ${project?.name || ''}`, 168, 27);
-  doc.text(`${translate('projectBeneficiaries.attendancePdf.code')}: ${project?.code || ''}`, 287, 27, { align: 'right' });
+  doc.text(`District: ${projectLocation[0] || ''}`, 10, 27);
+  doc.text(`Micro-catchment: ${project?.microCatchment?.name || ''}`, 58, 27);
+  doc.text(`Sector: ${project?.activity?.name || ''}`, 118, 27);
+  doc.text(`Project Name: ${project?.name || ''}`, 168, 27);
+  doc.text(`Code: ${project?.code || ''}`, 287, 27, { align: 'right' });
 
   autoTable(doc, {
     startY: 31,
     head: [[
       ...staticHeaders.map((header) => ({ content: header, rowSpan: 2 })),
-      {
-        content: translate('projectBeneficiaries.attendancePdf.amountOfWorkDone'),
-        colSpan: workingDays + 1,
-      },
-    ], [...dayHeaders, translate('projectBeneficiaries.attendancePdf.total')]],
+      { content: 'Amount of Work Done', colSpan: workingDays + 1 },
+    ], [...dayHeaders, 'Total']],
     body,
     theme: 'grid',
     margin: { left: 5, right: 5, bottom: 5 },
