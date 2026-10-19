@@ -5,10 +5,13 @@ import { injectIntl } from 'react-intl';
 import MaterialTable from 'material-table';
 import _ from 'lodash';
 import {
+  Checkbox,
   Select,
   MenuItem,
   Paper,
 } from '@material-ui/core';
+import CheckBoxIcon from '@material-ui/icons/CheckBox';
+import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank';
 import {
   withTheme,
   withStyles,
@@ -25,6 +28,7 @@ import {
   LOC_LEVELS,
   locationFormatter,
 } from '../util/searcher-utils';
+import { beneficiaryIdentifiers } from '../util/beneficiary-identifiers';
 import {
   MODULE_NAME,
   DEFAULT_PAGE_SIZE,
@@ -33,6 +37,48 @@ import {
 import NumberFilter from './MaterialTableNumberFilter';
 
 const DEFAULT_CELL_PADDING = '0 0 0 10px';
+
+// These fields are used during household validation and eligibility assessment,
+// but are not needed when reviewing beneficiaries already assigned to a project.
+const HIDDEN_DYNAMIC_FIELDS = new Set([
+  'household_pmt_score',
+  'business_period',
+  'type_of_business',
+  'business_experience',
+  'validation_notes',
+  'disability',
+  'marital_status',
+  'able_bodied',
+  'chronic_illness',
+  'educated_level',
+  'beneficiary_data_source',
+  'number_of_children',
+  'number_of_elderly',
+  'email',
+  'ubr_id',
+  'national_id_type',
+  'validation_status',
+  'group_village_head_code',
+  'group_village_head_name',
+  'traditional_authority_code',
+  'traditional_authority_name',
+  'location_code',
+  'location_name',
+  'recipient_info',
+  'last_verified_date',
+]);
+
+const isHiddenDynamicField = (field) => (
+  HIDDEN_DYNAMIC_FIELDS.has(field)
+  || field.startsWith('business_')
+  || (field.startsWith('validation_') && field !== 'validation_status')
+);
+
+const formatFitForWork = (value, translateFn) => {
+  if ([1, '1', true, 'true', 'yes', 'YES'].includes(value)) return translateFn('common.true');
+  if ([0, '0', false, 'false', 'no', 'NO'].includes(value)) return translateFn('common.false');
+  return value === null || value === undefined ? '' : String(value);
+};
 
 const createNumericFilterFn = (getValue) => (filter, rowData) => {
   const value = getValue(rowData);
@@ -77,12 +123,45 @@ const styles = (theme) => ({
       padding: DEFAULT_CELL_PADDING,
     },
   },
+  attendanceContainerWrapper: {
+    '& [class*="MTableToolbar-root"], & [class*="MTableToolbar-toolbar"]': {
+      display: 'flex',
+      flexWrap: 'nowrap',
+      alignItems: 'center',
+      minHeight: '64px',
+      padding: '8px 12px',
+    },
+    '& [class*="MTableToolbar-title"]': {
+      flex: '0 1 220px',
+      minWidth: 0,
+      overflow: 'hidden',
+    },
+    '& [class*="MTableToolbar-spacer"]': {
+      flex: '1 1 0',
+      minWidth: 0,
+    },
+    '& [class*="MTableToolbar-search"]': {
+      flex: '0 1 210px',
+      minWidth: '170px',
+    },
+    '& [class*="MTableToolbar-actions"]': {
+      display: 'flex',
+      flex: '0 0 auto',
+      flexWrap: 'nowrap',
+      alignItems: 'center',
+      gap: theme.spacing(1),
+    },
+    '& [class*="MTableToolbar-actions"] > *': {
+      margin: '0 !important',
+    },
+  },
 });
 
 const getDynamicColumns = (translateFn, customFilters = []) => {
   if (!customFilters || !customFilters.length) return [];
 
   return customFilters
+    .filter(({ field }) => !isHiddenDynamicField(field))
     .map((filter) => {
       const { field, type } = filter;
       let renderFn = (rowData) => {
@@ -95,6 +174,10 @@ const getDynamicColumns = (translateFn, customFilters = []) => {
         return String(value).toLowerCase().includes(term.toLowerCase());
       };
       let filterComponent;
+
+      if (field === 'fit_for_work') {
+        renderFn = (rowData) => formatFitForWork(rowData.jsonExt?.[field], translateFn);
+      }
 
       switch (type) {
         case 'boolean':
@@ -156,18 +239,21 @@ const getDynamicColumns = (translateFn, customFilters = []) => {
     });
 };
 
+const isAttended = (value) => Number.isFinite(Number(value)) && Number(value) > 0;
+
+function AttendanceStatusIcon({ value, theme }) {
+  return isAttended(value)
+    ? <CheckBoxIcon style={{ color: theme.palette.primary.main }} />
+    : <CheckBoxOutlineBlankIcon color="disabled" />;
+}
+
 function AttendanceEditField({
   value, onChange, columnDef, rowData, onTimeEntryChange, dayKey,
 }) {
-  const normalizedValue = value === 0 || value === 100 ? value : '';
   const effectiveDayKey = dayKey || columnDef?.dayKey;
-  const currentEntry = rowData?.projectTimeEntriesDict?.[effectiveDayKey];
-  const canRestoreNotRecorded = !currentEntry?.id;
 
-  const handleChange = (e) => {
-    // Keep an empty selection empty. Number('') is 0 and would silently turn
-    // a restored "Not recorded" value into an absence.
-    const newValue = e.target.value === '' ? '' : Number(e.target.value);
+  const handleChange = (event) => {
+    const newValue = event.target.checked ? 100 : 0;
     onChange(newValue);
 
     if (onTimeEntryChange && rowData?.enrollmentId && effectiveDayKey) {
@@ -177,16 +263,12 @@ function AttendanceEditField({
   };
 
   return (
-    <Select
-      value={normalizedValue}
+    <Checkbox
+      checked={isAttended(value)}
+      color="primary"
+      inputProps={{ 'aria-label': columnDef?.title }}
       onChange={handleChange}
-      displayEmpty
-      fullWidth
-    >
-      <MenuItem value="" disabled={!canRestoreNotRecorded}>{columnDef?.notRecordedLabel}</MenuItem>
-      <MenuItem value={100}>{columnDef?.presentLabel}</MenuItem>
-      <MenuItem value={0}>{columnDef?.absentLabel}</MenuItem>
-    </Select>
+    />
   );
 }
 
@@ -198,21 +280,32 @@ function TableContainer({ children, className }) {
   );
 }
 
-const getWorkDayColumns = (translateFn, onTimeEntryChange, workingDays = 0, maxColumns = DEFAULT_MAX_WORKING_DAYS) => {
+const getWorkDayColumns = (
+  translateFn,
+  onTimeEntryChange,
+  workingDays = 0,
+  maxColumns = DEFAULT_MAX_WORKING_DAYS,
+  attendanceMode = false,
+  theme,
+) => {
   if (!workingDays) return [];
   const cappedDays = Math.min(workingDays, maxColumns);
   return Array.from({ length: cappedDays }, (_, i) => {
     const dayNumber = i + 1;
     const dayKey = `day${dayNumber}`;
     return {
-      title: `${translateFn('project.day')} ${dayNumber}`,
+      title: attendanceMode ? String(dayNumber) : `${translateFn('project.day')} ${dayNumber}`,
       field: `projectTimeEntriesDict.${dayKey}.percentComplete`,
       dayKey,
       presentLabel: translateFn('projectBeneficiaries.present'),
-      absentLabel: translateFn('projectBeneficiaries.absent'),
       notRecordedLabel: translateFn('projectBeneficiaries.notRecorded'),
       render: (rowData) => {
         const value = rowData.projectTimeEntriesDict?.[dayKey]?.percentComplete;
+        if (attendanceMode) {
+          return (
+            <AttendanceStatusIcon value={value} theme={theme} />
+          );
+        }
         if (value === 100) return translateFn('projectBeneficiaries.present');
         if (value === 0) return translateFn('projectBeneficiaries.absent');
         return translateFn('projectBeneficiaries.notRecorded');
@@ -227,7 +320,19 @@ const getWorkDayColumns = (translateFn, onTimeEntryChange, workingDays = 0, maxC
         return aVal - bVal;
       },
       align: 'center',
-      width: '120px',
+      width: attendanceMode ? '48px' : '120px',
+      ...(attendanceMode && {
+        headerStyle: {
+          borderLeft: `1px solid ${theme.palette.primary.dark}`,
+          padding: 0,
+          textAlign: 'center',
+        },
+        cellStyle: {
+          borderLeft: `1px solid ${theme.palette.divider}`,
+          padding: 0,
+          textAlign: 'center',
+        },
+      }),
     };
   });
 };
@@ -248,6 +353,8 @@ function BeneficiaryTable({
   tableRef,
   classes,
   onTimeEntryChange,
+  attendanceMode = false,
+  workLogEditMode = false,
 }) {
   const nameDoBFieldPrefix = isGroup ? 'group.head' : 'individual';
   const locationFieldPrefix = isGroup ? 'group' : 'individual';
@@ -267,6 +374,33 @@ function BeneficiaryTable({
   const dynamicColumns = React.useMemo(() => (
     getDynamicColumns(translateRef.current, jsonExtFilters)
   ), [jsonExtFilters]);
+
+  // Project attendance rows are fetched in batches and may arrive in the
+  // database's default order. Keep the displayed individual list predictable
+  // regardless of the backend ordering.
+  const sortedRows = useMemo(() => {
+    if (!attendanceMode || isGroup || !Array.isArray(allRows)) return allRows;
+
+    return [...allRows].sort((left, right) => {
+      const firstName = left.individual?.firstName || '';
+      const otherFirstName = right.individual?.firstName || '';
+      const firstNameOrder = firstName.localeCompare(otherFirstName, undefined, { sensitivity: 'base' });
+      if (firstNameOrder !== 0) return firstNameOrder;
+
+      return (left.individual?.lastName || '').localeCompare(
+        right.individual?.lastName || '', undefined, { sensitivity: 'base' },
+      );
+    });
+  }, [allRows, attendanceMode, isGroup]);
+
+  // MaterialTable keeps an internal copy of its initial data. Re-key the
+  // attendance table once the fetched beneficiary set changes so it receives
+  // the sorted list rather than retaining the pre-fetch row order.
+  const attendanceTableKey = useMemo(() => (
+    attendanceMode && Array.isArray(sortedRows)
+      ? `attendance-${sortedRows.map((row) => row.id || row.enrollmentId).join('-')}`
+      : undefined
+  ), [attendanceMode, sortedRows]);
 
   useEffect(() => {
     if (appliedFilters) {
@@ -347,7 +481,17 @@ function BeneficiaryTable({
   });
 
   const columns = useMemo(() => {
-    const additionalColumns = isGroup ? [
+    const additionalColumns = attendanceMode ? [
+      {
+        title: translateRef.current('projectBeneficiaries.formNumber'),
+        field: 'beneficiaryFormNumber',
+        editable: 'never',
+        render: (rowData) => beneficiaryIdentifiers(rowData, isGroup).formNumber,
+        customSort: (left, right) => String(beneficiaryIdentifiers(left, isGroup).formNumber || '').localeCompare(
+          String(beneficiaryIdentifiers(right, isGroup).formNumber || ''), undefined, { numeric: true, sensitivity: 'base' },
+        ),
+      },
+    ] : isGroup ? [
       {
         title: translateRef.current('socialProtection.groupBeneficiary.code'),
         field: 'group.code',
@@ -355,22 +499,39 @@ function BeneficiaryTable({
         defaultSort: 'asc',
       },
     ] : [];
-    const workDayColumns = getWorkDayColumns(translateRef.current, onTimeEntryChange, workingDays, maxWorkingDays);
+    const workDayColumns = getWorkDayColumns(
+      translateRef.current,
+      onTimeEntryChange,
+      workingDays,
+      maxWorkingDays,
+      attendanceMode,
+      theme,
+    );
     const allColumns = [
       ...additionalColumns,
       {
         title: translateRef.current('socialProtection.beneficiary.firstName'),
         field: `${nameDoBFieldPrefix}.firstName`,
         editable: 'never',
+        ...(!isGroup && { defaultSort: 'asc' }),
         ...(isGroup && { orderField: 'head_first_name' }),
       },
       {
         title: translateRef.current('socialProtection.beneficiary.lastName'),
         field: `${nameDoBFieldPrefix}.lastName`,
         editable: 'never',
-        ...(!isGroup && { defaultSort: 'asc' }),
         ...(isGroup && { orderField: 'head_last_name' }),
       },
+      ...(attendanceMode ? [{
+        title: translateRef.current('projectBeneficiaries.nationalId'),
+        field: 'beneficiaryNationalId',
+        editable: 'never',
+        render: (rowData) => beneficiaryIdentifiers(rowData, isGroup).nationalId,
+        customSort: (left, right) => String(beneficiaryIdentifiers(left, isGroup).nationalId || '').localeCompare(
+          String(beneficiaryIdentifiers(right, isGroup).nationalId || ''), undefined, { numeric: true, sensitivity: 'base' },
+        ),
+      }] : []),
+      ...(attendanceMode && workLogEditMode ? workDayColumns : []),
       {
         title: translateRef.current('socialProtection.beneficiary.dob'),
         field: `${nameDoBFieldPrefix}.dob`,
@@ -402,26 +563,70 @@ function BeneficiaryTable({
         };
       }),
       ...dynamicColumns,
-      ...workDayColumns,
+      ...(!attendanceMode || !workLogEditMode ? workDayColumns : []),
     ];
 
     return allColumns.map((c) => ({
       ...c,
-      width: typeof c.field === 'string' && c.field.includes('email') ? '200px' : '140px',
+      ...(attendanceMode && {
+        searchable: [
+          `${nameDoBFieldPrefix}.firstName`,
+          `${nameDoBFieldPrefix}.lastName`,
+        ].includes(c.field),
+      }),
+      width: c.width || (typeof c.field === 'string' && c.field.includes('email') ? '200px' : '140px'),
       tableData: { filterValue: initialFiltersRef.current[c.title] || '' },
     }));
   }, [
     isGroup, nameDoBFieldPrefix, locationFieldPrefix,
-    dynamicColumns, workingDays, onTimeEntryChange, maxWorkingDays,
+    dynamicColumns, workingDays, onTimeEntryChange, maxWorkingDays, attendanceMode, workLogEditMode, theme,
   ]);
+
+  const fixedLeftColumnCount = useMemo(() => {
+    if (attendanceMode) {
+      // Attendance days are inserted immediately after the identity columns while recording.
+      // Deriving the boundary keeps the frozen section correct if those columns change.
+      const firstAttendanceDay = columns.findIndex((column) => column.dayKey);
+      if (workLogEditMode && firstAttendanceDay > 0) return firstAttendanceDay;
+
+      // Outside recording mode, keep the same identity columns frozen without
+      // depending on a hard-coded column count.
+      const nationalIdColumn = columns.findIndex((column) => column.field === 'beneficiaryNationalId');
+      return nationalIdColumn >= 0 ? nationalIdColumn + 1 : 0;
+    }
+
+    return isGroup ? 3 : 2;
+  }, [attendanceMode, workLogEditMode, columns, isGroup]);
+
+  const defaultSortSignature = useRef();
+  useEffect(() => {
+    if (!attendanceMode || !Array.isArray(sortedRows) || sortedRows.length === 0) return;
+
+    const signature = sortedRows.map((row) => row.id || row.enrollmentId).join('-');
+    if (defaultSortSignature.current === signature) return;
+
+    const materialTable = tableRef?.current;
+    const firstNameColumn = columns.findIndex((column) => column.field === `${nameDoBFieldPrefix}.firstName`);
+    if (!materialTable?.dataManager || firstNameColumn < 0) return;
+
+    materialTable.dataManager.changeOrder(firstNameColumn, 'asc');
+    materialTable.setState(materialTable.dataManager.getRenderState());
+    defaultSortSignature.current = signature;
+  }, [attendanceMode, sortedRows, tableRef, columns, nameDoBFieldPrefix]);
 
   const isSelectable = !!onSelectionChange;
 
   const cellPadding = isSelectable ? '0' : DEFAULT_CELL_PADDING;
 
   const ContainerComponent = useCallback(
-    (props) => <TableContainer className={classes.containerWrapper}>{props.children}</TableContainer>,
-    [classes.containerWrapper],
+    (props) => (
+      <TableContainer
+        className={`${classes.containerWrapper} ${attendanceMode ? classes.attendanceContainerWrapper : ''}`}
+      >
+        {props.children}
+      </TableContainer>
+    ),
+    [classes.containerWrapper, classes.attendanceContainerWrapper, attendanceMode],
   );
 
   const tableComponents = useMemo(
@@ -432,10 +637,11 @@ function BeneficiaryTable({
   return (
     <ThemeProvider theme={tableTheme}>
       <MaterialTable
+        key={attendanceTableKey}
         components={tableComponents}
         title={tableTitle}
         columns={columns}
-        data={onQueryChange || allRows}
+        data={onQueryChange || sortedRows}
         isLoading={fetchingBeneficiaries}
         options={{
           selection: isSelectable,
@@ -443,7 +649,7 @@ function BeneficiaryTable({
             color: 'primary',
           },
           search: true,
-          filtering: true,
+          filtering: !attendanceMode,
           paging: true,
           pageSize: appliedPageSize || DEFAULT_PAGE_SIZE,
           pageSizeOptions: [10, 50, 100],
@@ -451,24 +657,30 @@ function BeneficiaryTable({
           headerStyle: {
             padding: cellPadding,
             fontWeight: 500,
-            color: theme.palette.primary.main,
+            color: attendanceMode ? theme.palette.primary.contrastText : theme.palette.primary.main,
+            backgroundColor: attendanceMode ? theme.palette.primary.main : undefined,
+            whiteSpace: 'nowrap',
           },
           cellStyle: {
             padding: cellPadding,
             fontWeight: 400,
             color: theme.palette.primary.main,
+            whiteSpace: 'nowrap',
           },
           filterCellStyle: {
             padding: cellPadding,
             color: theme.palette.primary.main,
           },
-          rowStyle: {
-            height: '42px',
-          },
+          rowStyle: (rowData, index) => ({
+            height: attendanceMode ? '40px' : '42px',
+            backgroundColor: attendanceMode && index % 2 === 1
+              ? theme.palette.action.hover
+              : undefined,
+          }),
           doubleHorizontalScroll: false,
           tableLayout: 'fixed',
           emptyRowsWhenPaging: false,
-          fixedColumns: { left: isGroup ? 3 : 2, right: 0 },
+          fixedColumns: { left: fixedLeftColumnCount, right: 0 },
           actionsColumnIndex: -1,
         }}
         localization={{

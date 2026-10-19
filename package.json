@@ -38,6 +38,8 @@
     "dist"
   ],
   "dependencies": {
-    "flat": "5.0.2"
+    "flat": "5.0.2",
+    "jspdf": "4.2.1",
+    "jspdf-autotable": "5.0.9"
   }
 }

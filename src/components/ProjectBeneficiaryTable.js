@@ -15,6 +15,7 @@ import {
   Typography,
 } from '@material-ui/core';
 import AddIcon from '@material-ui/icons/Add';
+import DownloadIcon from '@material-ui/icons/CloudDownload';
 import {
   MODULE_NAME,
   RIGHT_PROJECT_UPDATE,
@@ -30,6 +31,7 @@ import {
   bulkUpdateBeneficiaryTimeEntries,
   bulkUpdateGroupBeneficiaryTimeEntries,
 } from '../actions';
+import { downloadLogSheetPdf } from '../util/log-sheet-export';
 
 function BaseProjectBeneficiaryTable({
   project,
@@ -43,7 +45,7 @@ function BaseProjectBeneficiaryTable({
   submittingMutation,
   coreAlert: showAlert,
 }) {
-  const orderBy = isGroup ? 'orderBy: ["group__code"]' : 'orderBy: ["individual__last_name", "individual__first_name"]';
+  const orderBy = isGroup ? 'orderBy: ["group__code"]' : 'orderBy: ["individual__first_name", "individual__last_name"]';
   const actionType = isGroup
     ? ACTION_TYPE.SEARCH_PROJECT_GROUP_BENEFICIARIES
     : ACTION_TYPE.SEARCH_PROJECT_BENEFICIARIES;
@@ -133,6 +135,7 @@ function BaseProjectBeneficiaryTable({
       startIcon={<AddIcon />}
       variant="contained"
       color="primary"
+      size="small"
     >
       <Typography variant="body2">{formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.enroll')}</Typography>
     </Button>
@@ -145,6 +148,7 @@ function BaseProjectBeneficiaryTable({
       <Button
         variant="contained"
         color="primary"
+        size="small"
       >
         <Typography variant="body2">
           {isEditing
@@ -155,16 +159,32 @@ function BaseProjectBeneficiaryTable({
     );
   };
 
+  const downloadLogSheetComponentFn = () => (
+    <Button startIcon={<DownloadIcon />} variant="contained" color="primary" size="small">
+      <Typography variant="body2" noWrap>
+        {formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.downloadLogSheet')}
+      </Typography>
+    </Button>
+  );
+
+  const handleDownloadLogSheet = () => {
+    downloadLogSheetPdf({
+      project,
+      beneficiaries: mergedBeneficiaries,
+      isGroup,
+      translate: (key) => formatMessage(intl, MODULE_NAME, key),
+    });
+  };
+
   function scrollToFirstWorkingDayColumn() {
     const scrollContainer = materialTableRef.current?.tableContainerDiv?.current;
     if (!scrollContainer) return;
 
     const headerCells = scrollContainer.querySelectorAll('thead th');
-    const firstDayTitle = `${formatMessage(intl, MODULE_NAME, 'project.day')} 1`;
-    const targetHeader = Array.from(headerCells).find((th) => th.textContent.includes(firstDayTitle));
+    const targetHeader = Array.from(headerCells).find((th) => th.textContent.trim().startsWith('1'));
 
     if (targetHeader) {
-      const numFrozenCols = isGroup ? 3 : 2;
+      const numFrozenCols = 4;
       const frozenColumns = Array.from(headerCells).slice(0, numFrozenCols);
       const frozenWidth = frozenColumns.reduce((sum, th) => sum + th.offsetWidth, 0);
 
@@ -205,8 +225,20 @@ function BaseProjectBeneficiaryTable({
 
           const isBlank = newPercent === '' || newPercent === undefined || newPercent === null;
 
-          // A missing entry means "not recorded" and must not be converted to absence.
-          if (isBlank) return;
+          // A missing entry means "not recorded".  Persist a clear operation
+          // only when an attendance entry already exists; a newly created blank
+          // cell has nothing to save.
+          if (isBlank) {
+            if (oldEntry?.id) {
+              timeEntries.push({
+                id: oldEntry.id,
+                enrollmentId: newData.enrollmentId,
+                dayNumber: parseInt(dayKey.replace('day', ''), 10),
+                clear: true,
+              });
+            }
+            return;
+          }
 
           const normalizedNew = Number(newPercent);
 
@@ -222,7 +254,7 @@ function BaseProjectBeneficiaryTable({
       });
 
       const hasInvalidEntries = timeEntries.some(
-        (e) => ![0, 100].includes(e.percentComplete),
+        (e) => !e.clear && ![0, 100].includes(e.percentComplete),
       );
 
       if (hasInvalidEntries) {
@@ -281,7 +313,7 @@ function BaseProjectBeneficiaryTable({
   };
 
   const cancelEditButtonFn = () => (
-    <Button variant="outlined" color="default">
+    <Button variant="outlined" color="default" size="small">
       <Typography variant="body2">
         {formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.cancelEdit')}
       </Typography>
@@ -303,10 +335,16 @@ function BaseProjectBeneficiaryTable({
   };
 
   function getTableActions() {
-    if (!rights.includes(RIGHT_PROJECT_UPDATE)) return [];
-
     const materialTable = materialTableRef.current;
-    const tableActions = [
+    const tableActions = [{
+      icon: downloadLogSheetComponentFn,
+      isFreeAction: true,
+      onClick: handleDownloadLogSheet,
+    }];
+
+    if (!rights.includes(RIGHT_PROJECT_UPDATE)) return tableActions;
+
+    tableActions.push(
       {
         icon: assignButtonComponentFn,
         isFreeAction: true,
@@ -317,7 +355,7 @@ function BaseProjectBeneficiaryTable({
         isFreeAction: true,
         onClick: handleToggleEdit,
       },
-    ];
+    );
 
     if (materialTable?.dataManager?.bulkEditOpen) {
       tableActions.push({
@@ -330,7 +368,7 @@ function BaseProjectBeneficiaryTable({
     return tableActions;
   }
 
-  const actions = useMemo(getTableActions, [rights, bulkEditOpen]);
+  const actions = useMemo(getTableActions, [rights, bulkEditOpen, mergedBeneficiaries, project, isGroup]);
 
   return (
     !!project?.id && (
@@ -344,6 +382,8 @@ function BaseProjectBeneficiaryTable({
           workingDays={project.workingDays}
           tableRef={materialTableRef}
           onTimeEntryChange={handleTimeEntryChange}
+          attendanceMode
+          workLogEditMode={bulkEditOpen}
         />
         <EnrollmentDialogComponent
           open={enrollmentDialogOpen}
