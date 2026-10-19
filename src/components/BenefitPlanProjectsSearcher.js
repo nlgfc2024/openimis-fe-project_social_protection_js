@@ -425,7 +425,10 @@ function BenefitPlanProjectsSearcher({
         rowIdentifier={rowIdentifier}
         defaultFilters={defaultFilters()}
         searcherActions={searcherActions}
+        enableActionButtons
         enableHeaderActionButtons
+        searcherActionsPosition="header-right"
+        compactLayout
         exportable
         exportFields={exportFields}
         exportFieldsColumns={exportFieldsColumns}
