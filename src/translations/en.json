@@ -66,6 +66,7 @@
   "projectBeneficiaries.formNumber": "Form Number",
   "projectBeneficiaries.nationalId": "National ID",
   "projectBeneficiaries.enterTime": "Record Attendance",
+  "projectBeneficiaries.downloadAttendance": "Download Attendance",
   "projectBeneficiaries.saveTime": "Save Attendance",
   "projectBeneficiaries.cancelEdit": "Cancel",
   "projectBeneficiaries.present": "Yes",
