@@ -58,7 +58,7 @@ const GROUP_BENEFICIARY_PROJECTION = (modulesManager) => [
   'id',
   'status',
   'jsonExt',
-  'group {id, code, jsonExt, head {uuid, firstName, lastName, dob, jsonExt}, location' + modulesManager.getProjection('location.Location.FlatProjection') + '}',
+  'group {id, code, head {uuid, firstName, lastName, dob}, location' + modulesManager.getProjection('location.Location.FlatProjection') + '}',
 ];
 
 // Enrolled members are read through the enrollment join type so each row carries its

@@ -29,7 +29,6 @@ import {
   LOC_LEVELS,
   locationFormatter,
 } from '../util/searcher-utils';
-import { attendanceIdentifiers } from '../util/attendance-identifiers';
 import {
   MODULE_NAME,
   DEFAULT_PAGE_SIZE,
@@ -485,9 +484,9 @@ function BeneficiaryTable({
     const additionalColumns = attendanceMode ? [
       {
         title: translateRef.current('projectBeneficiaries.formNumber'),
-        field: 'attendanceFormNumber',
+        field: isGroup ? 'group.code' : 'jsonExt.form_number',
         editable: 'never',
-        render: (rowData) => attendanceIdentifiers(rowData, isGroup).formNumber,
+        render: (rowData) => (isGroup ? rowData.group?.code : rowData.jsonExt?.form_number) || '',
       },
     ] : isGroup ? [
       {
@@ -522,9 +521,9 @@ function BeneficiaryTable({
       },
       ...(attendanceMode ? [{
         title: translateRef.current('projectBeneficiaries.nationalId'),
-        field: 'attendanceNationalId',
+        field: 'jsonExt.national_id',
         editable: 'never',
-        render: (rowData) => attendanceIdentifiers(rowData, isGroup).nationalId,
+        render: (rowData) => rowData.jsonExt?.national_id || rowData.jsonExt?.nationalId || '',
       }] : []),
       {
         title: translateRef.current('socialProtection.beneficiary.dob'),
