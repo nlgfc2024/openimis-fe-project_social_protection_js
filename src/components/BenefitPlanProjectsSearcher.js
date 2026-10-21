@@ -212,7 +212,6 @@ function BenefitPlanProjectsSearcher({
 
   const headers = () => {
     const baseHeaders = [
-      ...(standalone ? ['project.benefitPlan'] : []),
       'project.code',
       'project.name',
       'project.status',
@@ -224,6 +223,7 @@ function BenefitPlanProjectsSearcher({
       'location.locationType.1',
       'project.microCatchment',
       'project.hotspot',
+      ...(standalone ? ['project.benefitPlan'] : []),
     ];
 
     if (rights.includes(RIGHT_PROJECT_UPDATE)) {
@@ -266,9 +266,6 @@ function BenefitPlanProjectsSearcher({
 
   const itemFormatters = () => {
     const baseFormatters = [
-      ...(standalone
-        ? [(project) => project.benefitPlan?.name ?? '']
-        : []),
       (project) => project.code ?? '',
       (project) => project.name,
       (project) => formatMessage(intl, MODULE_NAME, `project.statusPicker.${project.status}`),
@@ -284,6 +281,9 @@ function BenefitPlanProjectsSearcher({
       (project) => locationFormatter(project?.location)[1] ?? '',
       (project) => project.microCatchment?.name ?? '',
       (project) => project.hotspot?.name ?? '',
+      ...(standalone
+        ? [(project) => project.benefitPlan?.name ?? '']
+        : []),
     ];
 
     if (rights.includes(RIGHT_PROJECT_UPDATE)) {
@@ -326,7 +326,6 @@ function BenefitPlanProjectsSearcher({
   const rowIdentifier = (project) => project.id;
 
   const sorts = () => [
-    ...(standalone ? [['benefitPlan__name', true]] : []),
     ['code', true],
     ['name', true],
     ['status', true],
@@ -338,6 +337,7 @@ function BenefitPlanProjectsSearcher({
     ['location', true],
     ['microCatchment', true],
     ['hotspot', true],
+    ...(standalone ? [['benefitPlan__name', true]] : []),
   ];
 
   const benefitPlanProjectsFilter = (props) => (
@@ -417,6 +417,22 @@ function BenefitPlanProjectsSearcher({
           projectsTotalCount,
         })}
         headers={headers}
+        columnWidths={[
+          { width: '7%', minWidth: '120px' },
+          { flex: true, minWidth: '300px' },
+          { width: '6%', minWidth: '110px' },
+          { width: '9%', minWidth: '160px' },
+          { width: '7%', minWidth: '140px' },
+          { width: '7%', minWidth: '150px' },
+          { width: '6%', minWidth: '110px' },
+          { width: '6%', minWidth: '120px' },
+          { width: '6%', minWidth: '110px' },
+          { width: '7%', minWidth: '160px' },
+          { width: '7%', minWidth: '140px' },
+          ...(standalone ? [{ width: '6%', minWidth: '120px' }] : []),
+          ...(rights.includes(RIGHT_PROJECT_UPDATE) ? ['48px'] : []),
+          ...(rights.includes(RIGHT_PROJECT_DELETE) ? ['48px'] : []),
+        ]}
         itemFormatters={itemFormatters}
         sorts={sorts}
         rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
