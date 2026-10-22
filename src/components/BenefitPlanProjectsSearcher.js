@@ -213,7 +213,6 @@ function BenefitPlanProjectsSearcher({
   const headers = () => {
     const baseHeaders = [
       'location.locationType.0',
-      'location.locationType.1',
       'project.microCatchment',
       'project.code',
       'project.name',
@@ -224,6 +223,7 @@ function BenefitPlanProjectsSearcher({
       'project.workingDays',
       'project.hotspot',
       ...(standalone ? ['project.benefitPlan'] : []),
+      'location.locationType.1',
     ];
 
     if (rights.includes(RIGHT_PROJECT_UPDATE)) {
@@ -267,7 +267,6 @@ function BenefitPlanProjectsSearcher({
   const itemFormatters = () => {
     const baseFormatters = [
       (project) => locationFormatter(project?.location)[0] ?? '',
-      (project) => locationFormatter(project?.location)[1] ?? '',
       (project) => project.microCatchment?.name ?? '',
       (project) => project.code ?? '',
       (project) => project.name,
@@ -280,6 +279,7 @@ function BenefitPlanProjectsSearcher({
       ...(standalone
         ? [(project) => project.benefitPlan?.name ?? '']
         : []),
+      (project) => locationFormatter(project?.location)[1] ?? '',
     ];
 
     const formatters = [...baseFormatters];
@@ -325,7 +325,6 @@ function BenefitPlanProjectsSearcher({
 
   const sorts = () => [
     ['location', true],
-    ['location', true],
     ['microCatchment', true],
     ['code', true],
     ['name', true],
@@ -336,6 +335,7 @@ function BenefitPlanProjectsSearcher({
     ['workingDays', true],
     ['hotspot', true],
     ...(standalone ? [['benefitPlan__name', true]] : []),
+    ['location', true],
   ];
 
   const benefitPlanProjectsFilter = (props) => (
