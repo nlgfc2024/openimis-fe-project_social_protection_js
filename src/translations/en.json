@@ -85,6 +85,8 @@
   "projectBeneficiaries.absent": "No",
   "projectBeneficiaries.notRecorded": "Not recorded",
   "projectBeneficiaries.timeEntry.mutationLabel": "Updated {n} work log entries for project {name}",
+  "projectBeneficiaries.timeEntry.success.title": "Work Log Recorded",
+  "projectBeneficiaries.timeEntry.success.message": "The work log has been recorded successfully.",
   "projectBeneficiaries.timeEntry.validation.title": "Invalid Work Log Entry",
   "projectBeneficiaries.timeEntry.validation.message": "Select attended or not attended.",
   "projectBeneficiaries.target.validation.title": "Enrollment Limit Exceeded",

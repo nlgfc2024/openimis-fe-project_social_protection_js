@@ -43,6 +43,7 @@ function BaseProjectBeneficiaryTable({
   beneficiaries,
   beneficiariesTotalCount,
   submittingMutation,
+  mutation,
   coreAlert: showAlert,
 }) {
   const orderBy = isGroup ? 'orderBy: ["group__code"]' : 'orderBy: ["individual__first_name", "individual__last_name"]';
@@ -125,10 +126,23 @@ function BaseProjectBeneficiaryTable({
   const prevSubmittingRef = useRef();
   useEffect(() => {
     if (prevSubmittingRef.current && !submittingMutation) {
-      triggerFetch();
+      const isTimeEntryMutation = [
+        ACTION_TYPE.BULK_UPDATE_BENEFICIARY_TIME_ENTRIES,
+        ACTION_TYPE.BULK_UPDATE_GROUP_BENEFICIARY_TIME_ENTRIES,
+      ].includes(mutation?.actionType);
+
+      if (isTimeEntryMutation) {
+        triggerFetch();
+        if (mutation?.id) {
+          showAlert(
+            formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.timeEntry.success.title'),
+            formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.timeEntry.success.message'),
+          );
+        }
+      }
     }
     prevSubmittingRef.current = submittingMutation;
-  }, [submittingMutation]);
+  }, [submittingMutation, mutation, triggerFetch, showAlert, intl]);
 
   const assignButtonComponentFn = () => (
     <Button
@@ -403,6 +417,7 @@ function BaseProjectBeneficiaryTable({
 const mapStateToPropsIndividual = (state) => ({
   rights: state.core?.user?.i_user?.rights ?? [],
   submittingMutation: state.projectSocialProtection.submittingMutation,
+  mutation: state.projectSocialProtection.mutation,
   fetchingBeneficiaries: state.projectSocialProtection.fetchingProjectBeneficiaries,
   beneficiaries: state.projectSocialProtection.projectBeneficiaries,
   beneficiariesTotalCount: state.projectSocialProtection.projectBeneficiariesTotalCount,
@@ -427,6 +442,7 @@ export const ProjectBeneficiaryTable = injectIntl((props) => (
 const mapStateToPropsGroup = (state) => ({
   rights: state.core?.user?.i_user?.rights ?? [],
   submittingMutation: state.projectSocialProtection.submittingMutation,
+  mutation: state.projectSocialProtection.mutation,
   fetchingBeneficiaries: state.projectSocialProtection.fetchingProjectGroupBeneficiaries,
   beneficiaries: state.projectSocialProtection.projectGroupBeneficiaries,
   beneficiariesTotalCount: state.projectSocialProtection.projectGroupBeneficiariesTotalCount,
