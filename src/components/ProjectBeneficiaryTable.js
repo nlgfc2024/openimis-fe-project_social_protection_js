@@ -7,6 +7,7 @@ import {
   formatMessageWithValues,
   useModulesManager,
   coreAlert,
+  waitForMutation,
 } from '@openimis/fe-core';
 import { connect, useDispatch } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -45,6 +46,7 @@ function BaseProjectBeneficiaryTable({
   submittingMutation,
   mutation,
   coreAlert: showAlert,
+  waitForMutation: waitForMutationStatus,
 }) {
   const orderBy = isGroup ? 'orderBy: ["group__code"]' : 'orderBy: ["individual__first_name", "individual__last_name"]';
   const actionType = isGroup
@@ -61,6 +63,7 @@ function BaseProjectBeneficiaryTable({
   const materialTableRef = useRef();
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [pendingChanges, setPendingChanges] = useState({});
+  const [clientMutationId, setClientMutationId] = useState(null);
   const pendingChangesRef = useRef({});
   const attendanceSnapshotRef = useRef({});
 
@@ -121,8 +124,8 @@ function BaseProjectBeneficiaryTable({
     triggerFetch();
   }, [project?.id]);
 
-  // Refetch after a time-entry save so the grid reflects the persisted values
-  // (the store still holds pre-mutation rows until this fires).
+  // Record a completed time-entry mutation, then check its mutation-log status
+  // before claiming success or refreshing the grid.
   const prevSubmittingRef = useRef();
   useEffect(() => {
     if (prevSubmittingRef.current && !submittingMutation) {
@@ -132,17 +135,35 @@ function BaseProjectBeneficiaryTable({
       ].includes(mutation?.actionType);
 
       if (isTimeEntryMutation) {
-        triggerFetch();
-        if (mutation?.id) {
-          showAlert(
-            formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.timeEntry.success.title'),
-            formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.timeEntry.success.message'),
-          );
+        if (mutation?.id && mutation?.clientMutationId) {
+          setClientMutationId(mutation.clientMutationId);
         }
       }
     }
     prevSubmittingRef.current = submittingMutation;
-  }, [submittingMutation, mutation, triggerFetch, showAlert, intl]);
+  }, [submittingMutation, mutation]);
+
+  useEffect(() => {
+    if (!clientMutationId) return undefined;
+
+    let cancelled = false;
+    const confirmTimeEntrySave = async () => {
+      const result = await waitForMutationStatus(clientMutationId);
+
+      if (cancelled) return;
+      setClientMutationId(null);
+      if (result?.status === 2) {
+        triggerFetch();
+        showAlert(
+          formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.timeEntry.success.title'),
+          formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.timeEntry.success.message'),
+        );
+      }
+    };
+
+    confirmTimeEntrySave();
+    return () => { cancelled = true; };
+  }, [clientMutationId, waitForMutationStatus, triggerFetch, showAlert, intl]);
 
   const assignButtonComponentFn = () => (
     <Button
@@ -423,7 +444,7 @@ const mapStateToPropsIndividual = (state) => ({
   beneficiariesTotalCount: state.projectSocialProtection.projectBeneficiariesTotalCount,
 });
 
-const mapDispatchToProps = (dispatch) => bindActionCreators({ coreAlert }, dispatch);
+const mapDispatchToProps = (dispatch) => bindActionCreators({ coreAlert, waitForMutation }, dispatch);
 
 const ConnectedProjectBeneficiaryTable = connect(
   mapStateToPropsIndividual,
