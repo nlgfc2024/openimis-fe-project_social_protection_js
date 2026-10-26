@@ -212,18 +212,18 @@ function BenefitPlanProjectsSearcher({
 
   const headers = () => {
     const baseHeaders = [
-      ...(standalone ? ['project.benefitPlan'] : []),
+      'location.locationType.0',
+      'project.microCatchment',
       'project.code',
       'project.name',
       'project.status',
-      'project.activity',
       'project.targetBeneficiaries',
       'project.assignedBeneficiariesCount',
+      'project.activity',
       'project.workingDays',
-      'location.locationType.0',
-      'location.locationType.1',
-      'project.microCatchment',
       'project.hotspot',
+      ...(standalone ? ['project.benefitPlan'] : []),
+      'location.locationType.1',
     ];
 
     if (rights.includes(RIGHT_PROJECT_UPDATE)) {
@@ -266,25 +266,23 @@ function BenefitPlanProjectsSearcher({
 
   const itemFormatters = () => {
     const baseFormatters = [
-      ...(standalone
-        ? [(project) => project.benefitPlan?.name ?? '']
-        : []),
+      (project) => locationFormatter(project?.location)[0] ?? '',
+      (project) => project.microCatchment?.name ?? '',
       (project) => project.code ?? '',
       (project) => project.name,
       (project) => formatMessage(intl, MODULE_NAME, `project.statusPicker.${project.status}`),
-      (project) => project.activity?.name ?? '',
       (project) => project.targetBeneficiaries,
       (project) => project.assignedBeneficiariesCount ?? 0,
+      (project) => project.activity?.name ?? '',
       (project) => project.workingDays,
+      (project) => project.hotspot?.name ?? '',
+      ...(standalone
+        ? [(project) => project.benefitPlan?.name ?? '']
+        : []),
+      (project) => locationFormatter(project?.location)[1] ?? '',
     ];
 
-    const formatters = [
-      ...baseFormatters,
-      (project) => locationFormatter(project?.location)[0] ?? '',
-      (project) => locationFormatter(project?.location)[1] ?? '',
-      (project) => project.microCatchment?.name ?? '',
-      (project) => project.hotspot?.name ?? '',
-    ];
+    const formatters = [...baseFormatters];
 
     if (rights.includes(RIGHT_PROJECT_UPDATE)) {
       formatters.push((project) => (
@@ -326,18 +324,18 @@ function BenefitPlanProjectsSearcher({
   const rowIdentifier = (project) => project.id;
 
   const sorts = () => [
-    ...(standalone ? [['benefitPlan__name', true]] : []),
+    ['location', true],
+    ['microCatchment', true],
     ['code', true],
     ['name', true],
     ['status', true],
-    ['activity', true],
     ['targetBeneficiaries', true],
     null,
+    ['activity', true],
     ['workingDays', true],
-    ['location', true],
-    ['location', true],
-    ['microCatchment', true],
     ['hotspot', true],
+    ...(standalone ? [['benefitPlan__name', true]] : []),
+    ['location', true],
   ];
 
   const benefitPlanProjectsFilter = (props) => (

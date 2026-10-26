@@ -309,6 +309,7 @@ export function bulkUpdateBeneficiaryTimeEntries(params, clientMutationLabel) {
       ERROR(ACTION_TYPE.MUTATION),
     ],
     {
+      actionType: ACTION_TYPE.BULK_UPDATE_BENEFICIARY_TIME_ENTRIES,
       clientMutationId: mutation.clientMutationId,
       clientMutationLabel,
       requestedDateTime,
@@ -328,6 +329,7 @@ export function bulkUpdateGroupBeneficiaryTimeEntries(params, clientMutationLabe
       ERROR(ACTION_TYPE.MUTATION),
     ],
     {
+      actionType: ACTION_TYPE.BULK_UPDATE_GROUP_BENEFICIARY_TIME_ENTRIES,
       clientMutationId: mutation.clientMutationId,
       clientMutationLabel,
       requestedDateTime,
