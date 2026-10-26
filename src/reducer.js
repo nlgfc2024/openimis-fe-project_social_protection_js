@@ -375,7 +375,10 @@ function reducer(
     case REQUEST(ACTION_TYPE.MUTATION):
       return dispatchMutationReq(state, action);
     case ERROR(ACTION_TYPE.MUTATION):
-      return dispatchMutationErr(state, action);
+      return {
+        ...dispatchMutationErr(state, action),
+        submittingMutation: false,
+      };
     case SUCCESS(ACTION_TYPE.CREATE_PROJECT):
       return dispatchMutationResp(state, 'createProject', action);
     case SUCCESS(ACTION_TYPE.UPDATE_PROJECT):

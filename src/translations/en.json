@@ -91,6 +91,10 @@
   "projectBeneficiaries.timeEntry.validation.message": "Select attended or not attended.",
   "projectBeneficiaries.target.validation.title": "Enrollment Limit Exceeded",
   "projectBeneficiaries.target.validation.message": "Assigned ({assigned}) + selected ({selected}) beneficiaries would total {total}, exceeding the project target ({target}).",
+  "projectBeneficiaries.enrollmentConflict.title": "Beneficiary Already Assigned",
+  "projectBeneficiaries.enrollmentError.title": "Unable to Assign Beneficiaries",
+  "projectBeneficiaries.enrollmentError.message": "The assignment could not be completed. Please try again.",
+  "projectBeneficiaries.enrollmentError.close": "Close",
 
   "projectChangelog.label": "Changelog",
 

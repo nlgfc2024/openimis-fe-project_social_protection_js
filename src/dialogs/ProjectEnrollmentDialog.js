@@ -19,6 +19,7 @@ import {
   decodeId,
   coreAlert,
   journalize,
+  waitForMutation,
 } from '@openimis/fe-core';
 import {
   fetchBeneficiaries,
@@ -79,12 +80,14 @@ function ProjectEnrollmentDialog({
   submittingMutation,
   mutation,
   journalize,
+  waitForMutation: waitForMutationStatus,
 }) {
   const prevSubmittingMutationRef = useRef();
   const modulesManager = useModulesManager();
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [pageData, setPageData] = useState([]);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [enrollmentError, setEnrollmentError] = useState(null);
   const translate = (key) => formatMessage(intl, MODULE_NAME, key);
   const tableTitle = formatMessageWithValues(
     intl,
@@ -93,6 +96,16 @@ function ProjectEnrollmentDialog({
     { n: selectedIds.size },
   );
   const [filters, setFilters] = React.useState({});
+
+  const showEnrollmentError = (message) => {
+    const isAssignmentConflict = message?.includes('already attached to another project');
+    setEnrollmentError({
+      title: translate(isAssignmentConflict
+        ? 'projectBeneficiaries.enrollmentConflict.title'
+        : 'projectBeneficiaries.enrollmentError.title'),
+      message: message || translate('projectBeneficiaries.enrollmentError.message'),
+    });
+  };
 
   const payloadField = isGroup ? 'groupBeneficiary' : 'beneficiary';
 
@@ -261,7 +274,7 @@ function ProjectEnrollmentDialog({
     setPageData(updatedPageData);
   };
 
-  const onSave = () => {
+  const onSave = async () => {
     const targetBeneficiaries = Number(project?.targetBeneficiaries || 0);
     const assignedCount = Number(project?.assignedBeneficiariesCount || 0);
     const alreadyEnrolledOfThisType = enrolledBeneficiaries?.length ?? 0;
@@ -287,7 +300,7 @@ function ProjectEnrollmentDialog({
       return;
     }
 
-    enroll(
+    const response = await enroll(
       {
         projectId: project.id,
         ids: Array.from(selectedIds),
@@ -300,7 +313,30 @@ function ProjectEnrollmentDialog({
       ),
     );
 
-    onClose();
+    const errors = response?.payload?.errors || response?.payload?.response?.errors;
+    if (response?.error || errors?.length) {
+      showEnrollmentError(errors?.map((error) => error.message).join('; '));
+      return;
+    }
+
+    const mutationResult = response?.payload?.data?.[
+      isGroup ? 'enrollGroupProject' : 'enrollProject'
+    ];
+    if (!mutationResult?.clientMutationId) {
+      showEnrollmentError();
+      return;
+    }
+
+    const result = await waitForMutationStatus(mutationResult.clientMutationId);
+    if (result?.status === 2) {
+      onClose();
+      return;
+    }
+
+    const errorMessages = Array.isArray(result?.error)
+      ? result.error.map((error) => error.detail || error.message).filter(Boolean)
+      : [];
+    showEnrollmentError(errorMessages.join('; '));
   };
 
   const dispatch = useDispatch();
@@ -310,9 +346,11 @@ function ProjectEnrollmentDialog({
 
   useEffect(() => {
     if (prevSubmittingMutationRef.current && !submittingMutation) {
-      journalize(mutation);
+      if (mutation?.id) {
+        journalize(mutation);
+      }
     }
-    if (mutation?.clientMutationId) {
+    if (mutation?.id && mutation?.clientMutationId) {
       dispatch({
         type: REQUEST(actionType),
         meta: {
@@ -344,49 +382,75 @@ function ProjectEnrollmentDialog({
     }
   }, [enrolledBeneficiaries]);
 
+  useEffect(() => {
+    if (!open) setEnrollmentError(null);
+  }, [open]);
+
   return (
-    <Dialog open={open} onClose={onClose} classes={{ paper: classes.dialogPaper }}>
-      <DialogTitle style={{ paddingBottom: 0 }}>
-        {translate('projectBeneficiaries.dialogTitle')}
-        <div style={{ float: 'right' }}>
-          <IconButton
-            aria-label="close"
-            onClick={onClose}
-            className={classes.closeButton}
+    <>
+      <Dialog open={open} onClose={onClose} classes={{ paper: classes.dialogPaper }}>
+        <DialogTitle style={{ paddingBottom: 0 }}>
+          {translate('projectBeneficiaries.dialogTitle')}
+          <div style={{ float: 'right' }}>
+            <IconButton
+              aria-label="close"
+              onClick={onClose}
+              className={classes.closeButton}
+            >
+              <CloseIcon />
+            </IconButton>
+          </div>
+        </DialogTitle>
+        <DialogContent>
+          <div className={classes.subtitle}>
+            {translate('projectBeneficiaries.dialogSubtitle')}
+          </div>
+
+          <BeneficiaryTable
+            onQueryChange={handleQueryChange}
+            fetchingBeneficiaries={fetchingBeneficiaries}
+            onSelectionChange={onSelectionChange}
+            tableTitle={tableTitle}
+            isGroup={isGroup}
+            appliedFilters={filters}
+            appliedPageSize={pageSize}
+          />
+        </DialogContent>
+
+        <DialogActions className={classes.actionsContainer}>
+          <Button
+            onClick={onSave}
+            variant="contained"
+            color="primary"
+            autoFocus
+            className={classes.saveButton}
+            disabled={fetchingEnrolledBeneficiaries || fetchingBeneficiaries || submittingMutation}
           >
-            <CloseIcon />
-          </IconButton>
-        </div>
-      </DialogTitle>
-      <DialogContent>
-        <div className={classes.subtitle}>
-          {translate('projectBeneficiaries.dialogSubtitle')}
-        </div>
+            {translate('projectBeneficiaries.save')}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-        <BeneficiaryTable
-          onQueryChange={handleQueryChange}
-          fetchingBeneficiaries={fetchingBeneficiaries}
-          onSelectionChange={onSelectionChange}
-          tableTitle={tableTitle}
-          isGroup={isGroup}
-          appliedFilters={filters}
-          appliedPageSize={pageSize}
-        />
-      </DialogContent>
-
-      <DialogActions className={classes.actionsContainer}>
-        <Button
-          onClick={onSave}
-          variant="contained"
-          color="primary"
-          autoFocus
-          className={classes.saveButton}
-          disabled={fetchingEnrolledBeneficiaries || fetchingBeneficiaries || submittingMutation}
-        >
-          {translate('projectBeneficiaries.save')}
-        </Button>
-      </DialogActions>
-    </Dialog>
+      <Dialog
+        open={Boolean(enrollmentError)}
+        onClose={() => setEnrollmentError(null)}
+        aria-labelledby="project-enrollment-error-title"
+      >
+        <DialogTitle id="project-enrollment-error-title">
+          {enrollmentError?.title}
+        </DialogTitle>
+        <DialogContent>{enrollmentError?.message}</DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setEnrollmentError(null)}
+            color="primary"
+            autoFocus
+          >
+            {translate('projectBeneficiaries.enrollmentError.close')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }
 
@@ -401,6 +465,7 @@ const mapDispatchToPropsBeneficiary = (dispatch) => bindActionCreators({
   enroll: enrollProject,
   coreAlert,
   journalize,
+  waitForMutation,
 }, dispatch);
 
 const mapStateToPropsGroupBeneficiary = (state) => ({
@@ -414,6 +479,7 @@ const mapDispatchToPropsGroupBeneficiary = (dispatch) => bindActionCreators({
   enroll: enrollGroupProject,
   coreAlert,
   journalize,
+  waitForMutation,
 }, dispatch);
 
 export const ProjectBeneficiariyEnrollmentDialog = injectIntl(
