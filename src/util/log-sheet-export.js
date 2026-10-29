@@ -1,7 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import malawiCoatOfArms from '../assets/malawi-coat-of-arms.png';
-import mbwezeraLogo from '../assets/mbwezera-logo.png';
 import { beneficiaryIdentifiers } from './beneficiary-identifiers';
 import { locationFormatter } from './searcher-utils';
 
@@ -150,7 +149,7 @@ export const downloadLogSheetPdf = ({
 
   // These PNG data are embedded by Rollup at build time, not loaded from a URL.
   doc.addImage(malawiCoatOfArms, 'PNG', PAGE.left, PAGE.top, 18, 18);
-  doc.addImage(mbwezeraLogo, 'PNG', PAGE.width - PAGE.right - 42, PAGE.top + 1, 42, 16);
+  doc.addImage(malawiCoatOfArms, 'PNG', PAGE.width - PAGE.right - 18, PAGE.top, 18, 18);
   doc.setFontSize(13);
   doc.text(translate('projectBeneficiaries.logSheetPdf.title'), PAGE.width / 2, 12, { align: 'center' });
   doc.setFontSize(6.5);
