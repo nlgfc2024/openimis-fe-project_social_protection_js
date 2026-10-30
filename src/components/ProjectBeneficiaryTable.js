@@ -15,6 +15,7 @@ import {
   Button,
   Typography,
 } from '@material-ui/core';
+import { useTheme } from '@material-ui/core/styles';
 import AddIcon from '@material-ui/icons/Add';
 import DownloadIcon from '@material-ui/icons/CloudDownload';
 import {
@@ -48,6 +49,7 @@ function BaseProjectBeneficiaryTable({
   coreAlert: showAlert,
   waitForMutation: waitForMutationStatus,
 }) {
+  const theme = useTheme();
   const orderBy = isGroup ? 'orderBy: ["group__code"]' : 'orderBy: ["individual__first_name", "individual__last_name"]';
   const actionType = isGroup
     ? ACTION_TYPE.SEARCH_PROJECT_GROUP_BENEFICIARIES
@@ -164,43 +166,6 @@ function BaseProjectBeneficiaryTable({
     confirmTimeEntrySave();
     return () => { cancelled = true; };
   }, [clientMutationId, waitForMutationStatus, triggerFetch, showAlert, intl]);
-
-  const assignButtonComponentFn = () => (
-    <Button
-      startIcon={<AddIcon />}
-      variant="contained"
-      color="primary"
-      size="small"
-    >
-      <Typography variant="body2">{formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.enroll')}</Typography>
-    </Button>
-  );
-
-  const enterTimeComponentFn = () => {
-    const isEditing = materialTableRef.current?.dataManager?.bulkEditOpen;
-
-    return (
-      <Button
-        variant="contained"
-        color="primary"
-        size="small"
-      >
-        <Typography variant="body2">
-          {isEditing
-            ? formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.saveTime')
-            : formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.enterTime')}
-        </Typography>
-      </Button>
-    );
-  };
-
-  const downloadLogSheetComponentFn = () => (
-    <Button startIcon={<DownloadIcon />} variant="contained" color="primary" size="small">
-      <Typography variant="body2" noWrap>
-        {formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.downloadLogSheet')}
-      </Typography>
-    </Button>
-  );
 
   const handleDownloadLogSheet = () => {
     downloadLogSheetPdf({
@@ -347,14 +312,6 @@ function BaseProjectBeneficiaryTable({
     }
   };
 
-  const cancelEditButtonFn = () => (
-    <Button variant="outlined" color="default" size="small">
-      <Typography variant="body2">
-        {formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.cancelEdit')}
-      </Typography>
-    </Button>
-  );
-
   const handleCancelEdit = () => {
     const materialTable = materialTableRef.current;
     if (!materialTable?.dataManager) return;
@@ -369,51 +326,73 @@ function BaseProjectBeneficiaryTable({
     setPendingChanges({});
   };
 
-  function getTableActions() {
-    const materialTable = materialTableRef.current;
-    const tableActions = [{
-      icon: downloadLogSheetComponentFn,
-      isFreeAction: true,
-      onClick: handleDownloadLogSheet,
-    }];
-
-    if (!rights.includes(RIGHT_PROJECT_UPDATE)) return tableActions;
-
-    tableActions.push(
-      {
-        icon: assignButtonComponentFn,
-        isFreeAction: true,
-        onClick: () => setEnrollmentDialogOpen(true),
-      },
-      {
-        icon: enterTimeComponentFn,
-        isFreeAction: true,
-        onClick: handleToggleEdit,
-      },
-    );
-
-    if (materialTable?.dataManager?.bulkEditOpen) {
-      tableActions.push({
-        icon: cancelEditButtonFn,
-        isFreeAction: true,
-        onClick: handleCancelEdit,
-      });
-    }
-
-    return tableActions;
-  }
-
-  const actions = useMemo(getTableActions, [rights, bulkEditOpen, mergedBeneficiaries, project, isGroup]);
-
   return (
     !!project?.id && (
       <>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            gap: theme.spacing(2),
+            padding: theme.spacing(1, 2),
+            overflowX: 'auto',
+            whiteSpace: 'nowrap',
+            backgroundColor: theme.paper?.body?.backgroundColor,
+          }}
+        >
+          <Button
+            startIcon={<DownloadIcon />}
+            variant="contained"
+            color="primary"
+            size="small"
+            onClick={handleDownloadLogSheet}
+          >
+            <Typography variant="body2" noWrap>
+              {formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.downloadLogSheet')}
+            </Typography>
+          </Button>
+          {rights.includes(RIGHT_PROJECT_UPDATE) && (
+            <>
+              <Button
+                startIcon={<AddIcon />}
+                variant="contained"
+                color="primary"
+                size="small"
+                onClick={() => setEnrollmentDialogOpen(true)}
+              >
+                <Typography variant="body2" noWrap>
+                  {formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.enroll')}
+                </Typography>
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                size="small"
+                onClick={handleToggleEdit}
+              >
+                <Typography variant="body2" noWrap>
+                  {bulkEditOpen
+                    ? formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.saveTime')
+                    : formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.enterTime')}
+                </Typography>
+              </Button>
+              {bulkEditOpen && (
+                <Button variant="outlined" color="default" size="small" onClick={handleCancelEdit}>
+                  <Typography variant="body2" noWrap>
+                    {formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.cancelEdit')}
+                  </Typography>
+                </Button>
+              )}
+            </>
+          )}
+        </div>
         <BeneficiaryTable
           allRows={mergedBeneficiaries}
           fetchingBeneficiaries={fetchingBeneficiaries}
           tableTitle={tableTitle}
           isGroup={isGroup}
-          actions={actions}
+          actions={[]}
           workingDays={project.workingDays}
           tableRef={materialTableRef}
           onTimeEntryChange={handleTimeEntryChange}
