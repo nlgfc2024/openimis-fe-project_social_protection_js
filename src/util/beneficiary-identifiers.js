@@ -26,10 +26,21 @@ export const beneficiaryIdentifiers = (row, isGroup = false) => {
   const personSources = isGroup
     ? [row.group?.head?.jsonExt, row.jsonExt]
     : [row.individual?.jsonExt, row.jsonExt];
+  const paymentSources = isGroup
+    ? [row.group?.head?.jsonExt, row.group?.jsonExt, row.jsonExt]
+    : [row.individual?.jsonExt, row.jsonExt];
 
   return {
     formNumber: firstValue(formNumberSources, ['form_number', 'formNumber']),
     nationalId: firstValue(personSources, ['national_id', 'nationalId']),
     sex: firstValue(personSources, ['sex', 'gender']),
+    paymentAccount: firstValue(paymentSources, [
+      'payment_account_number', 'paymentAccountNumber', 'account_number', 'accountNumber',
+      'bank_account_number', 'bankAccountNumber', 'account_no', 'accountNo',
+    ]),
+    phoneNumber: firstValue(paymentSources, [
+      'phone_number', 'phoneNumber', 'mobile_number', 'mobileNumber',
+      'household_mobile_number', 'householdMobileNumber',
+    ]),
   };
 };

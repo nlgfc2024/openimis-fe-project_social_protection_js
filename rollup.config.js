@@ -1,5 +1,6 @@
 import babel from '@rollup/plugin-babel';
 import json from '@rollup/plugin-json';
+import url from '@rollup/plugin-url';
 import pkg from './package.json';
 
 export default {
@@ -32,6 +33,8 @@ export default {
   ],
   plugins: [
     json(),
+    // Embed PDF logos in the built module instead of relying on runtime URLs.
+    url({ include: ['**/*.png'], limit: Infinity }),
     babel({
       exclude: 'node_modules/**',
       babelHelpers: 'runtime',
