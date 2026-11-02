@@ -8,11 +8,7 @@ const PAGE = {
   width: 297, height: 210, left: 6, right: 6, top: 6, bottom: 8,
 };
 
-// These match the compact proportions of the legacy works register.  Thirty
-// readable day cells must fit beside the participant data on A4 landscape.
-// Minimum and maximum widths for the participant columns. Their final width
-// is calculated from the actual values in each log sheet; the remaining A4
-// width is assigned to the day columns.
+// Participant columns are sized to their values; remaining width goes to day cells.
 const STATIC_COLUMN_MIN_WIDTHS = [5, 17, 10, 5, 10, 13, 12, 10, 9];
 const STATIC_COLUMN_MAX_WIDTHS = [5, 30, 18, 5, 16, 24, 22, 18, 15];
 
@@ -41,11 +37,11 @@ const addHeaderText = (doc, label, value, x, width) => {
   doc.text(doc.splitTextToSize(`${label}: ${value || ''}`, width), x, 28, { maxWidth: width });
 };
 
-const fitCellText = (doc, cell, value) => {
+const fitCellText = (doc, cell, value, columnWidth) => {
   const text = String(value || '');
   if (!text) return;
   const padding = Number(cell.styles.cellPadding || 0) * 2;
-  const availableWidth = cell.width - padding;
+  const availableWidth = Math.max(0, columnWidth - padding);
   const currentSize = cell.styles.fontSize || 5.7;
   doc.setFontSize(currentSize);
   const textWidth = doc.getTextWidth(text);
@@ -75,12 +71,13 @@ export const downloadLogSheetPdf = ({
   const workingDays = Math.max(0, Number(project?.workingDays) || 0);
   const projectLocation = locationFormatter(project?.location);
   const projectExtensions = projectJson(project);
+  const activityExtensions = projectJson(project?.activity);
   const subActivity = valueFrom(
-    [project?.subActivity, project?.activity?.subActivity, projectExtensions],
+    [project?.subActivity, project?.activity?.subActivity, projectExtensions, activityExtensions],
     ['name', 'sub_activity', 'subActivity'],
-  ) || project?.activity?.name || '';
+  );
   const unitOfMeasure = valueFrom(
-    [project?.unitOfMeasure, project?.activity?.unitOfMeasure, projectExtensions],
+    [project?.unitOfMeasure, project?.activity?.unitOfMeasure, projectExtensions, activityExtensions],
     ['name', 'unit_of_measure', 'unitOfMeasure'],
   );
   // A4 landscape is explicit so browser/printer defaults cannot fall back to Letter.
@@ -198,6 +195,7 @@ export const downloadLogSheetPdf = ({
       textColor: [0, 0, 0],
       fontStyle: 'bold',
       fontSize: 5.3,
+      overflow: 'linebreak',
       lineWidth: 0.22,
       lineColor: [40, 40, 40],
     },
@@ -217,7 +215,12 @@ export const downloadLogSheetPdf = ({
     didParseCell: (data) => {
       // IDs and payment details must never overflow or wrap into another cell.
       if (data.section === 'body' && [2, 3, 7, 8].includes(data.column.index)) {
-        fitCellText(doc, data.cell, data.cell.raw);
+        fitCellText(
+          doc,
+          data.cell,
+          data.cell.raw,
+          staticColumnWidths[data.column.index],
+        );
       }
     },
   });
