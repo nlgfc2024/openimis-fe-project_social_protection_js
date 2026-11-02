@@ -11,6 +11,9 @@ import {
 function ProjectPicker({
   benefitPlanId,
   status,
+  parentLocation,
+  microCatchment,
+  hotspot,
   multiple = true,
   required = false,
   label,
@@ -29,6 +32,9 @@ function ProjectPicker({
   const [filters, setFilters] = useState({
     benefitPlan_Id: benefitPlanId,
     status,
+    parentLocation: parentLocation?.uuid,
+    microCatchment_Id: microCatchment?.id,
+    hotspot_Id: hotspot?.gqlId,
     isDeleted: false,
   });
 
@@ -37,19 +43,38 @@ function ProjectPicker({
       ...prev,
       benefitPlan_Id: benefitPlanId,
       status,
+      parentLocation: parentLocation?.uuid,
+      microCatchment_Id: microCatchment?.id,
+      hotspot_Id: hotspot?.gqlId,
     }));
-  }, [benefitPlanId, status]);
+  }, [
+    benefitPlanId,
+    status,
+    parentLocation?.uuid,
+    microCatchment?.id,
+    hotspot?.gqlId,
+  ]);
 
   const { isLoading, data, error } = useGraphqlQuery(
     `
     query ProjectPicker(
-      $search: String, $first: Int, $benefitPlan_Id: ID, $status: ProjectStatus, $isDeleted: Boolean
+      $search: String,
+      $first: Int,
+      $benefitPlan_Id: ID,
+      $status: ProjectStatus,
+      $parentLocation: String,
+      $microCatchment_Id: ID,
+      $hotspot_Id: ID,
+      $isDeleted: Boolean
     ) {
       project(
         name_Icontains: $search,
         first: $first,
         benefitPlan_Id: $benefitPlan_Id,
         status: $status,
+        parentLocation: $parentLocation,
+        microCatchment_Id: $microCatchment_Id,
+        hotspot_Id: $hotspot_Id,
         isDeleted: $isDeleted,
         orderBy: "name"
       ) {
@@ -111,6 +136,9 @@ function ProjectPicker({
         search,
         benefitPlan_Id: benefitPlanId,
         status,
+        parentLocation: parentLocation?.uuid,
+        microCatchment_Id: microCatchment?.id,
+        hotspot_Id: hotspot?.gqlId,
         isDeleted: false,
       })}
       renderInput={(inputProps) => (

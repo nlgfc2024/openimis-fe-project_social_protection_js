@@ -12,6 +12,7 @@ import ProjectsPage from './pages/ProjectsPage';
 import ProjectHistorySearcher from './components/ProjectHistorySearcher';
 import BenefitPlanProjectsSearcher from './components/BenefitPlanProjectsSearcher';
 import ProjectPicker from './pickers/ProjectPicker';
+import HotspotPicker from './pickers/HotspotPicker';
 import {
   BenefitPlanProjectsTabLabel,
   BenefitPlanProjectsTabPanel,
@@ -58,6 +59,7 @@ const DEFAULT_CONFIG = {
     { key: 'projectSocialProtection.ProjectHistorySearcher', ref: ProjectHistorySearcher },
     { key: 'projectSocialProtection.BenefitPlanProjectsSearcher', ref: BenefitPlanProjectsSearcher },
     { key: 'projectSocialProtection.ProjectPicker', ref: ProjectPicker },
+    { key: 'projectSocialProtection.HotspotPicker', ref: HotspotPicker },
     // Legacy key: fe-payroll's payroll FilterDialog resolves the project filter through
     // `socialProtection.ProjectPicker`, which social_protection registered until the project
     // domain was extracted into this module. Registering it here keeps that filter working
