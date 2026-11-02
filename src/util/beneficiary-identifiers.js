@@ -7,7 +7,7 @@ export const parseJsonExt = (value) => {
   }
 };
 
-const firstValue = (sources, keys) => {
+export const firstValue = (sources, keys) => {
   for (const source of sources) {
     const jsonExt = parseJsonExt(source);
     for (const key of keys) {
