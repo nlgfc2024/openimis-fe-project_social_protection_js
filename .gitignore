@@ -12,3 +12,4 @@ dist
 .env
 .env.local
 *.log
+*:Zone.Identifier
