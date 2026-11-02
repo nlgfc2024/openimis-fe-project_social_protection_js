@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import malawiCoatOfArms from '../assets/malawi-coat-of-arms.png';
-import { beneficiaryIdentifiers, firstValue, parseJsonExt } from './beneficiary-identifiers';
+import { beneficiaryIdentifiers, firstValue } from './beneficiary-identifiers';
 import { locationFormatter } from './searcher-utils';
 
 const PAGE = {
@@ -125,14 +125,12 @@ export const downloadLogSheetPdf = ({
     ? Math.max(0, Math.floor(projectWorkingDays))
     : 0;
   const projectLocation = locationFormatter(project?.location);
-  const projectExtensions = parseJsonExt(project?.jsonExt);
-  const activityExtensions = parseJsonExt(project?.activity?.jsonExt);
   const subActivity = project?.subActivity || project?.activity?.subActivity || firstValue(
-    [projectExtensions, activityExtensions],
+    [project?.jsonExt, project?.activity?.jsonExt],
     ['sub_activity', 'subActivity'],
   );
   const unitOfMeasure = project?.unitOfMeasure || project?.activity?.unitOfMeasure || firstValue(
-    [projectExtensions, activityExtensions],
+    [project?.jsonExt, project?.activity?.jsonExt],
     ['unit_of_measure', 'unitOfMeasure'],
   );
   // A4 landscape is explicit so browser/printer defaults cannot fall back to Letter.
@@ -185,15 +183,13 @@ export const downloadLogSheetPdf = ({
   const staticColumnsWidth = measuredStaticColumns.reduce((total, column) => total + column.width, 0);
   const availableDayWidth = contentWidth - staticColumnsWidth;
   const daysPerPage = Math.max(1, Math.floor(availableDayWidth / DAY_COLUMN_MIN_WIDTH));
-  const dayColumnWidth = workingDays > daysPerPage
-    ? DAY_COLUMN_MIN_WIDTH
-    : (workingDays ? availableDayWidth / workingDays : 0);
-  const dayGroups = workingDays
-    ? Array.from({ length: Math.ceil(workingDays / daysPerPage) }, (_, index) => ({
-      start: index * daysPerPage,
-      count: Math.min(daysPerPage, workingDays - (index * daysPerPage)),
-    }))
-    : [{ start: 0, count: 0 }];
+  const dayGroupCount = workingDays ? Math.ceil(workingDays / daysPerPage) : 1;
+  const daysPerGroup = workingDays ? Math.ceil(workingDays / dayGroupCount) : 0;
+  const dayColumnWidth = workingDays ? availableDayWidth / daysPerGroup : 0;
+  const dayGroups = Array.from({ length: dayGroupCount }, (_, index) => ({
+    start: index * daysPerGroup,
+    count: Math.min(daysPerGroup, workingDays - (index * daysPerGroup)),
+  }));
   const headerValues = {
     location: projectLocation[0],
     microCatchment: project?.microCatchment?.name,
@@ -259,7 +255,7 @@ export const downloadLogSheetPdf = ({
         lineColor: [40, 40, 40],
       },
       columnStyles,
-      willDrawPage: () => drawPageHeader(doc, translate, headerValues),
+      didDrawPage: () => drawPageHeader(doc, translate, headerValues),
       didParseCell: (data) => {
         const column = measuredStaticColumns[data.column.index];
         if (data.section === 'body' && column?.fitText) {
