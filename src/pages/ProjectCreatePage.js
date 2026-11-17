@@ -225,7 +225,7 @@ function ProjectCreatePage({
     );
   };
 
-  if (deploymentError) return <Typography color="error">{validationErrorText(deploymentError)}</Typography>;
+  if (deploymentError) return <Typography color="error">{formatMessage(intl, 'projectSocialProtection', 'project.deployment.loadError')}</Typography>;
   if (!benefitPlanId || !editedProject.projectType) {
     return <div>{formatMessage(intl, 'projectSocialProtection', 'project.loading')}</div>;
   }

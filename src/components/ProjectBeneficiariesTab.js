@@ -2,8 +2,7 @@ import React from 'react';
 import { Tab } from '@material-ui/core';
 import { formatMessage } from '@openimis/fe-core';
 import { PROJECT_BENEFICIARIES_TAB_VALUE, BENEFIT_PLAN_TYPE } from '../constants';
-import { ProjectBeneficiaryTable, ProjectGroupBeneficiaryTable, TrainingGroupBeneficiaryTable } from './ProjectBeneficiaryTable';
-import { isTraining } from '../util/project-type';
+import { ProjectBeneficiaryTable, ProjectGroupBeneficiaryTable } from './ProjectBeneficiaryTable';
 
 function ProjectBeneficiariesTabLabel({
   intl, onChange, tabStyle, isSelected,
@@ -28,8 +27,6 @@ function ProjectBeneficiariesTabPanel({
         <div>
           {project.benefitPlan?.type === BENEFIT_PLAN_TYPE.INDIVIDUAL ? (
             <ProjectBeneficiaryTable project={project} />
-          ) : isTraining(project) ? (
-            <TrainingGroupBeneficiaryTable project={project} />
           ) : (
             <ProjectGroupBeneficiaryTable project={project} />
           )}

@@ -7,6 +7,7 @@ import {
   DialogActions,
   IconButton,
   Button,
+  TextField,
 } from '@material-ui/core';
 import CloseIcon from '@material-ui/icons/Close';
 import { withStyles, withTheme } from '@material-ui/core/styles';
@@ -24,6 +25,7 @@ import {
 import {
   fetchBeneficiaries,
   fetchGroupBeneficiaries,
+  fetchTrainingGroupBeneficiaries,
   enrollProject,
   enrollGroupProject,
 } from '../actions';
@@ -32,6 +34,7 @@ import {
   DEFAULT_PAGE_SIZE,
 } from '../constants';
 import BeneficiaryTable from '../components/BeneficiaryTable';
+import { rawBenefitPlanId } from '../util/project-type';
 import { REQUEST } from '../util/action-type';
 import { ACTION_TYPE } from '../reducer';
 
@@ -64,7 +67,7 @@ const convertFieldName = (field) => (
   (field || '').replace(/\.([a-z])/g, (_, char) => `_${char.toUpperCase()}`)
 );
 
-function ProjectEnrollmentDialog({
+export function ProjectEnrollmentDialog({
   intl,
   classes,
   open,
@@ -73,6 +76,7 @@ function ProjectEnrollmentDialog({
   enrolledBeneficiaries,
   isGroup,
   fetchBeneficiaries,
+  fetchTrainingGroupBeneficiaries,
   fetchingBeneficiaries,
   fetchingEnrolledBeneficiaries,
   enroll,
@@ -84,6 +88,8 @@ function ProjectEnrollmentDialog({
 }) {
   const prevSubmittingMutationRef = useRef();
   const modulesManager = useModulesManager();
+  const [groupCode, setGroupCode] = useState('');
+  const [loadingGroup, setLoadingGroup] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [pageData, setPageData] = useState([]);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -274,6 +280,43 @@ function ProjectEnrollmentDialog({
     setPageData(updatedPageData);
   };
 
+  const addGroupMembers = async () => {
+    setLoadingGroup(true);
+    try {
+      const ids = [];
+      let offset = 0;
+      let total = 0;
+      do {
+        const response = await fetchTrainingGroupBeneficiaries(modulesManager, [
+          `benefitPlan_Id: "${project.benefitPlan.id}"`,
+          `eligibleForProject: "${rawBenefitPlanId(project.id)}"`,
+          `groupCode: ${JSON.stringify(groupCode.trim())}`,
+          'status: ACTIVE', 'isDeleted: false', 'first: 100', `offset: ${offset}`,
+          'orderBy: ["id"]',
+        ]);
+        const page = response?.payload?.data?.projectEligibleBeneficiaries;
+        if (response?.error || response?.payload?.errors?.length || !page) throw new Error();
+        ids.push(...(page.edges || []).map(({ node }) => decodeId(node.id)));
+        total = Number(page.totalCount);
+        if (!Number.isFinite(total) || (offset < total && !page.edges?.length)) throw new Error();
+        offset += 100;
+      } while (offset < total);
+      if (!ids.length) {
+        showEnrollmentError(translate('projectBeneficiaries.group.noMembers'));
+        return;
+      }
+      // Add to the complete selection, including participants from earlier groups.
+      setSelectedIds((previous) => new Set([...previous, ...ids]));
+      setPageData((previous) => previous.map((row) => ({
+        ...row, tableData: { ...row.tableData, checked: selectedIds.has(row.id) || ids.includes(row.id) },
+      })));
+    } catch (error) {
+      showEnrollmentError(translate('projectBeneficiaries.group.loadError'));
+    } finally {
+      setLoadingGroup(false);
+    }
+  };
+
   const onSave = async () => {
     const targetBeneficiaries = Number(project?.targetBeneficiaries || 0);
     const assignedCount = Number(project?.assignedBeneficiariesCount || 0);
@@ -282,8 +325,7 @@ function ProjectEnrollmentDialog({
     const selectedCount = selectedIds.size;
     const projectedTotal = otherTypeAssigned + selectedCount;
 
-    // Training group assignments expand to people on the server; group counts
-    // cannot predict the individual capacity delta.
+    // Training targets are informational; WORK retains its capacity check.
     if (project.projectType !== 'TRAINING' && targetBeneficiaries > 0 && projectedTotal > targetBeneficiaries) {
       showAlert(
         translate('projectBeneficiaries.target.validation.title'),
@@ -368,7 +410,7 @@ function ProjectEnrollmentDialog({
   });
 
   useEffect(() => {
-    const enrolledIds = new Set((enrolledBeneficiaries || []).map((b) => b.id));
+    const enrolledIds = new Set((enrolledBeneficiaries || []).map((b) => rawBenefitPlanId(b.id)));
     setSelectedIds(enrolledIds);
 
     // Update current page data if it exists
@@ -408,6 +450,15 @@ function ProjectEnrollmentDialog({
             {translate('projectBeneficiaries.dialogSubtitle')}
           </div>
 
+          {project.projectType === 'TRAINING' && !isGroup && (
+            <div>
+              <TextField label={translate('projectBeneficiaries.group.code')} value={groupCode}
+                onChange={(event) => setGroupCode(event.target.value)} disabled={loadingGroup} />
+              <Button onClick={addGroupMembers} disabled={!groupCode.trim() || loadingGroup || submittingMutation}>
+                {translate('projectBeneficiaries.group.add')}
+              </Button>
+            </div>
+          )}
           <BeneficiaryTable
             onQueryChange={handleQueryChange}
             fetchingBeneficiaries={fetchingBeneficiaries}
@@ -426,7 +477,7 @@ function ProjectEnrollmentDialog({
             color="primary"
             autoFocus
             className={classes.saveButton}
-            disabled={fetchingEnrolledBeneficiaries || fetchingBeneficiaries || submittingMutation}
+            disabled={loadingGroup || fetchingEnrolledBeneficiaries || fetchingBeneficiaries || submittingMutation}
           >
             {translate('projectBeneficiaries.save')}
           </Button>
@@ -465,6 +516,7 @@ const mapStateToPropsBeneficiary = (state) => ({
 const mapDispatchToPropsBeneficiary = (dispatch) => bindActionCreators({
   fetchBeneficiaries,
   enroll: enrollProject,
+  fetchTrainingGroupBeneficiaries,
   coreAlert,
   journalize,
   waitForMutation,

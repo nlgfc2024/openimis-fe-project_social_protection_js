@@ -7,8 +7,8 @@ const dependency = (name) => require(require.resolve(name, {
 }));
 const babel = dependency('@babel/core');
 const React = dependency('react');
-const source = fs.readFileSync(path.join(__dirname, '../src/util/project-type.js'), 'utf8').replace(/export const /g, 'const ');
-const helpers = vm.runInNewContext(`${source}\n({isTraining, mandatoryFieldsEmpty, datesInOrder, rawBenefitPlanId, validationErrorText})`, { atob });
+const source = fs.readFileSync(path.join(__dirname, '../src/util/project-type.js'), 'utf8').replace(/import .*?;\s*/g, '').replace(/export const /g, 'const ');
+const helpers = vm.runInNewContext(`${source}\n({isTraining, mandatoryFieldsEmpty, datesInOrder, rawBenefitPlanId, validationErrorText})`, { decodeId: (id) => atob(id).split(':')[1] });
 const valid = { projectType: 'TRAINING', name: 'Session', activity: { id: '1' }, location: { uuid: 'location' }, targetBeneficiaries: 5, workingDays: 3 };
 assert.strictEqual(helpers.mandatoryFieldsEmpty(valid), false);
 assert.strictEqual(helpers.mandatoryFieldsEmpty({ ...valid, targetBeneficiaries: null }), false);
@@ -49,6 +49,11 @@ assert.ok(payload.includes('name: "Session \\"A\\""'));
 assert.ok(payload.includes('sessionEndDate: null'));
 assert.ok(!payload.includes('projectType:'));
 assert.ok(!actions.createProject({ ...valid, projectType: 'WORK' }).includes('name:'));
+for (const targetBeneficiaries of [null, undefined, '']) {
+  assert.ok(!actions.updateProject({ ...valid, projectType: 'WORK', targetBeneficiaries }).includes('targetBeneficiaries:'));
+  assert.ok(actions.updateProject({ ...valid, targetBeneficiaries }).includes('targetBeneficiaries: null'));
+}
+assert.ok(actions.updateProject({ ...valid, projectType: 'WORK', targetBeneficiaries: 10 }).includes('targetBeneficiaries: 10'));
 assert.strictEqual(actions.projectNameValidationCheck(null, { benefitPlanId: btoa(`BenefitPlanGQLType:${uuid}`) }).benefitPlanId, uuid);
 
 class FormPanel {
@@ -84,3 +89,73 @@ for (const projectType of ['WORK', 'TRAINING']) {
   }
 }
 console.log('Training/WORK rendering, payload, duration, date and UUID tests passed.');
+
+
+// Exercise the actual dialog handlers: paginated household additions must retain
+// earlier participants, deduplicate members and submit individual beneficiary IDs.
+async function checkGroupAssignment() {
+  const state = [];
+  let cursor = 0;
+  const useState = (initial) => {
+    const index = cursor++;
+    if (!(index in state)) state[index] = typeof initial === 'function' ? initial() : initial;
+    return [state[index], (next) => { state[index] = typeof next === 'function' ? next(state[index]) : next; }];
+  };
+  const fakeReact = { ...React, useState };
+  let submitted;
+  let fail = false;
+  const calls = [];
+  const decodeId = (id) => id.startsWith('encoded:') ? id.slice(8) : id;
+  const fetchMembers = async (_, params) => {
+    calls.push(params);
+    if (fail) return { payload: { errors: [{ message: 'Denied' }] } };
+    const secondPage = params.includes('offset: 100');
+    return { payload: { data: { projectEligibleBeneficiaries: {
+      totalCount: 101,
+      edges: (secondPage ? ['member-100'] : Array.from({ length: 100 }, (_, i) => `member-${i}`))
+        .map((id) => ({ node: { id: `encoded:${id}` } })),
+    } } } };
+  };
+  const identity = (value) => value;
+  const noop = () => {};
+  const env = {
+    React: fakeReact, useState, useEffect: noop, useRef: () => ({}),
+    useModulesManager: () => ({}), useDispatch: () => noop,
+    formatMessage: (_, __, key) => key, formatMessageWithValues: (_, __, key) => key,
+    decodeId, rawBenefitPlanId: identity, injectIntl: identity,
+    withTheme: identity, withStyles: () => identity, connect: () => identity,
+    bindActionCreators: identity, fetchBeneficiaries: noop, fetchGroupBeneficiaries: noop,
+    fetchTrainingGroupBeneficiaries: fetchMembers, enrollProject: noop, enrollGroupProject: noop,
+    coreAlert: noop, journalize: noop, waitForMutation: noop,
+    MODULE_NAME: 'projectSocialProtection', DEFAULT_PAGE_SIZE: 10,
+    REQUEST: identity, ACTION_TYPE: {},
+  };
+  for (const name of ['Dialog', 'DialogTitle', 'DialogContent', 'DialogActions', 'IconButton', 'Button', 'TextField', 'CloseIcon', 'BeneficiaryTable']) env[name] = name;
+  const { ProjectEnrollmentDialog } = load('dialogs/ProjectEnrollmentDialog.js', env);
+  const props = {
+    classes: {}, project: { id: 'project', projectType: 'TRAINING', benefitPlan: { id: 'plan' } },
+    enrolledBeneficiaries: [], fetchTrainingGroupBeneficiaries: fetchMembers,
+    enroll: async (params) => { submitted = params; return { payload: { data: { enrollProject: { clientMutationId: 'mutation' } } } }; },
+    waitForMutation: async () => ({ status: 2 }), onClose: noop,
+  };
+  const render = () => { cursor = 0; return elements(ProjectEnrollmentDialog(props)); };
+  render();
+  state[0] = 'household';
+  state[2] = new Set(['original', 'member-0']);
+  const add = () => render().find((node) => node.type === 'Button' && node.props.children === 'projectBeneficiaries.group.add').props.onClick();
+  await add();
+  assert.strictEqual(state[2].size, 102);
+  assert.ok(state[2].has('original'));
+  assert.ok(calls[0].includes('status: ACTIVE'));
+  assert.ok(calls[0].includes('eligibleForProject: "project"'));
+  await render().find((node) => node.type === 'Button' && node.props.children === 'projectBeneficiaries.save').props.onClick();
+  assert.strictEqual(submitted.ids.length, 102);
+  assert.ok(submitted.ids.includes('original'));
+  assert.ok(submitted.ids.includes('member-100'));
+  fail = true;
+  await add();
+  assert.strictEqual(state[2].size, 102);
+  assert.ok(state[5].message.includes('group.loadError'));
+  console.log('Training household pagination, additive selection, save and error tests passed.');
+}
+checkGroupAssignment().catch((error) => { console.error(error); process.exitCode = 1; });

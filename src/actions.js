@@ -129,6 +129,13 @@ export function fetchBeneficiaries(modulesManager, params) {
   return graphql(payload, ACTION_TYPE.SEARCH_PROJECT_ELIGIBLE_BENEFICIARIES);
 }
 
+export function fetchTrainingGroupBeneficiaries(modulesManager, params) {
+  return graphql(
+    formatPageQueryWithCount('projectEligibleBeneficiaries', params, BENEFICIARY_PROJECTION(modulesManager)),
+    ACTION_TYPE.SEARCH_PROJECT_ELIGIBLE_BENEFICIARIES,
+  );
+}
+
 export function fetchGroupBeneficiaries(modulesManager, params) {
   const payload = formatPageQueryWithCount('groupBeneficiary', params, GROUP_BENEFICIARY_PROJECTION(modulesManager));
   return graphql(payload, ACTION_TYPE.SEARCH_PROJECT_ELIGIBLE_GROUP_BENEFICIARIES);
@@ -143,7 +150,7 @@ function formatProjectGQL(project) {
     ${isTraining(project) && Object.prototype.hasOwnProperty.call(project, 'sessionStartDate') ? `sessionStartDate: ${project.sessionStartDate ? `"${project.sessionStartDate}"` : 'null'}` : ''}
     ${isTraining(project) && Object.prototype.hasOwnProperty.call(project, 'sessionEndDate') ? `sessionEndDate: ${project.sessionEndDate ? `"${project.sessionEndDate}"` : 'null'}` : ''}
     ${project?.id ? `id: "${project.id}"` : ''}
-    ${Object.prototype.hasOwnProperty.call(project || {}, 'targetBeneficiaries') ? `targetBeneficiaries: ${project.targetBeneficiaries === '' || project.targetBeneficiaries == null ? 'null' : project.targetBeneficiaries}` : ''}
+    ${Object.prototype.hasOwnProperty.call(project || {}, 'targetBeneficiaries') && (isTraining(project) || (project.targetBeneficiaries !== '' && project.targetBeneficiaries != null)) ? `targetBeneficiaries: ${project.targetBeneficiaries === '' || project.targetBeneficiaries == null ? 'null' : project.targetBeneficiaries}` : ''}
     ${project?.workingDays ? `workingDays: ${project.workingDays}` : ''}
     ${project?.status ? `status: "${project.status}"` : ''}
     ${project?.activity?.id ? `activityId: "${project.activity.id}"` : ''}

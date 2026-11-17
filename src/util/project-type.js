@@ -1,3 +1,5 @@
+import { decodeId } from '@openimis/fe-core';
+
 export const isTraining = (project) => project?.projectType === 'TRAINING';
 
 export const datesInOrder = (project) => !project?.sessionStartDate || !project?.sessionEndDate
@@ -11,7 +13,7 @@ export const mandatoryFieldsEmpty = (project) => (
 
 export const rawBenefitPlanId = (id) => {
   if (!id || /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(id)) return id;
-  try { return atob(id).split(':')[1] || id; } catch (error) { return id; }
+  try { return decodeId(id) || id; } catch (error) { return id; }
 };
 
 export const validationErrorText = (error) => {

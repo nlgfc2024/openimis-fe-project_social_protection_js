@@ -9,6 +9,7 @@ import {
   Select,
   MenuItem,
   Paper,
+  Typography,
 } from '@material-ui/core';
 import CheckBoxIcon from '@material-ui/icons/CheckBox';
 import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank';
@@ -365,6 +366,7 @@ function BeneficiaryTable({
   translateRef.current = translate;
 
   const initialFiltersRef = useRef(appliedFilters || {});
+  const [filterLoadError, setFilterLoadError] = React.useState(false);
   const [jsonExtFilters, setJsonExtFilters] = React.useState({});
 
   const dispatch = useDispatch();
@@ -418,9 +420,12 @@ function BeneficiaryTable({
     dispatch(fetchCustomFilter(params))
       .then((response) => {
         const customFilters = response?.payload?.data?.customFilters?.possibleFilters;
-        if (active) setJsonExtFilters(Array.isArray(customFilters) ? customFilters : []);
+        if (active) {
+          setFilterLoadError(!Array.isArray(customFilters));
+          setJsonExtFilters(Array.isArray(customFilters) ? customFilters : []);
+        }
       })
-      .catch(() => { if (active) setJsonExtFilters([]); });
+      .catch(() => { if (active) { setJsonExtFilters([]); setFilterLoadError(true); } });
     return () => { active = false; };
   }, [fetchCustomFilter]);
 
@@ -639,6 +644,7 @@ function BeneficiaryTable({
 
   return (
     <ThemeProvider theme={tableTheme}>
+      {filterLoadError && <Typography color="error">{translateRef.current('projectBeneficiaries.filters.loadError')}</Typography>}
       <MaterialTable
         key={attendanceTableKey}
         components={tableComponents}
