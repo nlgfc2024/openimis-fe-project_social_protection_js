@@ -14,6 +14,7 @@ import ProjectStatusPicker from '../pickers/ProjectStatusPicker';
 import ActivityPicker from '../pickers/ActivityPicker';
 import HotspotPicker from '../pickers/HotspotPicker';
 import UserPicker from '../pickers/UserPicker';
+import { isTraining } from '../util/project-type';
 import {
   getMaxTargetBeneficiaries,
   MODULE_NAME,
@@ -36,7 +37,7 @@ const styles = (theme) => ({
   item: theme.paper.item,
 });
 
-class ProjectHeadPanel extends FormPanel {
+export class ProjectHeadPanel extends FormPanel {
   shouldValidate(inputValue, savedValue) {
     if (!savedValue) return false;
     return !this.props.edited?.id || inputValue !== savedValue;
@@ -52,6 +53,7 @@ class ProjectHeadPanel extends FormPanel {
     } = this.props;
 
     const project = { ...edited };
+    const training = isTraining(project);
     const isNewProject = !project?.id;
     const maxTargetBeneficiaries = getMaxTargetBeneficiaries(this.props.modulesManager);
     const canPreviewGeneratedName = Boolean(project?.hotspot?.name && project?.activity?.name);
@@ -68,9 +70,11 @@ class ProjectHeadPanel extends FormPanel {
             module="projectSocialProtection"
             label="project.name"
             value={displayProjectName}
-            readOnly={false}
-            inputProps={{ readOnly: true }}
-            placeholder={formatMessage(intl, MODULE_NAME, 'project.name.autoHint')}
+            readOnly={training ? readOnly : false}
+            required={training}
+            inputProps={{ readOnly: !training, maxLength: 255 }}
+            onChange={(v) => this.updateAttribute('name', v)}
+            placeholder={training ? '' : formatMessage(intl, MODULE_NAME, 'project.name.autoHint')}
           />
         </Grid>
 
@@ -133,6 +137,8 @@ class ProjectHeadPanel extends FormPanel {
           />
         </Grid>
 
+        {!training && (
+        <React.Fragment>
         <Grid item xs={4} className={classes.item}>
           <PublishedComponent
             pubRef="location.MicroCatchmentPicker"
@@ -167,6 +173,8 @@ class ProjectHeadPanel extends FormPanel {
             onChange={(v) => this.updateAttribute('hotspot', v)}
           />
         </Grid>
+        </React.Fragment>
+        )}
 
         <Grid item xs={4} className={classes.item}>
           <ActivityPicker
@@ -175,10 +183,18 @@ class ProjectHeadPanel extends FormPanel {
             withNull={false}
             readOnly={readOnly}
             value={project?.activity}
-            onChange={(v) => this.updateAttribute('activity', v)}
+            onChange={(v) => {
+              const changes = { activity: v };
+              if (training && isNewProject && v?.defaultWorkingDays
+                && (!project.workingDays || project.workingDays === project.activity?.defaultWorkingDays)) {
+                changes.workingDays = v.defaultWorkingDays;
+              }
+              this.updateAttributes(changes);
+            }}
           />
         </Grid>
 
+        {!training && (
         <Grid item xs={4} className={classes.item}>
           <TextInput
             module="projectSocialProtection"
@@ -188,15 +204,16 @@ class ProjectHeadPanel extends FormPanel {
             onChange={(v) => this.updateAttribute('knownPlace', v)}
           />
         </Grid>
+        )}
 
         <Grid item xs={4} className={classes.item}>
           <NumberInput
             module="projectSocialProtection"
             label="project.targetBeneficiaries"
-            required
+            required={!training}
             readOnly={readOnly}
             min={1}
-            max={maxTargetBeneficiaries}
+            max={training ? undefined : maxTargetBeneficiaries}
             value={project?.targetBeneficiaries}
             onChange={(v) => this.updateAttribute('targetBeneficiaries', v)}
           />
@@ -213,6 +230,19 @@ class ProjectHeadPanel extends FormPanel {
             onChange={(v) => this.updateAttribute('workingDays', v)}
           />
         </Grid>
+
+        {training && ['sessionStartDate', 'sessionEndDate'].map((field) => (
+          <Grid key={field} item xs={4} className={classes.item}>
+            <PublishedComponent
+              pubRef="core.DatePicker"
+              module="projectSocialProtection"
+              label={`project.${field}`}
+              value={project[field] || ''}
+              readOnly={readOnly}
+              onChange={(v) => this.updateAttribute(field, v || null)}
+            />
+          </Grid>
+        ))}
 
         <Grid item xs={4} className={classes.item}>
           <ProjectStatusPicker
@@ -233,6 +263,8 @@ class ProjectHeadPanel extends FormPanel {
           />
         </Grid>
 
+        {!training && (
+        <React.Fragment>
         <Grid item xs={4} className={classes.item}>
           <UserPicker
             label="project.foreman"
@@ -250,6 +282,8 @@ class ProjectHeadPanel extends FormPanel {
             onChange={(v) => this.updateAttribute('supervisor', v)}
           />
         </Grid>
+        </React.Fragment>
+        )}
       </Grid>
     );
   }

@@ -1,4 +1,7 @@
 {
+  "project.sessionStartDate": "Session start date",
+  "project.sessionEndDate": "Session end date",
+  "project.sessionDates.invalid": "Session end date must not precede the start date.",
   "projects.label": "Projects",
   "projects.searcherResultsTitle": "{projectsTotalCount} Projects",
   "projects.searcherAddAction": "Create Project",

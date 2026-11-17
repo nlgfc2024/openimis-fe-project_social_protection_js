@@ -282,7 +282,9 @@ function ProjectEnrollmentDialog({
     const selectedCount = selectedIds.size;
     const projectedTotal = otherTypeAssigned + selectedCount;
 
-    if (targetBeneficiaries > 0 && projectedTotal > targetBeneficiaries) {
+    // Training group assignments expand to people on the server; group counts
+    // cannot predict the individual capacity delta.
+    if (project.projectType !== 'TRAINING' && targetBeneficiaries > 0 && projectedTotal > targetBeneficiaries) {
       showAlert(
         translate('projectBeneficiaries.target.validation.title'),
         formatMessageWithValues(

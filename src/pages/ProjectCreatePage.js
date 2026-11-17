@@ -6,6 +6,7 @@ import {
   withModulesManager,
   useHistory,
   coreAlert,
+  useGraphqlQuery,
 } from '@openimis/fe-core';
 import { injectIntl } from 'react-intl';
 import { bindActionCreators } from 'redux';
@@ -22,6 +23,7 @@ import {
 } from '../actions';
 import { ACTION_TYPE } from '../reducer';
 import ProjectHeadPanel from '../components/ProjectHeadPanel';
+import { datesInOrder, isTraining, mandatoryFieldsEmpty, rawBenefitPlanId, validationErrorText } from '../util/project-type';
 import ProjectTabPanel from '../components/ProjectTabPanel';
 import {
   RIGHT_BENEFIT_PLAN_UPDATE,
@@ -57,6 +59,7 @@ function ProjectCreatePage({
 }) {
   const history = useHistory();
   const maxTargetBeneficiaries = getMaxTargetBeneficiaries(modulesManager);
+  const { data: deployment, error: deploymentError } = useGraphqlQuery('{ projectDeploymentType }', {});
   const locationState = history.location?.state;
 
   const benefitPlanIdFromState = locationState?.benefitPlanId;
@@ -65,7 +68,7 @@ function ProjectCreatePage({
   const pathMatch = history.location?.pathname?.match(/benefitPlan\/([^/]+)/);
   const benefitPlanIdFromPath = pathMatch?.[1];
 
-  const benefitPlanId = benefitPlanIdFromState || benefitPlanIdFromPath;
+  const benefitPlanId = rawBenefitPlanId(benefitPlanIdFromState || benefitPlanIdFromPath);
 
   const [benefitPlanName, setBenefitPlanName] = useState(benefitPlanNameFromState);
   const [activeTab, setActiveTab] = useState(PROJECT_BENEFICIARIES_TAB_VALUE);
@@ -79,14 +82,20 @@ function ProjectCreatePage({
   });
 
   useEffect(() => {
-    if (!benefitPlanNameFromState && benefitPlanIdFromPath) {
-      dispatch(fetchBenefitPlan(modulesManager, [`id: "${benefitPlanIdFromPath}"`]))
+    if (deployment?.projectDeploymentType) {
+      setEditedProject((prev) => ({ ...prev, projectType: deployment.projectDeploymentType }));
+    }
+  }, [deployment?.projectDeploymentType]);
+
+  useEffect(() => {
+    if (!benefitPlanNameFromState && benefitPlanId) {
+      dispatch(fetchBenefitPlan(modulesManager, [`id: "${benefitPlanId}"`]))
         .then((response) => {
           const plan = response?.payload?.data?.benefitPlan?.edges?.[0]?.node;
           if (plan?.name) setBenefitPlanName(plan.name);
         });
     }
-  }, [benefitPlanIdFromPath]);
+  }, [benefitPlanId]);
 
   useEffect(() => {
     if (benefitPlanName) {
@@ -145,9 +154,8 @@ function ProjectCreatePage({
     editedProject?.activity?.name,
     editedProject?.benefitPlan?.name,
   ].filter(Boolean).join('-');
-  const projectName = editedProject?.knownPlace
-    ? `${generatedProjectName} - ${editedProject.knownPlace}`
-    : generatedProjectName;
+  const projectName = isTraining(editedProject) ? (editedProject.name || '').trim()
+    : (editedProject?.knownPlace ? `${generatedProjectName} - ${editedProject.knownPlace}` : generatedProjectName);
   const canValidateProjectName = Boolean(projectName && editedProject?.benefitPlan?.id);
 
   useEffect(() => {
@@ -175,19 +183,14 @@ function ProjectCreatePage({
 
   const back = () => history.goBack();
 
-  const isMandatoryFieldsEmpty = () => (
-    !editedProject?.hotspot
-    || !editedProject?.activity
-    || !editedProject?.location
-    || !editedProject?.targetBeneficiaries
-    || !editedProject?.workingDays
-  );
+  const isMandatoryFieldsEmpty = () => !editedProject.projectType || mandatoryFieldsEmpty(editedProject);
 
   const isTargetBeneficiariesInRange = () => {
+    if (isTraining(editedProject) && (editedProject.targetBeneficiaries == null || editedProject.targetBeneficiaries === '')) return true;
     const target = Number(editedProject?.targetBeneficiaries);
     return Number.isFinite(target)
       && target >= MIN_TARGET_BENEFICIARIES
-      && target <= maxTargetBeneficiaries;
+      && (isTraining(editedProject) || target <= maxTargetBeneficiaries);
   };
 
   const doesProjectChange = () => {
@@ -222,12 +225,14 @@ function ProjectCreatePage({
     );
   };
 
-  if (!benefitPlanId) {
+  if (deploymentError) return <Typography color="error">{validationErrorText(deploymentError)}</Typography>;
+  if (!benefitPlanId || !editedProject.projectType) {
     return <div>{formatMessage(intl, 'projectSocialProtection', 'project.loading')}</div>;
   }
 
   return rights.includes(RIGHT_BENEFIT_PLAN_UPDATE) && (
     <div className={classes.page}>
+      {!datesInOrder(editedProject) && <Typography color="error">{formatMessage(intl, 'projectSocialProtection', 'project.sessionDates.invalid')}</Typography>}
       {showTargetBeneficiariesRangeError && (
         <Typography color="error">
           {formatMessageWithValues(
@@ -243,7 +248,7 @@ function ProjectCreatePage({
       )}
       {canValidateProjectName && !projectNameIsValidating && projectNameIsValid === false && (
         <Typography color="error">
-          {projectNameValidationError || formatMessage(
+          {validationErrorText(projectNameValidationError) || formatMessage(
             intl,
             'projectSocialProtection',
             'project.name.alreadyTaken',

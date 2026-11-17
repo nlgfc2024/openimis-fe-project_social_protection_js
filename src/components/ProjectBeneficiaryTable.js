@@ -34,10 +34,12 @@ import {
   bulkUpdateGroupBeneficiaryTimeEntries,
 } from '../actions';
 import { downloadLogSheetPdf } from '../util/log-sheet-export';
+const EMPTY_GROUP_SELECTION = [];
 
 function BaseProjectBeneficiaryTable({
   project,
   isGroup,
+  enrollGroups = false,
   EnrollmentDialogComponent,
   rights,
   intl,
@@ -401,12 +403,15 @@ function BaseProjectBeneficiaryTable({
         />
         <EnrollmentDialogComponent
           open={enrollmentDialogOpen}
-          onClose={() => setEnrollmentDialogOpen(false)}
+          onClose={() => {
+            setEnrollmentDialogOpen(false);
+            if (enrollGroups) triggerFetch();
+          }}
           project={project}
-          enrolledBeneficiaries={beneficiaries}
+          enrolledBeneficiaries={enrollGroups ? EMPTY_GROUP_SELECTION : beneficiaries}
           fetchingEnrolledBeneficiaries={fetchingBeneficiaries}
-          isGroup={isGroup}
-          orderBy={orderBy}
+          isGroup={enrollGroups || isGroup}
+          orderBy={enrollGroups ? 'orderBy: ["group__code"]' : orderBy}
         />
       </>
     )
@@ -435,6 +440,14 @@ export const ProjectBeneficiaryTable = injectIntl((props) => (
     // eslint-disable-next-line react/jsx-props-no-spreading
     {...props}
     EnrollmentDialogComponent={ProjectBeneficiariyEnrollmentDialog}
+  />
+));
+
+export const TrainingGroupBeneficiaryTable = injectIntl((props) => (
+  <ConnectedProjectBeneficiaryTable
+    {...props}
+    enrollGroups
+    EnrollmentDialogComponent={ProjectGroupBeneficiaryEnrollmentDialog}
   />
 ));
 

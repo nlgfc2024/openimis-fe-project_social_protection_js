@@ -414,11 +414,14 @@ function BeneficiaryTable({
     'additionalParams: "{\\"type\\":\\"INDIVIDUAL\\"}"',
   ];
   useEffect(() => {
+    let active = true;
     dispatch(fetchCustomFilter(params))
       .then((response) => {
-        const customFilters = response?.payload.data.customFilters.possibleFilters;
-        setJsonExtFilters(customFilters);
-      });
+        const customFilters = response?.payload?.data?.customFilters?.possibleFilters;
+        if (active) setJsonExtFilters(Array.isArray(customFilters) ? customFilters : []);
+      })
+      .catch(() => { if (active) setJsonExtFilters([]); });
+    return () => { active = false; };
   }, [fetchCustomFilter]);
 
   const tableTheme = createMuiTheme({

@@ -26,6 +26,7 @@ import {
 } from '../actions';
 import { ACTION_TYPE } from '../reducer';
 import ProjectHeadPanel from '../components/ProjectHeadPanel';
+import { datesInOrder, isTraining, mandatoryFieldsEmpty } from '../util/project-type';
 import ProjectTabPanel from '../components/ProjectTabPanel';
 import {
   RIGHT_BENEFIT_PLAN_UPDATE,
@@ -137,19 +138,14 @@ function ProjectPage({
     prevSubmittingMutationRef.current = submittingMutation;
   });
 
-  const isMandatoryFieldsEmpty = () => (
-    !editedProject?.hotspot
-    || !editedProject?.activity
-    || !editedProject?.location
-    || !editedProject?.targetBeneficiaries
-    || !editedProject?.workingDays
-  );
+  const isMandatoryFieldsEmpty = () => mandatoryFieldsEmpty(editedProject);
 
   const isTargetBeneficiariesInRange = () => {
+    if (isTraining(editedProject) && (editedProject.targetBeneficiaries == null || editedProject.targetBeneficiaries === '')) return true;
     const target = Number(editedProject?.targetBeneficiaries);
     return Number.isFinite(target)
       && target >= MIN_TARGET_BENEFICIARIES
-      && target <= maxTargetBeneficiaries;
+      && (isTraining(editedProject) || target <= maxTargetBeneficiaries);
   };
 
   const doesProjectChange = () => {
@@ -227,6 +223,7 @@ function ProjectPage({
 
   return rights.includes(RIGHT_BENEFIT_PLAN_UPDATE) && (
     <div className={classes.page}>
+      {!datesInOrder(editedProject) && <Typography color="error">{formatMessage(intl, 'projectSocialProtection', 'project.sessionDates.invalid')}</Typography>}
       {showTargetBeneficiariesRangeError && (
         <Typography color="error">
           {formatMessageWithValues(

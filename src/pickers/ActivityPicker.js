@@ -35,6 +35,7 @@ function ActivityPicker({
           node {
             id
             name
+            defaultWorkingDays
           }
         }
       }

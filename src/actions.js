@@ -8,6 +8,7 @@ import {
   decodeId,
 } from '@openimis/fe-core';
 import { ACTION_TYPE } from './reducer';
+import { isTraining, rawBenefitPlanId } from './util/project-type';
 import {
   CLEAR, ERROR, REQUEST, SUCCESS,
 } from './util/action-type';
@@ -24,12 +25,15 @@ const PROJECT_FULL_PROJECTION = (modulesManager) => [
   'id',
   'code',
   'assignedBeneficiariesCount',
+  'projectType',
+  'sessionStartDate',
+  'sessionEndDate',
   'benefitPlan {id, name, type}',
   'name',
   'status',
   'targetBeneficiaries',
   'workingDays',
-  'activity {id, name}',
+  'activity {id, name, defaultWorkingDays}',
   'location' + modulesManager.getProjection('location.Location.FlatProjection'),
   // Malawi (sprint) fields
   'microCatchment {id, name, code}',
@@ -135,8 +139,11 @@ function formatProjectGQL(project) {
   // An explicitly cleared known place must be sent as an empty string because it
   // is part of the MIS-generated project name.
   return `
+    ${isTraining(project) ? `name: "${formatGQLString(project.name || '')}"` : ''}
+    ${isTraining(project) && Object.prototype.hasOwnProperty.call(project, 'sessionStartDate') ? `sessionStartDate: ${project.sessionStartDate ? `"${project.sessionStartDate}"` : 'null'}` : ''}
+    ${isTraining(project) && Object.prototype.hasOwnProperty.call(project, 'sessionEndDate') ? `sessionEndDate: ${project.sessionEndDate ? `"${project.sessionEndDate}"` : 'null'}` : ''}
     ${project?.id ? `id: "${project.id}"` : ''}
-    ${project?.targetBeneficiaries ? `targetBeneficiaries: ${project.targetBeneficiaries}` : ''}
+    ${Object.prototype.hasOwnProperty.call(project || {}, 'targetBeneficiaries') ? `targetBeneficiaries: ${project.targetBeneficiaries === '' || project.targetBeneficiaries == null ? 'null' : project.targetBeneficiaries}` : ''}
     ${project?.workingDays ? `workingDays: ${project.workingDays}` : ''}
     ${project?.status ? `status: "${project.status}"` : ''}
     ${project?.activity?.id ? `activityId: "${project.activity.id}"` : ''}
@@ -221,7 +228,7 @@ export function projectNameValidationCheck(modulesManager, variables) {
         }
       }
     `,
-    variables,
+    { ...variables, benefitPlanId: rawBenefitPlanId(variables.benefitPlanId) },
     ACTION_TYPE.PROJECT_NAME_FIELDS_VALIDATION,
   );
 }
