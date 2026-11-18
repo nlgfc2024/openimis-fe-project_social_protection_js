@@ -375,7 +375,10 @@ function BeneficiaryTable({
   attendanceMode = false,
   workLogEditMode = false,
 }) {
-  const nameDoBFieldPrefix = isGroup ? 'group.head' : 'individual';
+  // Group rows display the verified primary recipient, falling back to the
+  // household head when there is none. Use the primary-recipient path for
+  // remote filters as well; the backend annotation applies that same fallback.
+  const nameDoBFieldPrefix = isGroup ? 'group.primaryRecipient' : 'individual';
   const locationFieldPrefix = isGroup ? 'group' : 'individual';
 
   const translate = useCallback((key) => formatMessage(intl, MODULE_NAME, key), [intl, MODULE_NAME]);
