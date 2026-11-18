@@ -162,10 +162,8 @@ const getKycAccountNumberColumn = (translateFn, isGroup) => ({
   field: 'kycAccountNumber',
   editable: 'never',
   filtering: false,
+  sorting: false,
   render: (rowData) => beneficiaryIdentifiers(rowData, isGroup).paymentAccount,
-  customSort: (left, right) => String(beneficiaryIdentifiers(left, isGroup).paymentAccount || '').localeCompare(
-    String(beneficiaryIdentifiers(right, isGroup).paymentAccount || ''), undefined, { numeric: true, sensitivity: 'base' },
-  ),
 });
 
 const getKycNationalIdColumn = (translateFn, isGroup) => ({
@@ -173,10 +171,8 @@ const getKycNationalIdColumn = (translateFn, isGroup) => ({
   field: 'kycNationalId',
   editable: 'never',
   filtering: false,
+  sorting: false,
   render: (rowData) => beneficiaryIdentifiers(rowData, isGroup).nationalId,
-  customSort: (left, right) => String(beneficiaryIdentifiers(left, isGroup).nationalId || '').localeCompare(
-    String(beneficiaryIdentifiers(right, isGroup).nationalId || ''), undefined, { numeric: true, sensitivity: 'base' },
-  ),
 });
 
 const getDynamicColumns = (translateFn, isGroup, customFilters = []) => {
@@ -258,16 +254,7 @@ const getDynamicColumns = (translateFn, isGroup, customFilters = []) => {
         align: 'left',
         editable: 'never',
       };
-      // The primary recipient's approved KYC account is stored on the
-      // Individual record. Keep the household mobile number visible and put
-      // KYC identity and payment details directly beside it for assignment.
-      return field === 'household_mobile_number'
-        ? [
-          column,
-          getKycNationalIdColumn(translateFn, isGroup),
-          getKycAccountNumberColumn(translateFn, isGroup),
-        ]
-        : [column];
+      return [column];
     });
 };
 
@@ -388,10 +375,7 @@ function BeneficiaryTable({
   attendanceMode = false,
   workLogEditMode = false,
 }) {
-  // A household's activity participant is its validated primary worker.  Do
-  // not render the household head here: it can be a different member from the
-  // KYC recipient and Payroll beneficiary.
-  const nameDoBFieldPrefix = isGroup ? 'group.primaryRecipient' : 'individual';
+  const nameDoBFieldPrefix = isGroup ? 'group.head' : 'individual';
   const locationFieldPrefix = isGroup ? 'group' : 'individual';
 
   const translate = useCallback((key) => formatMessage(intl, MODULE_NAME, key), [intl, MODULE_NAME]);
@@ -534,6 +518,10 @@ function BeneficiaryTable({
         defaultSort: 'asc',
       },
     ] : [];
+    const groupKycColumns = isGroup ? [
+      ...(!attendanceMode ? [getKycNationalIdColumn(translateRef.current, true)] : []),
+      getKycAccountNumberColumn(translateRef.current, true),
+    ] : [];
     const workDayColumns = getWorkDayColumns(
       translateRef.current,
       onTimeEntryChange,
@@ -549,13 +537,21 @@ function BeneficiaryTable({
         field: `${nameDoBFieldPrefix}.firstName`,
         editable: 'never',
         ...(!isGroup && { defaultSort: 'asc' }),
-        ...(isGroup && { sorting: false }),
+        ...(isGroup && {
+          filtering: false,
+          sorting: false,
+          render: (rowData) => (rowData.group?.primaryRecipient || rowData.group?.head)?.firstName || '',
+        }),
       },
       {
         title: translateRef.current('socialProtection.beneficiary.lastName'),
         field: `${nameDoBFieldPrefix}.lastName`,
         editable: 'never',
-        ...(isGroup && { sorting: false }),
+        ...(isGroup && {
+          filtering: false,
+          sorting: false,
+          render: (rowData) => (rowData.group?.primaryRecipient || rowData.group?.head)?.lastName || '',
+        }),
       },
       ...(attendanceMode ? [{
         title: translateRef.current('projectBeneficiaries.nationalId'),
@@ -571,7 +567,11 @@ function BeneficiaryTable({
         title: translateRef.current('socialProtection.beneficiary.dob'),
         field: `${nameDoBFieldPrefix}.dob`,
         editable: 'never',
-        ...(isGroup && { sorting: false }),
+        ...(isGroup && {
+          filtering: false,
+          sorting: false,
+          render: (rowData) => (rowData.group?.primaryRecipient || rowData.group?.head)?.dob || '',
+        }),
       },
       ...Array.from({ length: LOC_LEVELS }, (_, i) => {
         // Build the orderField path for remote sorting: level 3 (village) = location__name,
@@ -598,6 +598,7 @@ function BeneficiaryTable({
         };
       }),
       ...dynamicColumns,
+      ...groupKycColumns,
       ...(!attendanceMode || !workLogEditMode ? workDayColumns : []),
     ];
 
@@ -607,7 +608,7 @@ function BeneficiaryTable({
         searchable: [
           `${nameDoBFieldPrefix}.firstName`,
           `${nameDoBFieldPrefix}.lastName`,
-        ].includes(c.field),
+        ].includes(c.field) && !isGroup,
       }),
       width: c.width || (typeof c.field === 'string' && c.field.includes('email') ? '200px' : '140px'),
       tableData: { filterValue: initialFiltersRef.current[c.title] || '' },

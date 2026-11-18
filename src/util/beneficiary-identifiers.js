@@ -23,11 +23,15 @@ export const beneficiaryIdentifiers = (row, isGroup = false) => {
   const formNumberSources = isGroup
     ? [row.group?.jsonExt, row.group?.primaryRecipient?.jsonExt, row.group?.head?.jsonExt, row.jsonExt]
     : [row.individual?.jsonExt, row.jsonExt];
+  // Once a household has a validated primary recipient, identity and payment
+  // values must come exclusively from that person. Falling back to the head
+  // would display one member's name beside another member's payment account.
+  const hasPrimaryRecipient = isGroup && !!row.group?.primaryRecipient;
   const personSources = isGroup
-    ? [row.group?.primaryRecipient?.jsonExt, row.group?.head?.jsonExt, row.jsonExt]
+    ? (hasPrimaryRecipient ? [row.group.primaryRecipient.jsonExt] : [row.group?.head?.jsonExt, row.jsonExt])
     : [row.individual?.jsonExt, row.jsonExt];
   const paymentSources = isGroup
-    ? [row.group?.primaryRecipient?.jsonExt, row.group?.head?.jsonExt, row.group?.jsonExt, row.jsonExt]
+    ? (hasPrimaryRecipient ? [row.group.primaryRecipient.jsonExt] : [row.group?.head?.jsonExt, row.group?.jsonExt, row.jsonExt])
     : [row.individual?.jsonExt, row.jsonExt];
 
   return {

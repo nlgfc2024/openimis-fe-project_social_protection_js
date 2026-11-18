@@ -140,8 +140,8 @@ export const downloadLogSheetPdf = ({
     header: translate(column.translationKey),
   }));
   const sortedBeneficiaries = [...(beneficiaries || [])].sort((left, right) => {
-    const leftPerson = isGroup ? left.group?.head : left.individual;
-    const rightPerson = isGroup ? right.group?.head : right.individual;
+    const leftPerson = isGroup ? (left.group?.primaryRecipient || left.group?.head) : left.individual;
+    const rightPerson = isGroup ? (right.group?.primaryRecipient || right.group?.head) : right.individual;
     const firstNameOrder = (leftPerson?.firstName || '').localeCompare(
       rightPerson?.firstName || '', undefined, { sensitivity: 'base' },
     );
@@ -152,7 +152,7 @@ export const downloadLogSheetPdf = ({
     );
   });
   const body = sortedBeneficiaries.map((row, index) => {
-    const person = isGroup ? row.group?.head : row.individual;
+    const person = isGroup ? (row.group?.primaryRecipient || row.group?.head) : row.individual;
     const identifiers = beneficiaryIdentifiers(row, isGroup);
     const location = locationFormatter(isGroup ? row.group?.location : row.individual?.location);
 
