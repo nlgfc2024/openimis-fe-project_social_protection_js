@@ -21,13 +21,13 @@ export const firstValue = (sources, keys) => {
 
 export const beneficiaryIdentifiers = (row, isGroup = false) => {
   const formNumberSources = isGroup
-    ? [row.group?.jsonExt, row.group?.head?.jsonExt, row.jsonExt]
+    ? [row.group?.jsonExt, row.group?.primaryRecipient?.jsonExt, row.group?.head?.jsonExt, row.jsonExt]
     : [row.individual?.jsonExt, row.jsonExt];
   const personSources = isGroup
-    ? [row.group?.head?.jsonExt, row.jsonExt]
+    ? [row.group?.primaryRecipient?.jsonExt, row.group?.head?.jsonExt, row.jsonExt]
     : [row.individual?.jsonExt, row.jsonExt];
   const paymentSources = isGroup
-    ? [row.group?.head?.jsonExt, row.group?.jsonExt, row.jsonExt]
+    ? [row.group?.primaryRecipient?.jsonExt, row.group?.head?.jsonExt, row.group?.jsonExt, row.jsonExt]
     : [row.individual?.jsonExt, row.jsonExt];
 
   return {

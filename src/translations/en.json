@@ -65,6 +65,7 @@
   "projectBeneficiaries.enrolled": "{n} Beneficiaries Assigned",
   "projectBeneficiaries.formNumber": "Form Number",
   "projectBeneficiaries.nationalId": "National ID",
+  "projectBeneficiaries.accountNumber": "Account Number",
   "projectBeneficiaries.enterTime": "Record Work Log",
   "projectBeneficiaries.downloadLogSheet": "Download Log Sheet",
   "projectBeneficiaries.logSheetPdf.title": "Project Log Sheet",

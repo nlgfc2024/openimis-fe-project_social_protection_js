@@ -157,12 +157,34 @@ const styles = (theme) => ({
   },
 });
 
-const getDynamicColumns = (translateFn, customFilters = []) => {
+const getKycAccountNumberColumn = (translateFn, isGroup) => ({
+  title: translateFn('projectBeneficiaries.accountNumber'),
+  field: 'kycAccountNumber',
+  editable: 'never',
+  filtering: false,
+  render: (rowData) => beneficiaryIdentifiers(rowData, isGroup).paymentAccount,
+  customSort: (left, right) => String(beneficiaryIdentifiers(left, isGroup).paymentAccount || '').localeCompare(
+    String(beneficiaryIdentifiers(right, isGroup).paymentAccount || ''), undefined, { numeric: true, sensitivity: 'base' },
+  ),
+});
+
+const getKycNationalIdColumn = (translateFn, isGroup) => ({
+  title: translateFn('projectBeneficiaries.nationalId'),
+  field: 'kycNationalId',
+  editable: 'never',
+  filtering: false,
+  render: (rowData) => beneficiaryIdentifiers(rowData, isGroup).nationalId,
+  customSort: (left, right) => String(beneficiaryIdentifiers(left, isGroup).nationalId || '').localeCompare(
+    String(beneficiaryIdentifiers(right, isGroup).nationalId || ''), undefined, { numeric: true, sensitivity: 'base' },
+  ),
+});
+
+const getDynamicColumns = (translateFn, isGroup, customFilters = []) => {
   if (!customFilters || !customFilters.length) return [];
 
   return customFilters
     .filter(({ field }) => !isHiddenDynamicField(field))
-    .map((filter) => {
+    .flatMap((filter) => {
       const { field, type } = filter;
       let renderFn = (rowData) => {
         const value = rowData.jsonExt?.[field];
@@ -226,7 +248,7 @@ const getDynamicColumns = (translateFn, customFilters = []) => {
           break;
       }
 
-      return {
+      const column = {
         title: _.startCase(field),
         field: `jsonExt.${field}`,
         type,
@@ -236,6 +258,16 @@ const getDynamicColumns = (translateFn, customFilters = []) => {
         align: 'left',
         editable: 'never',
       };
+      // The primary recipient's approved KYC account is stored on the
+      // Individual record. Keep the household mobile number visible and put
+      // KYC identity and payment details directly beside it for assignment.
+      return field === 'household_mobile_number'
+        ? [
+          column,
+          getKycNationalIdColumn(translateFn, isGroup),
+          getKycAccountNumberColumn(translateFn, isGroup),
+        ]
+        : [column];
     });
 };
 
@@ -356,7 +388,10 @@ function BeneficiaryTable({
   attendanceMode = false,
   workLogEditMode = false,
 }) {
-  const nameDoBFieldPrefix = isGroup ? 'group.head' : 'individual';
+  // A household's activity participant is its validated primary worker.  Do
+  // not render the household head here: it can be a different member from the
+  // KYC recipient and Payroll beneficiary.
+  const nameDoBFieldPrefix = isGroup ? 'group.primaryRecipient' : 'individual';
   const locationFieldPrefix = isGroup ? 'group' : 'individual';
 
   const translate = useCallback((key) => formatMessage(intl, MODULE_NAME, key), [intl, MODULE_NAME]);
@@ -372,8 +407,8 @@ function BeneficiaryTable({
   const maxWorkingDays = modulesManager.getConf('fe-project_social_protection', 'maxWorkingDays', DEFAULT_MAX_WORKING_DAYS);
 
   const dynamicColumns = React.useMemo(() => (
-    getDynamicColumns(translateRef.current, jsonExtFilters)
-  ), [jsonExtFilters]);
+    getDynamicColumns(translateRef.current, isGroup, jsonExtFilters)
+  ), [isGroup, jsonExtFilters]);
 
   // Project attendance rows are fetched in batches and may arrive in the
   // database's default order. Keep the displayed individual list predictable
@@ -514,13 +549,13 @@ function BeneficiaryTable({
         field: `${nameDoBFieldPrefix}.firstName`,
         editable: 'never',
         ...(!isGroup && { defaultSort: 'asc' }),
-        ...(isGroup && { orderField: 'head_first_name' }),
+        ...(isGroup && { sorting: false }),
       },
       {
         title: translateRef.current('socialProtection.beneficiary.lastName'),
         field: `${nameDoBFieldPrefix}.lastName`,
         editable: 'never',
-        ...(isGroup && { orderField: 'head_last_name' }),
+        ...(isGroup && { sorting: false }),
       },
       ...(attendanceMode ? [{
         title: translateRef.current('projectBeneficiaries.nationalId'),
@@ -536,7 +571,7 @@ function BeneficiaryTable({
         title: translateRef.current('socialProtection.beneficiary.dob'),
         field: `${nameDoBFieldPrefix}.dob`,
         editable: 'never',
-        ...(isGroup && { orderField: 'head_dob' }),
+        ...(isGroup && { sorting: false }),
       },
       ...Array.from({ length: LOC_LEVELS }, (_, i) => {
         // Build the orderField path for remote sorting: level 3 (village) = location__name,
