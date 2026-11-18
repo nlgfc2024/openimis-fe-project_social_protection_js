@@ -538,8 +538,7 @@ function BeneficiaryTable({
         editable: 'never',
         ...(!isGroup && { defaultSort: 'asc' }),
         ...(isGroup && {
-          filtering: false,
-          sorting: false,
+          orderField: 'primary_recipient_first_name',
           render: (rowData) => (rowData.group?.primaryRecipient || rowData.group?.head)?.firstName || '',
         }),
       },
@@ -548,8 +547,7 @@ function BeneficiaryTable({
         field: `${nameDoBFieldPrefix}.lastName`,
         editable: 'never',
         ...(isGroup && {
-          filtering: false,
-          sorting: false,
+          orderField: 'primary_recipient_last_name',
           render: (rowData) => (rowData.group?.primaryRecipient || rowData.group?.head)?.lastName || '',
         }),
       },
@@ -568,8 +566,8 @@ function BeneficiaryTable({
         field: `${nameDoBFieldPrefix}.dob`,
         editable: 'never',
         ...(isGroup && {
-          filtering: false,
-          sorting: false,
+          type: 'date',
+          orderField: 'primary_recipient_dob',
           render: (rowData) => (rowData.group?.primaryRecipient || rowData.group?.head)?.dob || '',
         }),
       },
@@ -608,7 +606,7 @@ function BeneficiaryTable({
         searchable: [
           `${nameDoBFieldPrefix}.firstName`,
           `${nameDoBFieldPrefix}.lastName`,
-        ].includes(c.field) && !isGroup,
+        ].includes(c.field),
       }),
       width: c.width || (typeof c.field === 'string' && c.field.includes('email') ? '200px' : '140px'),
       tableData: { filterValue: initialFiltersRef.current[c.title] || '' },
