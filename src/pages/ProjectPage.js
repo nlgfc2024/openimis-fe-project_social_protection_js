@@ -141,9 +141,11 @@ function ProjectPage({
   const isMandatoryFieldsEmpty = () => isProjectRequiredFieldsMissing(editedProject);
 
   const isTargetBeneficiariesInRange = () => {
+    if (editedProject.projectType === 'TRAINING'
+      && [null, undefined, ''].includes(editedProject.targetBeneficiaries)) return true;
     const target = Number(editedProject?.targetBeneficiaries);
     return Number.isFinite(target)
-      && target >= MIN_TARGET_BENEFICIARIES
+      && target >= (editedProject.projectType === 'TRAINING' ? 1 : MIN_TARGET_BENEFICIARIES)
       && target <= maxTargetBeneficiaries;
   };
 

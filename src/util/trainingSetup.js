@@ -9,10 +9,9 @@ export const isTrainingNameValid = (project) => (
 );
 
 export const isProjectRequiredFieldsMissing = (project) => (
-  !project?.hotspot || !project?.location || !project?.targetBeneficiaries
-  || (project?.projectType === 'TRAINING'
+  !project?.location || (project?.projectType === 'TRAINING'
     ? !project.trainingModules?.length || project.trainingModuleLoading || project.trainingModuleLoadError
-    : !project?.activity || !project?.workingDays)
+    : !project?.hotspot || !project?.targetBeneficiaries || !project?.activity || !project?.workingDays)
 );
 
 export const persistedProjectData = (project) => Object.fromEntries(

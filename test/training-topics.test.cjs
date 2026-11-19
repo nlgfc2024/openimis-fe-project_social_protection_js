@@ -149,6 +149,7 @@ test('form switches Training to module selection and a derived read-only topic c
     '../pickers/ActivityPicker': 'ActivityPicker', '../pickers/TrainingModulePicker': 'TrainingModulePicker',
     '../pickers/ProjectStatusPicker': 'StatusPicker', '../pickers/HotspotPicker': 'HotspotPicker',
     '../pickers/UserPicker': 'UserPicker',
+    '../util/trainingFormConfig': load('util/trainingFormConfig.js', {}),
   }).default;
   let current;
   const render = (edited) => {

@@ -6,7 +6,8 @@ import { fetchTrainingModules } from '../trainingCatalogueActions';
 import { MODULE_NAME } from '../constants';
 import { decodeTrainingReferenceId } from '../util/trainingSetup';
 
-export default function TrainingModulePicker({ programmeId, value, savedModules, readOnly, onStateChange }) {
+export default function TrainingModulePicker({ programmeId, value, savedModules, readOnly, locked = readOnly,
+  renderControl = true, onStateChange }) {
   const dispatch = useDispatch();
   const manager = useModulesManager();
   const { formatMessage: t } = useTranslations(MODULE_NAME, manager);
@@ -18,7 +19,7 @@ export default function TrainingModulePicker({ programmeId, value, savedModules,
 
   useEffect(() => {
     let active = true;
-    if (readOnly || !programmeId) return undefined;
+    if (locked || !programmeId) return undefined;
     setLoading(true);
     setError(false);
     latest.current.onStateChange({ trainingModuleLoading: true, trainingModuleLoadError: false });
@@ -51,8 +52,9 @@ export default function TrainingModulePicker({ programmeId, value, savedModules,
       }
     })();
     return () => { active = false; };
-  }, [dispatch, programmeId, readOnly]);
+  }, [dispatch, programmeId, locked]);
 
+  if (!renderControl) return null;
   return <>
     <Autocomplete multiple options={options} value={value || []} readOnly={readOnly || loading}
       isLoading={loading} error={error} getOptionLabel={(module) => module.name}
@@ -70,9 +72,9 @@ export default function TrainingModulePicker({ programmeId, value, savedModules,
       }}
       renderInput={(props) => <TextField {...props} required label={t('project.trainingModules')}
         error={error} helperText={error ? t('project.trainingModules.loadError') : ''} />} />
-    {!loading && !error && !readOnly && options.length === 0 && (
+    {!loading && !error && !locked && options.length === 0 && (
       <Typography color="error">{t('project.trainingModules.empty')}</Typography>
     )}
-    {readOnly && <Typography variant="caption">{t('project.trainingModules.locked')}</Typography>}
+    {locked && <Typography variant="caption">{t('project.trainingModules.locked')}</Typography>}
   </>;
 }

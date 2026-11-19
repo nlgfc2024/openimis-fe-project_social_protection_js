@@ -16,6 +16,7 @@ import { withTheme, withStyles } from '@material-ui/core/styles';
 import {
   fetchBenefitPlan,
   fetchProjectDeploymentType,
+  fetchTrainingFormConfiguration,
   createProject,
   clearProject,
   projectNameValidationCheck,
@@ -25,6 +26,11 @@ import { ACTION_TYPE } from '../reducer';
 import ProjectHeadPanel from '../components/ProjectHeadPanel';
 import { isSessionDateOrderValid, isTrainingNameValid, isProjectRequiredFieldsMissing } from '../util/trainingSetup';
 import ProjectTabPanel from '../components/ProjectTabPanel';
+import {
+  parseTrainingFormConfig, applyTrainingFormDefaults, trainingCreationFieldsMissing,
+  trainingCreationPayload, trainingTargetInRange,
+  trainingFieldRule,
+} from '../util/trainingFormConfig';
 import {
   RIGHT_BENEFIT_PLAN_UPDATE,
   BENEFIT_PLAN_PROJECTS_TAB_VALUE,
@@ -74,6 +80,8 @@ function ProjectCreatePage({
 
   const dispatch = useDispatch();
   const [deploymentError, setDeploymentError] = useState(false);
+  const [trainingFormConfig, setTrainingFormConfig] = useState(null);
+  const [trainingConfigurationError, setTrainingConfigurationError] = useState(false);
   const prevSubmittingMutationRef = useRef();
 
   const [editedProject, setEditedProject] = useState({
@@ -83,17 +91,37 @@ function ProjectCreatePage({
 
   useEffect(() => {
     let active = true;
-    dispatch(fetchProjectDeploymentType()).then((response) => {
+    let loadingTrainingConfiguration = false;
+    setTrainingFormConfig(null);
+    setDeploymentError(false);
+    setTrainingConfigurationError(false);
+    setEditedProject({ benefitPlan: { id: benefitPlanId, name: benefitPlanNameFromState }, status: 'PREPARATION' });
+    dispatch(fetchProjectDeploymentType()).then(async (response) => {
       if (!active) return;
       const type = response?.payload?.data?.projectDeploymentType;
       if (!['WORK', 'TRAINING'].includes(type) || response?.payload?.errors?.length) {
         setDeploymentError(true);
         return;
       }
-      setEditedProject((previous) => ({ ...previous, projectType: type }));
-    }).catch(() => active && setDeploymentError(true));
+      if (type === 'TRAINING') {
+        loadingTrainingConfiguration = true;
+        const configuration = await dispatch(fetchTrainingFormConfiguration(benefitPlanId));
+        if (!active) return;
+        if (configuration?.payload?.errors?.length) throw new Error('Training form configuration unavailable');
+        const config = parseTrainingFormConfig(configuration?.payload?.data?.projectTrainingFormConfig);
+        setTrainingFormConfig(config);
+        setEditedProject((previous) => ({ ...applyTrainingFormDefaults(previous, config), projectType: type }));
+      } else {
+        setEditedProject((previous) => ({ ...previous, projectType: type }));
+      }
+    }).catch(() => {
+      if (active) {
+        setDeploymentError(true);
+        setTrainingConfigurationError(loadingTrainingConfiguration);
+      }
+    });
     return () => { active = false; };
-  }, [dispatch]);
+  }, [dispatch, benefitPlanId]);
 
   useEffect(() => {
     if (!benefitPlanNameFromState && benefitPlanIdFromPath) {
@@ -193,9 +221,11 @@ function ProjectCreatePage({
 
   const back = () => history.goBack();
 
-  const isMandatoryFieldsEmpty = () => isProjectRequiredFieldsMissing(editedProject);
+  const isMandatoryFieldsEmpty = () => editedProject.projectType === 'TRAINING'
+    ? trainingCreationFieldsMissing(editedProject, trainingFormConfig) : isProjectRequiredFieldsMissing(editedProject);
 
   const isTargetBeneficiariesInRange = () => {
+    if (editedProject.projectType === 'TRAINING') return trainingTargetInRange(editedProject, trainingFormConfig, maxTargetBeneficiaries);
     const target = Number(editedProject?.targetBeneficiaries);
     return Number.isFinite(target)
       && target >= MIN_TARGET_BENEFICIARIES
@@ -228,7 +258,7 @@ function ProjectCreatePage({
 
   const handleSave = () => {
     createProject(
-      editedProject,
+      editedProject.projectType === 'TRAINING' ? trainingCreationPayload(editedProject, trainingFormConfig) : editedProject,
       formatMessageWithValues(
         intl,
         'projectSocialProtection',
@@ -238,6 +268,12 @@ function ProjectCreatePage({
     );
   };
 
+  const onEditedChanged = (update) => setEditedProject((previous) => {
+    const next = typeof update === 'function' ? update(previous) : update;
+    return next.projectType === 'TRAINING' && trainingFormConfig
+      ? applyTrainingFormDefaults(next, trainingFormConfig) : next;
+  });
+
   if (!benefitPlanId) {
     return <div>{formatMessage(intl, 'projectSocialProtection', 'project.loading')}</div>;
   }
@@ -246,7 +282,16 @@ function ProjectCreatePage({
     <div className={classes.page}>
       {deploymentError && (
         <Typography color="error">
-          {formatMessage(intl, 'projectSocialProtection', 'project.deploymentType.error')}
+          {formatMessage(intl, 'projectSocialProtection', trainingConfigurationError
+            ? 'project.trainingFormConfig.error' : 'project.deploymentType.error')}
+        </Typography>
+      )}
+      {trainingFormConfig && !trainingFieldRule(trainingFormConfig, 'trainingModules').visible
+        && (editedProject.trainingModuleLoadError || !editedProject.trainingModuleLoading
+          && Array.isArray(editedProject.trainingModules) && !editedProject.trainingModules.length) && (
+        <Typography color="error">
+          {formatMessage(intl, 'projectSocialProtection', editedProject.trainingModuleLoadError
+            ? 'project.trainingModules.loadError' : 'project.trainingModules.empty')}
         </Typography>
       )}
       {!isSessionDateOrderValid(editedProject) && (
@@ -282,13 +327,14 @@ function ProjectCreatePage({
         title="project.createPageTitle"
         openDirty
         edited={editedProject}
-        onEditedChanged={setEditedProject}
+        onEditedChanged={onEditedChanged}
         back={back}
         mandatoryFieldsEmpty={isMandatoryFieldsEmpty}
         canSave={canSave}
         save={handleSave}
         HeadPanel={ProjectHeadPanel}
         previewProjectName={projectName}
+        trainingFormConfig={trainingFormConfig}
         Panels={[ProjectTabPanel]}
         onActiveTabChange={setActiveTab}
         activeTab={activeTab}

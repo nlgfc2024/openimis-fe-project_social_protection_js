@@ -1,5 +1,20 @@
 # Project social protection frontend
 
+## Configurable Training creation fields
+
+The creation form obtains its field settings from the backend's
+`projectTrainingFormConfig` query. Configure `training_form.fields` in Django admin
+under **project_social_protection / backend / 1.0.0**. Each field accepts `visible`,
+`required`, `readOnly`, and a typed `default` where applicable. See the backend's
+`training-form-config.example.json` for all field names and a complete example.
+Merge it with existing module configuration and reload the page after saving.
+No frontend rebuild is required for later configuration changes.
+
+Creation defaults do not overwrite an existing record. Hidden fields do not leave
+empty layout cells or use CSS hiding; hidden module metadata still loads so the
+derived topic count stays correct. Programme, initial status and topic count
+remain system-controlled. WORK fields keep their current behavior.
+
 ## Training form modules
 
 When the backend deployment type is TRAINING, the form selects programme modules
@@ -37,3 +52,9 @@ other entries:
 
 Reload the application after changing menu configuration. The page manages module
 names, programme links, and ordered topics; participant attendance is separate.
+
+For programme-specific fields, add `training_form.programs.202646268.fields` (RMEP)
+and `training_form.programs.<UPG_PROGRAM_CODE>.fields` (UPG) to that backend configuration.
+These override shared fields per property. The creation page requests effective
+rules for its selected BenefitPlan; the backend matches the programme code. Replace `<UPG_PROGRAM_CODE>` with its actual code.
+See the backend `training-form-config.example.json` for both programmes.

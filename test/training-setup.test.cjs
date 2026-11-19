@@ -32,6 +32,7 @@ test('training names and session date order gate saving', () => {
 const actions = load('actions.js', {
   '@openimis/fe-core': {
     graphql: (payload) => payload,
+    graphqlWithVariables: (query, variables) => ({ query, variables }),
     formatMutation: (_, input) => ({ payload: input }),
     formatGQLString: (value) => value.replace(/"/g, '\\"'),
     decodeId: (id) => id,
@@ -39,6 +40,13 @@ const actions = load('actions.js', {
   './reducer': { ACTION_TYPE: {} },
   './util/trainingSetup': load('util/trainingSetup.js'),
   './util/action-type': { REQUEST: () => '', SUCCESS: () => '', ERROR: () => '' },
+});
+
+test('training configuration is requested for the selected programme UUID', () => {
+  const id = '01a1e45f-92eb-7cbd-a645-e5987d331147';
+  const request = actions.fetchTrainingFormConfiguration(id);
+  assert.deepEqual(request.variables, { benefitPlanId: id });
+  assert.match(request.query, /projectTrainingFormConfig\(benefitPlanId: \$benefitPlanId\)/);
 });
 
 test('training sends manual name and nullable dates but never accepts a type input', () => {
@@ -91,4 +99,9 @@ test('route and snapshot UUIDs bypass the Relay-only decoder', () => {
   assert.equal(decodeTrainingReferenceId(id, () => { throw new Error('Raw UUID must not be decoded'); }), id);
   assert.equal(decodeTrainingReferenceId('encoded', () => id), id);
   assert.match(actions.updateProject({ projectType: 'TRAINING', trainingModules: [{ id }] }), new RegExp(id));
+});
+
+test('cleared optional Training target is serialized as null', () => {
+  assert.match(actions.createProject({ projectType: 'TRAINING', targetBeneficiaries: null }), /targetBeneficiaries: null/);
+  assert.doesNotMatch(actions.createProject({ projectType: 'WORK', targetBeneficiaries: null }), /targetBeneficiaries:/);
 });

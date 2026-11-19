@@ -101,6 +101,11 @@ export function fetchProjectDeploymentType() {
   return graphql('query { projectDeploymentType }', 'PROJECT_SOCIAL_PROTECTION_DEPLOYMENT_TYPE');
 }
 
+export function fetchTrainingFormConfiguration(benefitPlanId) {
+  return graphqlWithVariables('query ($benefitPlanId: UUID!) { projectTrainingFormConfig(benefitPlanId: $benefitPlanId) }',
+    { benefitPlanId: decodeTrainingReferenceId(benefitPlanId, decodeId) }, 'PROJECT_SOCIAL_PROTECTION_TRAINING_FORM_CONFIG');
+}
+
 export function fetchProjectHistory(modulesManager, params) {
   const payload = formatPageQueryWithCount('projectHistory', params, PROJECT_HISTORY_PROJECTION(modulesManager));
   return graphql(payload, ACTION_TYPE.SEARCH_PROJECTS_HISTORY);
@@ -150,7 +155,9 @@ function formatProjectGQL(project) {
     ${project?.projectType === 'TRAINING' ? `name: "${formatGQLString(project.name || '')}"` : ''}
     ${['sessionStartDate', 'sessionEndDate'].filter((key) => Object.prototype.hasOwnProperty.call(project || {}, key))
     .map((key) => `${key}: ${project[key] ? `"${formatGQLString(project[key])}"` : 'null'}`).join('\n')}
-    ${project?.targetBeneficiaries ? `targetBeneficiaries: ${project.targetBeneficiaries}` : ''}
+    ${project?.projectType === 'TRAINING' && Object.prototype.hasOwnProperty.call(project, 'targetBeneficiaries')
+    ? `targetBeneficiaries: ${project.targetBeneficiaries == null || project.targetBeneficiaries === '' ? 'null' : project.targetBeneficiaries}`
+    : project?.targetBeneficiaries ? `targetBeneficiaries: ${project.targetBeneficiaries}` : ''}
     ${project?.projectType === 'TRAINING' && Array.isArray(project.trainingModules)
     ? `moduleIds: [${project.trainingModules.map((module) => `"${decodeTrainingReferenceId(module.id, decodeId)}"`).join(',')}]` : ''}
     ${project?.projectType !== 'TRAINING' && project?.workingDays ? `workingDays: ${project.workingDays}` : ''}
@@ -167,7 +174,9 @@ function formatProjectGQL(project) {
 
 export function createProject(project, clientMutationLabel) {
   const { status, ...projectWithoutStatus } = project || {};
-  const mutation = formatMutation('createProject', formatProjectGQL(projectWithoutStatus), clientMutationLabel);
+  const district = project?.projectType === 'TRAINING' && project?.district?.uuid
+    ? `districtId: "${project.district.uuid}"` : '';
+  const mutation = formatMutation('createProject', `${formatProjectGQL(projectWithoutStatus)}\n${district}`, clientMutationLabel);
   const requestedDateTime = new Date();
   return graphql(
     mutation.payload,
