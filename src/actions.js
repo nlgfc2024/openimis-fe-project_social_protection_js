@@ -32,7 +32,7 @@ const PROJECT_FULL_PROJECTION = (modulesManager) => [
   'activity {id, name}',
   'location' + modulesManager.getProjection('location.Location.FlatProjection'),
   // Malawi (sprint) fields
-  'microCatchment {id, name, code}',
+  'microCatchment {id, uuid, name, code}',
   'hotspot {id, name, code}',
   'knownPlace',
   'foreman {id, username, iUser {lastName, otherNames}}',

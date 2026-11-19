@@ -1,6 +1,7 @@
 // Disable due to core architecture
 /* eslint-disable import/prefer-default-export */
 import React from 'react';
+import { ProjectBoundaryTabLabel, ProjectBoundaryTabPanel } from './components/ProjectBoundaryTab';
 import WorkIcon from '@material-ui/icons/Work';
 import { FormattedMessage } from '@openimis/fe-core';
 import flatten from 'flat';
@@ -87,10 +88,12 @@ const DEFAULT_CONFIG = {
   'project.TabPanel.label': [
     ProjectBeneficiariesTabLabel,
     ProjectChangelogTabLabel,
+    ProjectBoundaryTabLabel,
   ],
   'project.TabPanel.panel': [
     ProjectBeneficiariesTabPanel,
     ProjectChangelogTabPanel,
+    ProjectBoundaryTabPanel,
   ],
   middlewares: [projectBeneficiariesMiddleware],
 };
