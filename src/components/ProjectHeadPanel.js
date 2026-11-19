@@ -12,6 +12,7 @@ import { injectIntl } from 'react-intl';
 import { withTheme, withStyles } from '@material-ui/core/styles';
 import ProjectStatusPicker from '../pickers/ProjectStatusPicker';
 import ActivityPicker from '../pickers/ActivityPicker';
+import TrainingModulePicker from '../pickers/TrainingModulePicker';
 import HotspotPicker from '../pickers/HotspotPicker';
 import UserPicker from '../pickers/UserPicker';
 import {
@@ -185,6 +186,13 @@ class ProjectHeadPanel extends FormPanel {
         </Grid>
 
         <Grid item xs={4} className={classes.item}>
+          {isTraining ? <TrainingModulePicker
+            programmeId={project?.benefitPlan?.id}
+            value={project?.trainingModules}
+            savedModules={this.props.project?.trainingModules}
+            readOnly={readOnly || project?.trainingModulesLocked}
+            onStateChange={(updates) => this.props.onEditedChanged((current) => ({ ...current, ...updates }))}
+          /> : (
           <ActivityPicker
             label="project.activity"
             required
@@ -193,6 +201,7 @@ class ProjectHeadPanel extends FormPanel {
             value={project?.activity}
             onChange={(v) => this.updateAttribute('activity', v)}
           />
+          )}
         </Grid>
 
         <Grid item xs={4} className={classes.item}>
@@ -221,11 +230,11 @@ class ProjectHeadPanel extends FormPanel {
         <Grid item xs={4} className={classes.item}>
           <NumberInput
             module="projectSocialProtection"
-            label="project.workingDays"
-            required
-            readOnly={readOnly}
+            label={isTraining ? 'project.topicCount' : 'project.workingDays'}
+            required={!isTraining}
+            readOnly={readOnly || isTraining}
             min={1}
-            value={project?.workingDays}
+            value={isTraining ? project?.trainingModules?.reduce((total, module) => total + module.topicCount, 0) : project?.workingDays}
             onChange={(v) => this.updateAttribute('workingDays', v)}
           />
         </Grid>

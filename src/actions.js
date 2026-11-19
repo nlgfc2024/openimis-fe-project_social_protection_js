@@ -8,6 +8,7 @@ import {
   decodeId,
 } from '@openimis/fe-core';
 import { ACTION_TYPE } from './reducer';
+import { decodeTrainingReferenceId } from './util/trainingSetup';
 import {
   CLEAR, ERROR, REQUEST, SUCCESS,
 } from './util/action-type';
@@ -30,6 +31,9 @@ const PROJECT_FULL_PROJECTION = (modulesManager) => [
   'projectType',
   'sessionStartDate',
   'sessionEndDate',
+  'trainingModules {id, name, topicCount}',
+  'trainingTopics {sequence, code, name, module {id, name}}',
+  'trainingModulesLocked',
   'targetBeneficiaries',
   'workingDays',
   'activity {id, name}',
@@ -48,7 +52,7 @@ const PROJECT_FULL_PROJECTION = (modulesManager) => [
 ];
 
 const PROJECT_HISTORY_PROJECTION = (modulesManager) => PROJECT_FULL_PROJECTION(modulesManager)
-  .filter((field) => field !== 'assignedBeneficiariesCount');
+  .filter((field) => field !== 'assignedBeneficiariesCount' && !field.startsWith('training'));
 
 const BENEFICIARY_PROJECTION = (modulesManager) => [
   'id',
@@ -147,9 +151,11 @@ function formatProjectGQL(project) {
     ${['sessionStartDate', 'sessionEndDate'].filter((key) => Object.prototype.hasOwnProperty.call(project || {}, key))
     .map((key) => `${key}: ${project[key] ? `"${formatGQLString(project[key])}"` : 'null'}`).join('\n')}
     ${project?.targetBeneficiaries ? `targetBeneficiaries: ${project.targetBeneficiaries}` : ''}
-    ${project?.workingDays ? `workingDays: ${project.workingDays}` : ''}
+    ${project?.projectType === 'TRAINING' && Array.isArray(project.trainingModules)
+    ? `moduleIds: [${project.trainingModules.map((module) => `"${decodeTrainingReferenceId(module.id, decodeId)}"`).join(',')}]` : ''}
+    ${project?.projectType !== 'TRAINING' && project?.workingDays ? `workingDays: ${project.workingDays}` : ''}
     ${project?.status ? `status: "${project.status}"` : ''}
-    ${project?.activity?.id ? `activityId: "${project.activity.id}"` : ''}
+    ${project?.projectType !== 'TRAINING' && project?.activity?.id ? `activityId: "${project.activity.id}"` : ''}
     ${project?.location?.uuid ? `locationId: "${project.location.uuid}"` : ''}
     ${project?.benefitPlan?.id ? `benefitPlanId: "${project.benefitPlan.id}"` : ''}
     ${project?.microCatchment?.id ? `microCatchmentId: ${decodeId(project.microCatchment.id)}` : ''}

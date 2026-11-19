@@ -26,7 +26,7 @@ import {
 } from '../actions';
 import { ACTION_TYPE } from '../reducer';
 import ProjectHeadPanel from '../components/ProjectHeadPanel';
-import { isSessionDateOrderValid, isTrainingNameValid } from '../util/trainingSetup';
+import { isSessionDateOrderValid, isTrainingNameValid, isProjectRequiredFieldsMissing, persistedProjectData } from '../util/trainingSetup';
 import ProjectTabPanel from '../components/ProjectTabPanel';
 import {
   RIGHT_BENEFIT_PLAN_UPDATE,
@@ -138,13 +138,7 @@ function ProjectPage({
     prevSubmittingMutationRef.current = submittingMutation;
   });
 
-  const isMandatoryFieldsEmpty = () => (
-    !editedProject?.hotspot
-    || !editedProject?.activity
-    || !editedProject?.location
-    || !editedProject?.targetBeneficiaries
-    || !editedProject?.workingDays
-  );
+  const isMandatoryFieldsEmpty = () => isProjectRequiredFieldsMissing(editedProject);
 
   const isTargetBeneficiariesInRange = () => {
     const target = Number(editedProject?.targetBeneficiaries);
@@ -154,7 +148,7 @@ function ProjectPage({
   };
 
   const doesProjectChange = () => {
-    if (_.isEqual(project, editedProject)) return false;
+    if (_.isEqual(persistedProjectData(project), persistedProjectData(editedProject))) return false;
     return true;
   };
 

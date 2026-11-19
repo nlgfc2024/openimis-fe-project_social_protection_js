@@ -23,7 +23,7 @@ import {
 } from '../actions';
 import { ACTION_TYPE } from '../reducer';
 import ProjectHeadPanel from '../components/ProjectHeadPanel';
-import { isSessionDateOrderValid, isTrainingNameValid } from '../util/trainingSetup';
+import { isSessionDateOrderValid, isTrainingNameValid, isProjectRequiredFieldsMissing } from '../util/trainingSetup';
 import ProjectTabPanel from '../components/ProjectTabPanel';
 import {
   RIGHT_BENEFIT_PLAN_UPDATE,
@@ -193,13 +193,7 @@ function ProjectCreatePage({
 
   const back = () => history.goBack();
 
-  const isMandatoryFieldsEmpty = () => (
-    !editedProject?.hotspot
-    || !editedProject?.activity
-    || !editedProject?.location
-    || !editedProject?.targetBeneficiaries
-    || !editedProject?.workingDays
-  );
+  const isMandatoryFieldsEmpty = () => isProjectRequiredFieldsMissing(editedProject);
 
   const isTargetBeneficiariesInRange = () => {
     const target = Number(editedProject?.targetBeneficiaries);

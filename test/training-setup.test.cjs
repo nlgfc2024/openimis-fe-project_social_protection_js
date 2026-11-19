@@ -37,6 +37,7 @@ const actions = load('actions.js', {
     decodeId: (id) => id,
   },
   './reducer': { ACTION_TYPE: {} },
+  './util/trainingSetup': load('util/trainingSetup.js'),
   './util/action-type': { REQUEST: () => '', SUCCESS: () => '', ERROR: () => '' },
 });
 
@@ -57,4 +58,37 @@ test('work keeps generated naming and omitted dates intact', () => {
 
 test('create form queries the backend deployment type', () => {
   assert.equal(actions.fetchProjectDeploymentType(), 'query { projectDeploymentType }');
+});
+
+test('training sends ordered module IDs and omits work fields', () => {
+  const payload = actions.updateProject({ id: 'training', projectType: 'TRAINING', name: 'Training',
+    trainingModules: [{ id: 'second' }, { id: 'first' }], workingDays: 10, activity: { id: 'legacy' } });
+  assert.match(payload, /moduleIds: \["second","first"\]/);
+  assert.doesNotMatch(payload, /workingDays:|activityId:/);
+});
+
+test('required fields use modules for training and activity/work days for work', () => {
+  const { isProjectRequiredFieldsMissing: missing } = load('util/trainingSetup.js');
+  const base = { hotspot: {}, location: {}, targetBeneficiaries: 10 };
+  assert.equal(Boolean(missing({ ...base, projectType: 'TRAINING', trainingModules: [{ id: 'module' }] })), false);
+  assert.equal(Boolean(missing({ ...base, projectType: 'TRAINING', trainingModules: [] })), true);
+  assert.equal(Boolean(missing({ ...base, projectType: 'TRAINING', trainingModules: [{}], trainingModuleLoadError: true })), true);
+  assert.equal(Boolean(missing({ ...base, projectType: 'TRAINING', trainingModules: [{}], trainingModuleLoading: true })), true);
+  assert.equal(Boolean(missing({ ...base, projectType: 'WORK', activity: {}, workingDays: 5 })), false);
+  assert.equal(Boolean(missing({ ...base, projectType: 'WORK', trainingModules: [{}] })), true);
+});
+
+test('catalogue loading alone does not count as a project edit', () => {
+  const { persistedProjectData } = load('util/trainingSetup.js');
+  const saved = { id: 'training', name: 'Saved', trainingModules: [{ id: 'module' }] };
+  assert.deepEqual(persistedProjectData({ ...saved, trainingModuleLoading: false, trainingModuleLoadError: false }), saved);
+  assert.notDeepEqual(persistedProjectData({ ...saved, name: 'Edited' }), saved);
+});
+
+test('route and snapshot UUIDs bypass the Relay-only decoder', () => {
+  const { decodeTrainingReferenceId } = load('util/trainingSetup.js');
+  const id = '01a1e45f-92eb-7cbd-a645-e5987d331147';
+  assert.equal(decodeTrainingReferenceId(id, () => { throw new Error('Raw UUID must not be decoded'); }), id);
+  assert.equal(decodeTrainingReferenceId('encoded', () => id), id);
+  assert.match(actions.updateProject({ projectType: 'TRAINING', trainingModules: [{ id }] }), new RegExp(id));
 });
