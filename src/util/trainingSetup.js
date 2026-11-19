@@ -22,3 +22,7 @@ export const decodeTrainingReferenceId = (id, decodeId) => (
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
     ? id : decodeId(id)
 );
+export const trainingTopicColumnLabel = (topics, sequence) => (
+  topics?.find((topic) => Number(topic.sequence) === sequence)?.code || String(sequence)
+);
+

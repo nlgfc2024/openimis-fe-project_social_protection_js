@@ -394,6 +394,8 @@ function BaseProjectBeneficiaryTable({
           isGroup={isGroup}
           actions={[]}
           workingDays={project.workingDays}
+          projectType={project.projectType}
+          trainingTopics={project.trainingTopics}
           tableRef={materialTableRef}
           onTimeEntryChange={handleTimeEntryChange}
           attendanceMode

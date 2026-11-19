@@ -5,6 +5,24 @@ const test = require('node:test');
 const babel = require('../../openimis-fe_js/node_modules/@babel/core');
 const React = require('../../openimis-fe_js/node_modules/react');
 
+test('Training attendance columns use snapshot topic codes in sequence; Work keeps day numbers', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../src/components/BeneficiaryTable.js'), 'utf8');
+  const fragment = source.slice(source.indexOf('const getWorkDayColumns ='), source.indexOf('function BeneficiaryTable('));
+  const { code } = babel.transformSync(fragment, { babelrc: false, configFile: false,
+    presets: [require.resolve('../../openimis-fe_js/node_modules/@babel/preset-react')] });
+  const { trainingTopicColumnLabel } = load('util/trainingSetup.js', {});
+  const columns = new Function('DEFAULT_MAX_WORKING_DAYS', 'trainingTopicColumnLabel',
+    `${code}; return getWorkDayColumns;`)(200, trainingTopicColumnLabel);
+  const theme = { palette: { primary: { dark: '#000' }, divider: '#ccc' } };
+  const topics = [{ sequence: 2, code: 'BM01' }, { sequence: 1, code: 'E01' }];
+  const training = columns((key) => key, () => {}, 2, 1, true, theme, 'TRAINING', topics);
+  assert.deepEqual(training.map((column) => column.title), ['E01', 'BM01']);
+  assert.deepEqual(training.map((column) => column.field), [
+    'projectTimeEntriesDict.day1.percentComplete', 'projectTimeEntriesDict.day2.percentComplete']);
+  const work = columns((key) => key, () => {}, 2, 200, true, theme, 'WORK', topics);
+  assert.deepEqual(work.map((column) => column.title), ['1', '2']);
+});
+
 function load(file, dependencies) {
   const { code } = babel.transformSync(fs.readFileSync(path.join(__dirname, '../src', file), 'utf8'), {
     babelrc: false, configFile: false,
