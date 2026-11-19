@@ -26,7 +26,12 @@ live catalogue lookup is needed. WORK fields and payloads are unchanged.
 
 Requires backend migration `0009_training_topic_snapshots` and the companion
 language-pack labels. This step supplies the form and saved topic structure for
-issue #130; its attendance grid is separate.
+issue #130. Training attendance uses ordered snapshot topic codes as checkbox
+columns, with topic names available on hover. Each module has a read-only
+completion column showing ticked/total topics and percentage. Totals update while
+editing and count only values of 100; unticked and unrecorded topics count as zero.
+Saving waits for mutation confirmation before discarding edits; failed saves keep
+the editor open. WORK retains numbered day columns.
 
 ## Training module catalogue
 

@@ -5,6 +5,26 @@ const test = require('node:test');
 const babel = require('../../openimis-fe_js/node_modules/@babel/core');
 const React = require('../../openimis-fe_js/node_modules/react');
 
+test('module completion counts only ticked snapshot topics and updates with checkbox edits', () => {
+  const { trainingCompletionColumns } = load('util/trainingAttendance.js', {});
+  const topics = [
+    { sequence: 3, module: { id: 'b', name: 'Business' } },
+    { sequence: 2, module: { id: 'a', name: 'Entrepreneurship' } },
+    { sequence: 1, module: { id: 'a', name: 'Entrepreneurship' } },
+  ];
+  const columns = trainingCompletionColumns(topics);
+  assert.deepEqual(columns.map((column) => column.title), ['Entrepreneurship', 'Business']);
+  const row = { projectTimeEntriesDict: { day1: { percentComplete: 100 }, day2: { percentComplete: 0 } } };
+  assert.equal(columns[0].render(row), '1/2 (50%)');
+  assert.equal(columns[1].render(row), '0/1 (0%)');
+  row.projectTimeEntriesDict.day2.percentComplete = 100;
+  assert.equal(columns[0].render(row), '2/2 (100%)');
+  row.projectTimeEntriesDict.day1.percentComplete = null;
+  assert.equal(columns[0].render(row), '1/2 (50%)');
+  assert.equal(columns[0].editable, 'never');
+  assert.deepEqual(trainingCompletionColumns([]), []);
+});
+
 test('Training attendance columns use snapshot topic codes in sequence; Work keeps day numbers', () => {
   const source = fs.readFileSync(path.join(__dirname, '../src/components/BeneficiaryTable.js'), 'utf8');
   const fragment = source.slice(source.indexOf('const getWorkDayColumns ='), source.indexOf('function BeneficiaryTable('));

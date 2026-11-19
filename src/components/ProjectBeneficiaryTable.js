@@ -64,6 +64,7 @@ function BaseProjectBeneficiaryTable({
   );
   const materialTableRef = useRef();
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [attendanceSaving, setAttendanceSaving] = useState(false);
   const [pendingChanges, setPendingChanges] = useState({});
   const [clientMutationId, setClientMutationId] = useState(null);
   const pendingChangesRef = useRef({});
@@ -154,16 +155,38 @@ function BaseProjectBeneficiaryTable({
 
       if (cancelled) return;
       setClientMutationId(null);
+      setAttendanceSaving(false);
       if (result?.status === 2) {
+        const table = materialTableRef.current;
+        if (table?.dataManager) {
+          table.dataManager.changeBulkEditOpen(false);
+          table.setState({ ...table.dataManager.getRenderState() });
+        }
+        setBulkEditOpen(false);
+        pendingChangesRef.current = {};
+        attendanceSnapshotRef.current = {};
+        setPendingChanges({});
         triggerFetch();
         showAlert(
           formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.timeEntry.success.title'),
           formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.timeEntry.success.message'),
         );
+      } else {
+        const messages = Array.isArray(result?.error)
+          ? result.error.map((error) => error.detail || error.message).filter(Boolean).join('; ') : '';
+        showAlert(formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.timeEntry.validation.title'),
+          messages || formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.timeEntry.validation.message'));
       }
     };
 
-    confirmTimeEntrySave();
+    confirmTimeEntrySave().catch(() => {
+      if (!cancelled) {
+        setAttendanceSaving(false);
+        setClientMutationId(null);
+        showAlert(formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.timeEntry.validation.title'),
+          formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.timeEntry.validation.message'));
+      }
+    });
     return () => { cancelled = true; };
   }, [clientMutationId, waitForMutationStatus, triggerFetch, showAlert, intl]);
 
@@ -181,7 +204,9 @@ function BaseProjectBeneficiaryTable({
     if (!scrollContainer) return;
 
     const headerCells = scrollContainer.querySelectorAll('thead th');
-    const targetHeader = Array.from(headerCells).find((th) => th.textContent.trim().startsWith('1'));
+    const firstTopic = [...(project.trainingTopics || [])].sort((a, b) => a.sequence - b.sequence)[0];
+    const firstLabel = project.projectType === 'TRAINING' ? firstTopic?.code || '1' : '1';
+    const targetHeader = Array.from(headerCells).find((th) => th.textContent.trim() === firstLabel);
 
     if (targetHeader) {
       const numFrozenCols = 4;
@@ -196,6 +221,7 @@ function BaseProjectBeneficiaryTable({
   }
 
   const handleToggleEdit = () => {
+    if (attendanceSaving) return;
     const materialTable = materialTableRef.current;
     if (!materialTable?.dataManager) return;
 
@@ -277,7 +303,11 @@ function BaseProjectBeneficiaryTable({
           ? bulkUpdateGroupBeneficiaryTimeEntries({ timeEntries }, mutationLabel)
           : bulkUpdateBeneficiaryTimeEntries({ timeEntries }, mutationLabel);
 
-        dispatch(action);
+        setAttendanceSaving(true);
+        Promise.resolve(dispatch(action)).then((response) => {
+          if (response?.error || response?.payload?.errors?.length) setAttendanceSaving(false);
+        }).catch(() => setAttendanceSaving(false));
+        return;
       }
 
       pendingChangesRef.current = {};
@@ -316,6 +346,12 @@ function BaseProjectBeneficiaryTable({
     const materialTable = materialTableRef.current;
     if (!materialTable?.dataManager) return;
 
+    (materialTable.dataManager.data || []).forEach((row) => {
+      const original = attendanceSnapshotRef.current[row.enrollmentId];
+      if (original) row.projectTimeEntriesDict = Object.fromEntries(
+        Object.entries(original).map(([key, entry]) => [key, { ...entry }]),
+      );
+    });
     materialTable.dataManager.changeBulkEditOpen(false);
     materialTable.setState({
       ...materialTable.dataManager.getRenderState(),
@@ -370,6 +406,7 @@ function BaseProjectBeneficiaryTable({
                 color="primary"
                 size="small"
                 onClick={handleToggleEdit}
+                disabled={attendanceSaving}
               >
                 <Typography variant="body2" noWrap>
                   {bulkEditOpen
@@ -378,7 +415,7 @@ function BaseProjectBeneficiaryTable({
                 </Typography>
               </Button>
               {bulkEditOpen && (
-                <Button variant="outlined" color="default" size="small" onClick={handleCancelEdit}>
+                <Button variant="outlined" color="default" size="small" onClick={handleCancelEdit} disabled={attendanceSaving}>
                   <Typography variant="body2" noWrap>
                     {formatMessage(intl, MODULE_NAME, 'projectBeneficiaries.cancelEdit')}
                   </Typography>
