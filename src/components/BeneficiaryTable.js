@@ -157,12 +157,30 @@ const styles = (theme) => ({
   },
 });
 
-const getDynamicColumns = (translateFn, customFilters = []) => {
+const getKycAccountNumberColumn = (translateFn, isGroup) => ({
+  title: translateFn('projectBeneficiaries.accountNumber'),
+  field: 'kycAccountNumber',
+  editable: 'never',
+  filtering: false,
+  sorting: false,
+  render: (rowData) => beneficiaryIdentifiers(rowData, isGroup).paymentAccount,
+});
+
+const getKycNationalIdColumn = (translateFn, isGroup) => ({
+  title: translateFn('projectBeneficiaries.nationalId'),
+  field: 'kycNationalId',
+  editable: 'never',
+  filtering: false,
+  sorting: false,
+  render: (rowData) => beneficiaryIdentifiers(rowData, isGroup).nationalId,
+});
+
+const getDynamicColumns = (translateFn, isGroup, customFilters = []) => {
   if (!customFilters || !customFilters.length) return [];
 
   return customFilters
     .filter(({ field }) => !isHiddenDynamicField(field))
-    .map((filter) => {
+    .flatMap((filter) => {
       const { field, type } = filter;
       let renderFn = (rowData) => {
         const value = rowData.jsonExt?.[field];
@@ -226,7 +244,7 @@ const getDynamicColumns = (translateFn, customFilters = []) => {
           break;
       }
 
-      return {
+      const column = {
         title: _.startCase(field),
         field: `jsonExt.${field}`,
         type,
@@ -236,6 +254,7 @@ const getDynamicColumns = (translateFn, customFilters = []) => {
         align: 'left',
         editable: 'never',
       };
+      return [column];
     });
 };
 
@@ -356,7 +375,10 @@ function BeneficiaryTable({
   attendanceMode = false,
   workLogEditMode = false,
 }) {
-  const nameDoBFieldPrefix = isGroup ? 'group.head' : 'individual';
+  // Group rows display the verified primary recipient, falling back to the
+  // household head when there is none. Use the primary-recipient path for
+  // remote filters as well; the backend annotation applies that same fallback.
+  const nameDoBFieldPrefix = isGroup ? 'group.primaryRecipient' : 'individual';
   const locationFieldPrefix = isGroup ? 'group' : 'individual';
 
   const translate = useCallback((key) => formatMessage(intl, MODULE_NAME, key), [intl, MODULE_NAME]);
@@ -372,8 +394,8 @@ function BeneficiaryTable({
   const maxWorkingDays = modulesManager.getConf('fe-project_social_protection', 'maxWorkingDays', DEFAULT_MAX_WORKING_DAYS);
 
   const dynamicColumns = React.useMemo(() => (
-    getDynamicColumns(translateRef.current, jsonExtFilters)
-  ), [jsonExtFilters]);
+    getDynamicColumns(translateRef.current, isGroup, jsonExtFilters)
+  ), [isGroup, jsonExtFilters]);
 
   // Project attendance rows are fetched in batches and may arrive in the
   // database's default order. Keep the displayed individual list predictable
@@ -499,6 +521,10 @@ function BeneficiaryTable({
         defaultSort: 'asc',
       },
     ] : [];
+    const groupKycColumns = isGroup ? [
+      ...(!attendanceMode ? [getKycNationalIdColumn(translateRef.current, true)] : []),
+      getKycAccountNumberColumn(translateRef.current, true),
+    ] : [];
     const workDayColumns = getWorkDayColumns(
       translateRef.current,
       onTimeEntryChange,
@@ -514,13 +540,19 @@ function BeneficiaryTable({
         field: `${nameDoBFieldPrefix}.firstName`,
         editable: 'never',
         ...(!isGroup && { defaultSort: 'asc' }),
-        ...(isGroup && { orderField: 'head_first_name' }),
+        ...(isGroup && {
+          orderField: 'primary_recipient_first_name',
+          render: (rowData) => (rowData.group?.primaryRecipient || rowData.group?.head)?.firstName || '',
+        }),
       },
       {
         title: translateRef.current('socialProtection.beneficiary.lastName'),
         field: `${nameDoBFieldPrefix}.lastName`,
         editable: 'never',
-        ...(isGroup && { orderField: 'head_last_name' }),
+        ...(isGroup && {
+          orderField: 'primary_recipient_last_name',
+          render: (rowData) => (rowData.group?.primaryRecipient || rowData.group?.head)?.lastName || '',
+        }),
       },
       ...(attendanceMode ? [{
         title: translateRef.current('projectBeneficiaries.nationalId'),
@@ -536,7 +568,11 @@ function BeneficiaryTable({
         title: translateRef.current('socialProtection.beneficiary.dob'),
         field: `${nameDoBFieldPrefix}.dob`,
         editable: 'never',
-        ...(isGroup && { orderField: 'head_dob' }),
+        ...(isGroup && {
+          type: 'date',
+          orderField: 'primary_recipient_dob',
+          render: (rowData) => (rowData.group?.primaryRecipient || rowData.group?.head)?.dob || '',
+        }),
       },
       ...Array.from({ length: LOC_LEVELS }, (_, i) => {
         // Build the orderField path for remote sorting: level 3 (village) = location__name,
@@ -563,6 +599,7 @@ function BeneficiaryTable({
         };
       }),
       ...dynamicColumns,
+      ...groupKycColumns,
       ...(!attendanceMode || !workLogEditMode ? workDayColumns : []),
     ];
 
