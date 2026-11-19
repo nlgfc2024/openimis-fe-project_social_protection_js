@@ -15,6 +15,7 @@ import { withTheme, withStyles } from '@material-ui/core/styles';
 
 import {
   fetchBenefitPlan,
+  fetchProjectDeploymentType,
   createProject,
   clearProject,
   projectNameValidationCheck,
@@ -22,6 +23,7 @@ import {
 } from '../actions';
 import { ACTION_TYPE } from '../reducer';
 import ProjectHeadPanel from '../components/ProjectHeadPanel';
+import { isSessionDateOrderValid, isTrainingNameValid } from '../util/trainingSetup';
 import ProjectTabPanel from '../components/ProjectTabPanel';
 import {
   RIGHT_BENEFIT_PLAN_UPDATE,
@@ -71,12 +73,27 @@ function ProjectCreatePage({
   const [activeTab, setActiveTab] = useState(PROJECT_BENEFICIARIES_TAB_VALUE);
 
   const dispatch = useDispatch();
+  const [deploymentError, setDeploymentError] = useState(false);
   const prevSubmittingMutationRef = useRef();
 
   const [editedProject, setEditedProject] = useState({
     benefitPlan: { id: benefitPlanId, name: benefitPlanName },
     status: 'PREPARATION',
   });
+
+  useEffect(() => {
+    let active = true;
+    dispatch(fetchProjectDeploymentType()).then((response) => {
+      if (!active) return;
+      const type = response?.payload?.data?.projectDeploymentType;
+      if (!['WORK', 'TRAINING'].includes(type) || response?.payload?.errors?.length) {
+        setDeploymentError(true);
+        return;
+      }
+      setEditedProject((previous) => ({ ...previous, projectType: type }));
+    }).catch(() => active && setDeploymentError(true));
+    return () => { active = false; };
+  }, [dispatch]);
 
   useEffect(() => {
     if (!benefitPlanNameFromState && benefitPlanIdFromPath) {
@@ -145,9 +162,10 @@ function ProjectCreatePage({
     editedProject?.activity?.name,
     editedProject?.benefitPlan?.name,
   ].filter(Boolean).join('-');
-  const projectName = editedProject?.knownPlace
+  const generatedName = editedProject?.knownPlace
     ? `${generatedProjectName} - ${editedProject.knownPlace}`
     : generatedProjectName;
+  const projectName = editedProject?.projectType === 'TRAINING' ? editedProject?.name || '' : generatedName;
   const canValidateProjectName = Boolean(projectName && editedProject?.benefitPlan?.id);
 
   useEffect(() => {
@@ -200,7 +218,11 @@ function ProjectCreatePage({
   };
 
   const canSave = () => (
-    !isMandatoryFieldsEmpty()
+    ['WORK', 'TRAINING'].includes(editedProject?.projectType)
+    && !deploymentError
+    && isSessionDateOrderValid(editedProject)
+    && isTrainingNameValid(editedProject)
+    && !isMandatoryFieldsEmpty()
     && isTargetBeneficiariesInRange()
     && doesProjectChange()
     && projectNameIsValid === true
@@ -228,6 +250,16 @@ function ProjectCreatePage({
 
   return rights.includes(RIGHT_BENEFIT_PLAN_UPDATE) && (
     <div className={classes.page}>
+      {deploymentError && (
+        <Typography color="error">
+          {formatMessage(intl, 'projectSocialProtection', 'project.deploymentType.error')}
+        </Typography>
+      )}
+      {!isSessionDateOrderValid(editedProject) && (
+        <Typography color="error">
+          {formatMessage(intl, 'projectSocialProtection', 'project.sessionDates.invalid')}
+        </Typography>
+      )}
       {showTargetBeneficiariesRangeError && (
         <Typography color="error">
           {formatMessageWithValues(

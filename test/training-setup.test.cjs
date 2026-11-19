@@ -1,0 +1,60 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const test = require('node:test');
+const babel = require('../../openimis-fe_js/node_modules/@babel/core');
+
+function load(file, environment = {}) {
+  const source = fs.readFileSync(path.join(__dirname, '../src', file), 'utf8');
+  const { code } = babel.transformSync(source, {
+    babelrc: false, configFile: false,
+    plugins: [require.resolve('../../openimis-fe_js/node_modules/@babel/plugin-transform-modules-commonjs')],
+  });
+  const output = { exports: {} };
+  new Function('module', 'exports', 'require', code)(output, output.exports, (name) => {
+    if (environment[name]) return environment[name];
+    throw new Error(`Unexpected dependency ${name}`);
+  });
+  return output.exports;
+}
+
+test('training names and session date order gate saving', () => {
+  const { isTrainingNameValid, isSessionDateOrderValid } = load('util/trainingSetup.js');
+  assert.equal(isTrainingNameValid({ projectType: 'TRAINING', name: '  ' }), false);
+  assert.equal(isTrainingNameValid({ projectType: 'TRAINING', name: 'x'.repeat(256) }), false);
+  assert.equal(isTrainingNameValid({ projectType: 'TRAINING', name: 'Business skills' }), true);
+  assert.equal(isTrainingNameValid({ projectType: 'WORK' }), true);
+  assert.equal(isSessionDateOrderValid({}), true);
+  assert.equal(isSessionDateOrderValid({ sessionStartDate: '2026-12-02', sessionEndDate: '2026-12-01' }), false);
+  assert.equal(isSessionDateOrderValid({ sessionStartDate: '2026-12-02', sessionEndDate: '2026-12-02' }), true);
+});
+
+const actions = load('actions.js', {
+  '@openimis/fe-core': {
+    graphql: (payload) => payload,
+    formatMutation: (_, input) => ({ payload: input }),
+    formatGQLString: (value) => value.replace(/"/g, '\\"'),
+    decodeId: (id) => id,
+  },
+  './reducer': { ACTION_TYPE: {} },
+  './util/action-type': { REQUEST: () => '', SUCCESS: () => '', ERROR: () => '' },
+});
+
+test('training sends manual name and nullable dates but never accepts a type input', () => {
+  const payload = actions.createProject({ projectType: 'TRAINING', name: 'Business "skills"',
+    sessionStartDate: '2026-12-02', sessionEndDate: null });
+  assert.match(payload, /name: "Business \\"skills\\""/);
+  assert.match(payload, /sessionStartDate: "2026-12-02"/);
+  assert.match(payload, /sessionEndDate: null/);
+  assert.doesNotMatch(payload, /projectType:/);
+});
+
+test('work keeps generated naming and omitted dates intact', () => {
+  const payload = actions.updateProject({ projectType: 'WORK', name: 'Ignore this', workingDays: 5 });
+  assert.doesNotMatch(payload, /name:|sessionStartDate:|sessionEndDate:|projectType:/);
+  assert.match(payload, /workingDays: 5/);
+});
+
+test('create form queries the backend deployment type', () => {
+  assert.equal(actions.fetchProjectDeploymentType(), 'query { projectDeploymentType }');
+});

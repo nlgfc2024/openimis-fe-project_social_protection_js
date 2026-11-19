@@ -26,6 +26,7 @@ import {
 } from '../actions';
 import { ACTION_TYPE } from '../reducer';
 import ProjectHeadPanel from '../components/ProjectHeadPanel';
+import { isSessionDateOrderValid, isTrainingNameValid } from '../util/trainingSetup';
 import ProjectTabPanel from '../components/ProjectTabPanel';
 import {
   RIGHT_BENEFIT_PLAN_UPDATE,
@@ -158,6 +159,8 @@ function ProjectPage({
   };
 
   const canSave = () => !isMandatoryFieldsEmpty()
+    && isSessionDateOrderValid(editedProject)
+    && isTrainingNameValid(editedProject)
     && isTargetBeneficiariesInRange()
     && doesProjectChange();
 
@@ -227,6 +230,11 @@ function ProjectPage({
 
   return rights.includes(RIGHT_BENEFIT_PLAN_UPDATE) && (
     <div className={classes.page}>
+      {!isSessionDateOrderValid(editedProject) && (
+        <Typography color="error">
+          {formatMessage(intl, 'projectSocialProtection', 'project.sessionDates.invalid')}
+        </Typography>
+      )}
       {showTargetBeneficiariesRangeError && (
         <Typography color="error">
           {formatMessageWithValues(
