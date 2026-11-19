@@ -117,9 +117,9 @@ test('creation configuration does not hide fields on WORK or existing records', 
   }
 });
 
-function pageHarness({ type = 'TRAINING', fail = false } = {}) {
+function pageHarness({ type = 'TRAINING', fail = false, saveStatus = 2 } = {}) {
   const states = [], calls = [];
-  let cursor = 0, effect, submitted;
+  let cursor = 0, effect, submitted, redirect;
   const config = { fields: {
     name: rule({ required: true, readOnly: true, default: 'Configured training' }),
     location: rule({ required: true, default: { uuid: 'location', type: 'D', parent: { type: 'R' } } }),
@@ -128,6 +128,7 @@ function pageHarness({ type = 'TRAINING', fail = false } = {}) {
     hotspot: rule({ visible: false }),
   } };
   const dispatch = async (action) => {
+    if (action.kind === 'wait') return { status: saveStatus, error: [{ message: 'Training validation failed' }] };
     calls.push(action.kind);
     if (action.kind === 'type') return { payload: { data: { projectDeploymentType: type } } };
     return fail ? { payload: { errors: [{ message: 'Invalid configuration' }] } }
@@ -146,7 +147,9 @@ function pageHarness({ type = 'TRAINING', fail = false } = {}) {
     '@openimis/fe-core': { Form: 'Form', formatMessage: (_, __, key) => key,
       formatMessageWithValues: (_, __, key) => key, withModulesManager: identity,
       useHistory: () => ({ location: { pathname: '/benefitPlans/benefitPlan/plan/project/create',
-        state: { benefitPlanId: 'plan', benefitPlanName: 'Programme' } } }), coreAlert: () => {},
+        state: { benefitPlanId: 'plan', benefitPlanName: 'Programme' } },
+      replace: (path) => { redirect = path; } }), coreAlert: () => {},
+      waitForMutation: () => ({ kind: 'wait' }),
     },
     'react-intl': { injectIntl: identity }, redux: { bindActionCreators: () => ({}) },
     'react-redux': { connect: () => identity, useDispatch: () => dispatch },
@@ -160,11 +163,13 @@ function pageHarness({ type = 'TRAINING', fail = false } = {}) {
     '../constants': { RIGHT_BENEFIT_PLAN_UPDATE: 160003, getMaxTargetBeneficiaries: () => 200,
       MIN_TARGET_BENEFICIARIES: 5 },
   }).default;
-  const props = { intl: {}, classes: {}, rights: [160003], modulesManager: {}, projectNameIsValid: true,
-    createProject: (payload) => { submitted = payload; } };
+  const props = { intl: {}, classes: {}, rights: [160003], modulesManager: { getRef: () => 'projects' }, projectNameIsValid: true,
+    coreAlert: () => {},
+    createProject: (payload) => { submitted = payload;
+      return Promise.resolve({ payload: { data: { createProject: { clientMutationId: 'save-id' } } } }); } };
   return {
     render: () => { cursor = 0; return nodes(Page(props)); },
-    run: () => effect(), calls, submitted: () => submitted,
+    run: () => effect(), calls, submitted: () => submitted, redirect: () => redirect,
   };
 }
 
@@ -180,9 +185,22 @@ test('create page fetches backend configuration and applies defaults to validati
   form = page.render().find((node) => node.type === 'Form');
   assert.equal(form.props.edited.name, 'Configured training');
   form.props.save();
+  await new Promise(setImmediate);
   assert.equal(page.submitted().name, 'Configured training');
   assert.equal(page.submitted().targetBeneficiaries, null);
   assert.equal('hotspot' in page.submitted(), false);
+  assert.equal(page.redirect(), '/projects');
+});
+
+test('failed Training save stays on the form and displays its error', async () => {
+  const page = pageHarness({ saveStatus: 1 });
+  page.render(); page.run();
+  await new Promise(setImmediate);
+  page.render().find((node) => node.type === 'Form').props.save();
+  await new Promise(setImmediate);
+  assert.equal(page.redirect(), undefined);
+  assert.ok(page.render().some((node) => node.type === 'Typography'
+    && node.props.children === 'Training validation failed'));
 });
 
 test('unavailable Training configuration blocks saving and shows a configuration error', async () => {
