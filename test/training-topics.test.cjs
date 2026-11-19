@@ -57,7 +57,7 @@ function load(file, dependencies) {
   return module.exports;
 }
 
-function pickerHarness({ value, readOnly = false, fail = false } = {}) {
+function pickerHarness({ value, readOnly = false, fail = false, autoSelectProgrammeModules = false } = {}) {
   const states = [];
   let cursor = 0;
   let effect;
@@ -93,7 +93,7 @@ function pickerHarness({ value, readOnly = false, fail = false } = {}) {
   }).default;
   const render = () => {
     cursor = 0;
-    return Picker({ programmeId: 'encoded-plan', value: currentValue, savedModules: value, readOnly,
+    return Picker({ programmeId: 'encoded-plan', value: currentValue, savedModules: value, readOnly, autoSelectProgrammeModules,
       onStateChange: (update) => { updates.push(update); if ('trainingModules' in update) currentValue = update.trainingModules; } });
   };
   return { render, run: () => effect(), updates, requests };
@@ -123,6 +123,22 @@ test('picker retains explicit selections and lets users choose a subset', async 
   assert.equal(picker.props.value[0].name, 'Snapshot B');
   picker.props.onChange([{ id: 'a' }]);
   assert.deepEqual(harness.updates.at(-1).trainingModules, [{ id: 'a', name: 'A', topicCount: 2 }]);
+});
+
+test('new Training preselects programme modules for empty initial values; existing selections stay unchanged', async () => {
+  for (const value of [null, []]) {
+    const harness = pickerHarness({ value, autoSelectProgrammeModules: true });
+    harness.render(); harness.run();
+    await new Promise(setImmediate);
+    assert.deepEqual(harness.updates.at(-1).trainingModules.map((module) => module.id), ['a', 'b']);
+    const picker = nodes(harness.render()).find((node) => node.type === 'Autocomplete');
+    picker.props.onChange([]);
+    assert.deepEqual(harness.updates.at(-1).trainingModules, []);
+  }
+  const existing = pickerHarness({ value: [] });
+  existing.render(); existing.run();
+  await new Promise(setImmediate);
+  assert.equal('trainingModules' in existing.updates.at(-1), false);
 });
 
 test('locked picker preserves deleted catalogue snapshots without querying or resetting', () => {

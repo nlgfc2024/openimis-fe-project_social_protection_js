@@ -110,11 +110,32 @@ test('read-only module configuration does not skip automatic programme loading',
   assert.equal(picker.props.locked, false);
 });
 
-test('creation configuration does not hide fields on WORK or existing records', () => {
-  const config = { fields: { hotspot: rule({ visible: false }) } };
-  for (const project of [{ projectType: 'WORK' }, { projectType: 'TRAINING', id: 'existing' }]) {
-    assert.ok(render(config, project).some((node) => node.type === 'HotspotPicker'));
+test('programme module editing follows config on creation and details', () => {
+  for (const project of [{ projectType: 'TRAINING' }, { projectType: 'TRAINING', id: 'existing' }]) {
+    for (const readOnly of [false, true]) {
+      const elements = render({ fields: { trainingModules: rule({ readOnly }) } }, project);
+      const picker = elements.find((node) => node.type === 'TrainingModulePicker');
+      assert.equal(picker.props.readOnly, readOnly);
+      assert.equal(picker.props.autoSelectProgrammeModules, !project.id);
+      assert.equal(picker.props.locked, false);
+    }
   }
+});
+
+test('programme configuration hides fields on existing Training records and preserves WORK fields', () => {
+  const config = { fields: { hotspot: rule({ visible: false }) } };
+  assert.ok(render(config, { projectType: 'WORK' }).some((node) => node.type === 'HotspotPicker'));
+  assert.equal(render(config, { projectType: 'TRAINING', id: 'existing' }).some((node) => node.type === 'HotspotPicker'), false);
+});
+
+test('Training details honour readonly rules without applying creation defaults', () => {
+  const config = { fields: { knownPlace: rule({ readOnly: true, default: 'New default' }),
+    targetBeneficiaries: rule({ required: false }), location: rule({ visible: false }) } };
+  const elements = render(config, { projectType: 'TRAINING', id: 'existing', knownPlace: 'Saved venue' });
+  const venue = elements.find((node) => node.type === 'TextInput' && node.props.label === 'project.knownPlace');
+  assert.equal(venue.props.value, 'Saved venue');
+  assert.equal(venue.props.readOnly, true);
+  assert.equal(elements.some((node) => node.props['data-training-field'] === 'location'), false);
 });
 
 function pageHarness({ type = 'TRAINING', fail = false, saveStatus = 2 } = {}) {
