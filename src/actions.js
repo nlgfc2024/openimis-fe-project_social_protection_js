@@ -174,6 +174,13 @@ function formatProjectGQL(project) {
 
 export function createProject(project, clientMutationLabel) {
   const { status, ...projectWithoutStatus } = project || {};
+  // This deployment's GraphQL parser rejects inline null literals. Omitted
+  // creation inputs remain unset and are resolved by backend defaults/config.
+  ['targetBeneficiaries', 'sessionStartDate', 'sessionEndDate'].forEach((field) => {
+    if (projectWithoutStatus[field] == null || projectWithoutStatus[field] === '') {
+      delete projectWithoutStatus[field];
+    }
+  });
   const district = project?.projectType === 'TRAINING' && project?.district?.uuid
     ? `districtId: "${project.district.uuid}"` : '';
   const mutation = formatMutation('createProject', `${formatProjectGQL(projectWithoutStatus)}\n${district}`, clientMutationLabel);

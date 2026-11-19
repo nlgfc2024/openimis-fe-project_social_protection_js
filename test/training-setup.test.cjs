@@ -54,7 +54,7 @@ test('training sends manual name and nullable dates but never accepts a type inp
     sessionStartDate: '2026-12-02', sessionEndDate: null });
   assert.match(payload, /name: "Business \\"skills\\""/);
   assert.match(payload, /sessionStartDate: "2026-12-02"/);
-  assert.match(payload, /sessionEndDate: null/);
+  assert.doesNotMatch(payload, /sessionEndDate:/);
   assert.doesNotMatch(payload, /projectType:/);
 });
 
@@ -101,7 +101,11 @@ test('route and snapshot UUIDs bypass the Relay-only decoder', () => {
   assert.match(actions.updateProject({ projectType: 'TRAINING', trainingModules: [{ id }] }), new RegExp(id));
 });
 
-test('cleared optional Training target is serialized as null', () => {
-  assert.match(actions.createProject({ projectType: 'TRAINING', targetBeneficiaries: null }), /targetBeneficiaries: null/);
+test('empty optional Training target is omitted from creation without inline null literals', () => {
+  for (const targetBeneficiaries of [null, undefined, '']) {
+    const payload = actions.createProject({ projectType: 'TRAINING', targetBeneficiaries,
+      sessionStartDate: null, sessionEndDate: null });
+    assert.doesNotMatch(payload, /targetBeneficiaries:|sessionStartDate:|sessionEndDate:|:\s*null/);
+  }
   assert.doesNotMatch(actions.createProject({ projectType: 'WORK', targetBeneficiaries: null }), /targetBeneficiaries:/);
 });
