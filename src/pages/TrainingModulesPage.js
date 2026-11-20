@@ -61,9 +61,8 @@ export default function TrainingModulesPage() {
     setError('');
     try {
       const response = await dispatch(saveTrainingModule(edited.uuid, trainingModuleInput(edited, decodeId)));
-      const result = response?.payload?.data?.result;
-      if (!result?.success || response?.payload?.errors?.length) {
-        throw new Error(result?.errors?.join(' ') || trainingCatalogueError(response, t('trainingModules.saveError')));
+      if (response?.status !== 2) {
+        throw new Error(trainingCatalogueError(response, t('trainingModules.saveError')));
       }
       if (mounted.current) { setEdited(null); setRevision((previous) => previous + 1); }
     } catch (failure) {
@@ -79,9 +78,8 @@ export default function TrainingModulesPage() {
     setError('');
     try {
       const response = await dispatch(deleteTrainingModule(deleting.uuid));
-      const result = response?.payload?.data?.result;
-      if (!result?.success || response?.payload?.errors?.length) {
-        throw new Error(result?.errors?.join(' ') || trainingCatalogueError(response, t('trainingModules.deleteError')));
+      if (response?.status !== 2) {
+        throw new Error(trainingCatalogueError(response, t('trainingModules.deleteError')));
       }
       if (mounted.current) { setDeleting(null); setRevision((previous) => previous + 1); }
     } catch (failure) {
