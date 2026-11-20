@@ -1,8 +1,7 @@
 import React, { useMemo } from 'react';
 import { Grid } from '@material-ui/core';
 import {
-  Autocomplete, NumberInput, PublishedComponent, SelectInput, TextAreaInput, TextInput, useModulesManager,
-  useTranslations,
+  Autocomplete, NumberInput, PublishedComponent, TextAreaInput, TextInput, useModulesManager, useTranslations,
 } from '@openimis/fe-core';
 import { BUSINESS_APPRAISAL_TAB_VALUE, MODULE_NAME, RIGHT_PLANS_AND_GRANTS } from '../constants';
 import {
@@ -41,6 +40,7 @@ export function BusinessAppraisalTabPanel({
   const allowed = allowedGrantTypes(benefitPlan);
   const typeOptions = allowed.map((type) => ({ id: type, label: t(`beneficiaryGrant.grantType.${type}`) }));
   const selected = Array.isArray(draft.grant_types) ? allowed.filter((type) => draft.grant_types.includes(type)) : [];
+  const statusOptions = PLAN_STATUSES.map((status) => ({ id: status, label: t(`beneficiaryGrant.status.${status}`) }));
   const dirty = !sameJsonExt(saved, jsonExt);
   // Errors show once the user changes something, not on a record still to be appraised.
   const error = (key) => (!readOnly && dirty ? errorText(errors, key, t, formatMessageWithValues) : null);
@@ -60,7 +60,7 @@ export function BusinessAppraisalTabPanel({
     >
       {recordsGrantPerBeneficiary(benefitPlan) && (
         <>
-          <Grid item xs={3} className={classes.item}>
+          <Grid item xs={4} className={classes.item}>
             <Autocomplete
               multiple
               required
@@ -74,7 +74,7 @@ export function BusinessAppraisalTabPanel({
               onInputChange={() => {}}
             />
           </Grid>
-          <Grid item xs={3} className={classes.item}>
+          <Grid item xs={4} className={classes.item}>
             <NumberInput
               module={MODULE_NAME}
               label={fieldLabel('approved_grant_amount')}
@@ -89,7 +89,7 @@ export function BusinessAppraisalTabPanel({
           {IN_KIND_TYPES.filter((type) => selected.includes(type)).map((type) => {
             const key = trancheAmountKey(1, type);
             return (
-              <Grid item xs={3} className={classes.item} key={key}>
+              <Grid item xs={4} className={classes.item} key={key}>
                 <NumberInput
                   module={MODULE_NAME}
                   label={fieldLabel(`${type.toLowerCase()}_amount`)}
@@ -106,14 +106,15 @@ export function BusinessAppraisalTabPanel({
           })}
         </>
       )}
-      <Grid item xs={3} className={classes.item}>
-        <SelectInput
-          module={MODULE_NAME}
-          label={fieldLabel('business_plan_status')}
+      <Grid item xs={4} className={classes.item}>
+        <Autocomplete
           readOnly={readOnly}
-          value={draft.business_plan_status ?? ''}
-          options={PLAN_STATUSES.map((status) => ({ value: status, label: t(`beneficiaryGrant.status.${status}`) }))}
-          onChange={(status) => change('business_plan_status', status)}
+          label={t(fieldLabel('business_plan_status'))}
+          withPlaceholder={false}
+          options={statusOptions}
+          value={statusOptions.find((option) => option.id === draft.business_plan_status) ?? null}
+          onChange={(option) => change('business_plan_status', option?.id)}
+          onInputChange={() => {}}
         />
       </Grid>
       {jsonExt.business_plan_status === APPROVED && (
