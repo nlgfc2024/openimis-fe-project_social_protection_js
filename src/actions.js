@@ -151,8 +151,6 @@ function formatProjectGQL(project) {
     ${['sessionStartDate', 'sessionEndDate'].filter((key) => Object.prototype.hasOwnProperty.call(project || {}, key))
     .map((key) => `${key}: ${project[key] ? `"${formatGQLString(project[key])}"` : 'null'}`).join('\n')}
     ${project?.targetBeneficiaries ? `targetBeneficiaries: ${project.targetBeneficiaries}` : ''}
-    ${project?.projectType === 'TRAINING' && Array.isArray(project.trainingModules)
-    ? `moduleIds: [${project.trainingModules.map((module) => `"${decodeTrainingReferenceId(module.id, decodeId)}"`).join(',')}]` : ''}
     ${project?.projectType !== 'TRAINING' && project?.workingDays ? `workingDays: ${project.workingDays}` : ''}
     ${project?.status ? `status: "${project.status}"` : ''}
     ${project?.projectType !== 'TRAINING' && project?.activity?.id ? `activityId: "${project.activity.id}"` : ''}

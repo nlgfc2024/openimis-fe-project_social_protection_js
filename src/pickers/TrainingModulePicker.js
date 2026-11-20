@@ -73,6 +73,5 @@ export default function TrainingModulePicker({ programmeId, value, savedModules,
     {!loading && !error && !readOnly && options.length === 0 && (
       <Typography color="error">{t('project.trainingModules.empty')}</Typography>
     )}
-    {readOnly && <Typography variant="caption">{t('project.trainingModules.locked')}</Typography>}
   </>;
 }
