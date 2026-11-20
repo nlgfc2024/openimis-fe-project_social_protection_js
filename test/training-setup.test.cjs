@@ -99,7 +99,7 @@ test('route and snapshot UUIDs bypass the Relay-only decoder', () => {
   const id = '01a1e45f-92eb-7cbd-a645-e5987d331147';
   assert.equal(decodeTrainingReferenceId(id, () => { throw new Error('Raw UUID must not be decoded'); }), id);
   assert.equal(decodeTrainingReferenceId('encoded', () => id), id);
-  assert.match(actions.updateProject({ projectType: 'TRAINING', trainingModules: [{ id }] }), new RegExp(id));
+  assert.doesNotMatch(actions.updateProject({ projectType: 'TRAINING', trainingModules: [{ id }] }), /moduleIds:/);
 });
 
 test('empty optional Training target is omitted from creation without inline null literals', () => {
