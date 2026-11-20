@@ -33,6 +33,7 @@ const actions = load('actions.js', {
   '@openimis/fe-core': {
     graphql: (payload) => payload,
     graphqlWithVariables: (query, variables) => ({ query, variables }),
+    formatPageQueryWithCount: (field, params, projection) => JSON.stringify({ field, projection }),
     formatMutation: (_, input) => ({ payload: input }),
     formatGQLString: (value) => value.replace(/"/g, '\\"'),
     decodeId: (id) => id,
@@ -47,6 +48,14 @@ test('training configuration is requested for the selected programme UUID', () =
   const request = actions.fetchTrainingFormConfiguration(id);
   assert.deepEqual(request.variables, { benefitPlanId: id });
   assert.match(request.query, /projectTrainingFormConfig\(benefitPlanId: \$benefitPlanId\)/);
+});
+
+test('individual and household enrollment queries request backend module completion', () => {
+  const manager = { getProjection: () => '{uuid}' };
+  for (const fetch of [actions.fetchProjectBeneficiaries, actions.fetchProjectGroupBeneficiaries]) {
+    const query = JSON.parse(fetch(manager, []));
+    assert.ok(query.projection.includes('moduleCompletion { module { id name } tickedTopics totalTopics percentage }'));
+  }
 });
 
 test('training sends manual name and nullable dates but never accepts a type input', () => {

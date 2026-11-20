@@ -74,12 +74,14 @@ const PROJECT_ENROLLMENT_PROJECTION = (modulesManager) => [
   'id',
   'beneficiary {' + BENEFICIARY_PROJECTION(modulesManager).join(', ') + '}',
   'timeEntries { id, dayNumber, percentComplete }',
+  'moduleCompletion { module { id name } tickedTopics totalTopics percentage }',
 ];
 
 const PROJECT_GROUP_ENROLLMENT_PROJECTION = (modulesManager) => [
   'id',
   'groupBeneficiary {' + GROUP_BENEFICIARY_PROJECTION(modulesManager).join(', ') + '}',
   'timeEntries { id, dayNumber, percentComplete }',
+  'moduleCompletion { module { id name } tickedTopics totalTopics percentage }',
 ];
 
 export function fetchBenefitPlan(modulesManager, params) {

@@ -574,7 +574,7 @@ function BeneficiaryTable({
       }),
       ...dynamicColumns,
       ...(!attendanceMode || !workLogEditMode ? workDayColumns : []),
-      ...(projectType === 'TRAINING' ? trainingCompletionColumns(trainingTopics) : []),
+      ...(projectType === 'TRAINING' ? trainingCompletionColumns(trainingTopics, workLogEditMode) : []),
     ];
 
     return allColumns.map((c) => ({

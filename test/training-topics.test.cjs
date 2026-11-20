@@ -12,17 +12,61 @@ test('module completion counts only ticked snapshot topics and updates with chec
     { sequence: 2, module: { id: 'a', name: 'Entrepreneurship' } },
     { sequence: 1, module: { id: 'a', name: 'Entrepreneurship' } },
   ];
-  const columns = trainingCompletionColumns(topics);
+  const columns = trainingCompletionColumns(topics, true);
   assert.deepEqual(columns.map((column) => column.title), ['Entrepreneurship', 'Business']);
-  const row = { projectTimeEntriesDict: { day1: { percentComplete: 100 }, day2: { percentComplete: 0 } } };
-  assert.equal(columns[0].render(row), '1/2 (50%)');
-  assert.equal(columns[1].render(row), '0/1 (0%)');
+  const row = { attendanceDirty: true, projectTimeEntriesDict: { day1: { percentComplete: 100 }, day2: { percentComplete: 0 } } };
+  assert.equal(columns[0].render(row), '1/2 (50.0%)');
+  assert.equal(columns[1].render(row), '0/1 (0.0%)');
   row.projectTimeEntriesDict.day2.percentComplete = 100;
-  assert.equal(columns[0].render(row), '2/2 (100%)');
+  assert.equal(columns[0].render(row), '2/2 (100.0%)');
   row.projectTimeEntriesDict.day1.percentComplete = null;
-  assert.equal(columns[0].render(row), '1/2 (50%)');
+  assert.equal(columns[0].render(row), '1/2 (50.0%)');
   assert.equal(columns[0].editable, 'never');
   assert.deepEqual(trainingCompletionColumns([]), []);
+});
+
+test('saved completion uses backend percentages; only dirty rows in an open editor get a preview', () => {
+  const { trainingCompletionColumns } = load('util/trainingAttendance.js', {});
+  const topics = Array.from({ length: 44 }, (_, index) => ({ sequence: index + 1, module: { id: 'module', name: 'Module' } }));
+  const row = { moduleCompletion: [{ module: { id: 'module' }, tickedTopics: 35, totalTopics: 44, percentage: 100 * 35 / 44 }],
+    projectTimeEntriesDict: Object.fromEntries(topics.map((topic) => [`day${topic.sequence}`, { percentComplete: 100 }])) };
+  const saved = trainingCompletionColumns(topics)[0];
+  const editor = trainingCompletionColumns(topics, true)[0];
+  assert.equal(saved.render(row), '35/44 (79.5%)');
+  assert.equal(editor.render(row), '35/44 (79.5%)');
+  row.attendanceDirty = true;
+  assert.equal(editor.render(row), '44/44 (100.0%)');
+  assert.equal(saved.render(row), '35/44 (79.5%)');
+  row.moduleCompletion[0].percentage = 79.999;
+  assert.equal(saved.render(row), '35/44 (79.9%)');
+  assert.equal(saved.render({}), '\u2014');
+});
+
+test('attendance dirty tracking returns to saved values when edits are undone', () => {
+  const { hasAttendanceChanges } = load('util/trainingAttendance.js', {});
+  const saved = { day1: { percentComplete: 100 }, day2: { percentComplete: 0 } };
+  assert.equal(hasAttendanceChanges(saved, saved), false);
+  assert.equal(hasAttendanceChanges({ ...saved, day1: { percentComplete: 0 } }, saved), true);
+  assert.equal(hasAttendanceChanges({ ...saved, day1: { percentComplete: '100' } }, saved), false);
+  assert.equal(hasAttendanceChanges({ day1: { percentComplete: 0 } }, {}), true);
+  assert.equal(hasAttendanceChanges({ day1: { percentComplete: '' } }, {}), false);
+});
+
+test('both enrollment reducers preserve backend module completion for the grid', () => {
+  const core = { decodeId: (id) => id, parseData: (data) => data.edges.map(({ node }) => node),
+    pageInfo: () => ({}), formatGraphQLError: () => null };
+  const actionTypes = Object.fromEntries(['CLEAR', 'ERROR', 'REQUEST', 'SUCCESS'].map((key) => [key, (type) => `${type}_${key}`]));
+  const { default: reducer, ACTION_TYPE } = load('reducer.js', { '@openimis/fe-core': core, './util/action-type': actionTypes });
+  const moduleCompletion = [{ module: { id: 'module', name: 'Module' }, tickedTopics: 35, totalTopics: 44, percentage: 79.545 }];
+  for (const [type, connection, relation, resultKey] of [
+    [ACTION_TYPE.SEARCH_PROJECT_BENEFICIARIES, 'beneficiaryProjectEnrollment', 'beneficiary', 'projectBeneficiaries'],
+    [ACTION_TYPE.SEARCH_PROJECT_GROUP_BENEFICIARIES, 'groupBeneficiaryProjectEnrollment', 'groupBeneficiary', 'projectGroupBeneficiaries'],
+  ]) {
+    const state = reducer(undefined, { type: actionTypes.SUCCESS(type), payload: { data: {
+      [connection]: { edges: [{ node: { id: 'enrollment', [relation]: { id: 'beneficiary', jsonExt: {} }, moduleCompletion } }] },
+    } } });
+    assert.deepEqual(state[resultKey][0].moduleCompletion, moduleCompletion);
+  }
 });
 
 test('Training attendance columns use snapshot topic codes in sequence; Work keeps day numbers', () => {

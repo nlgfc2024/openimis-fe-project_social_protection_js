@@ -34,6 +34,7 @@ import {
   bulkUpdateGroupBeneficiaryTimeEntries,
 } from '../actions';
 import { downloadLogSheetPdf } from '../util/log-sheet-export';
+import { hasAttendanceChanges } from '../util/trainingAttendance';
 
 function BaseProjectBeneficiaryTable({
   project,
@@ -89,6 +90,8 @@ function BaseProjectBeneficiaryTable({
           },
         },
       };
+      newData.attendanceDirty = hasAttendanceChanges(newData.projectTimeEntriesDict,
+        attendanceSnapshotRef.current[enrollmentId] || {});
 
       const nextChanges = {
         ...prev,
@@ -323,6 +326,7 @@ function BaseProjectBeneficiaryTable({
     setBulkEditOpen(newState);
 
     if (newState) {
+      (materialTable.dataManager.data || []).forEach((row) => { row.attendanceDirty = false; });
       // Preserve immutable values from the beginning of the edit session.
       // MaterialTable updates nested row fields in place, so comparing against
       // the Redux rows after editing can otherwise hide genuine changes.
@@ -351,6 +355,7 @@ function BaseProjectBeneficiaryTable({
       if (original) row.projectTimeEntriesDict = Object.fromEntries(
         Object.entries(original).map(([key, entry]) => [key, { ...entry }]),
       );
+      delete row.attendanceDirty;
     });
     materialTable.dataManager.changeBulkEditOpen(false);
     materialTable.setState({
