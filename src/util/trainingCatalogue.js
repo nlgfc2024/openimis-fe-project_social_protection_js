@@ -27,6 +27,6 @@ export const trainingModuleInput = (module, decodeId) => ({
 export const trainingCatalogueError = (response, fallback) => {
   const errors = response?.payload?.errors || response?.errors || response?.error;
   if (typeof errors === 'string') return errors;
-  if (!errors?.length) return fallback;
+  if (!Array.isArray(errors) || !errors.length) return fallback;
   return errors.map((error) => (typeof error === 'string' ? error : error.detail || error.message || fallback)).join(' ');
 };
