@@ -9,6 +9,7 @@ import reducer from './reducer';
 import ProjectPage from './pages/ProjectPage';
 import ProjectCreatePage from './pages/ProjectCreatePage';
 import ProjectsPage from './pages/ProjectsPage';
+import TrainingModulesPage from './pages/TrainingModulesPage';
 import ProjectHistorySearcher from './components/ProjectHistorySearcher';
 import BenefitPlanProjectsSearcher from './components/BenefitPlanProjectsSearcher';
 import ProjectPicker from './pickers/ProjectPicker';
@@ -26,7 +27,7 @@ import {
   ProjectChangelogTabPanel,
 } from './components/ProjectChangelogTab';
 import projectBeneficiariesMiddleware from './middlewares';
-import { RIGHT_PROJECT_SEARCH } from './constants';
+import { RIGHT_PROJECT_SEARCH, RIGHT_ACTIVITY_SEARCH } from './constants';
 
 // Kept identical to social_protection's route roots so the project route stays
 // nested under a benefit plan ("Phase") page.
@@ -39,6 +40,7 @@ const DEFAULT_CONFIG = {
   translations: [{ key: 'en', messages: flatten(messages_en) }],
   reducers: [{ key: 'projectSocialProtection', reducer }],
   'core.Router': [
+    { path: 'trainingModules', component: TrainingModulesPage },
     {
       path: ROUTE_PROJECTS,
       component: ProjectsPage,
@@ -66,6 +68,13 @@ const DEFAULT_CONFIG = {
     // without forking fe-payroll. Remove once fe-payroll consumes the namespaced key above.
     { key: 'socialProtection.ProjectPicker', ref: ProjectPicker },
   ],
+  'admin.MainMenu': [{
+    text: <FormattedMessage module="projectSocialProtection" id="trainingModules.title" />,
+    icon: <WorkIcon />,
+    route: '/trainingModules',
+    filter: (rights) => rights.includes(RIGHT_ACTIVITY_SEARCH),
+    id: 'projectSocialProtection.trainingModules',
+  }],
   'socialProtection.MainMenu': [
     {
       text: (
