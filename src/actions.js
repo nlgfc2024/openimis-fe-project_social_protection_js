@@ -158,8 +158,6 @@ function formatProjectGQL(project) {
     ${project?.projectType === 'TRAINING' && Object.prototype.hasOwnProperty.call(project, 'targetBeneficiaries')
     ? `targetBeneficiaries: ${project.targetBeneficiaries == null || project.targetBeneficiaries === '' ? 'null' : project.targetBeneficiaries}`
     : project?.targetBeneficiaries ? `targetBeneficiaries: ${project.targetBeneficiaries}` : ''}
-    ${project?.projectType === 'TRAINING' && Array.isArray(project.trainingModules)
-    ? `moduleIds: [${project.trainingModules.map((module) => `"${decodeTrainingReferenceId(module.id, decodeId)}"`).join(',')}]` : ''}
     ${project?.projectType !== 'TRAINING' && project?.workingDays ? `workingDays: ${project.workingDays}` : ''}
     ${project?.status ? `status: "${project.status}"` : ''}
     ${project?.projectType !== 'TRAINING' && project?.activity?.id ? `activityId: "${project.activity.id}"` : ''}

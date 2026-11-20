@@ -68,11 +68,12 @@ test('create form queries the backend deployment type', () => {
   assert.equal(actions.fetchProjectDeploymentType(), 'query { projectDeploymentType }');
 });
 
-test('training sends ordered module IDs and omits work fields', () => {
-  const payload = actions.updateProject({ id: 'training', projectType: 'TRAINING', name: 'Training',
-    trainingModules: [{ id: 'second' }, { id: 'first' }], workingDays: 10, activity: { id: 'legacy' } });
-  assert.match(payload, /moduleIds: \["second","first"\]/);
-  assert.doesNotMatch(payload, /workingDays:|activityId:/);
+test('Training create and update omit module IDs and work fields', () => {
+  for (const action of [actions.createProject, actions.updateProject]) {
+    const payload = action({ id: 'training', projectType: 'TRAINING', name: 'Training',
+      trainingModules: [{ id: 'second' }, { id: 'first' }], workingDays: 10, activity: { id: 'legacy' } });
+    assert.doesNotMatch(payload, /moduleIds:|workingDays:|activityId:/);
+  }
 });
 
 test('required fields use modules for training and activity/work days for work', () => {
