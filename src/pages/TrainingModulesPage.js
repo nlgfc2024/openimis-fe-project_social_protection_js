@@ -113,7 +113,7 @@ export default function TrainingModulesPage() {
         searcherActions={[{ label: t('trainingModules.create'), icon: <AddIcon />,
           authorized: rights.includes(208002), onClick: () => {
             setError(''); setEdited({ name: '', programmes: [], topics: [{ key: 'initial', code: '', name: '' }] });
-          } }]} enableActionButtons enableHeaderActionButtons />
+          } }]} enableActionButtons={false} enableHeaderActionButtons />
 
       <Dialog open={Boolean(edited)} maxWidth="lg" fullWidth onClose={() => !saving && setEdited(null)}>
         <DialogContent>
