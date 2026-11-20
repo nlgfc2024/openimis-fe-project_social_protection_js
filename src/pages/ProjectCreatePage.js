@@ -33,6 +33,7 @@ import {
 } from '../util/trainingFormConfig';
 import {
   RIGHT_BENEFIT_PLAN_UPDATE,
+  BENEFIT_PLAN_PROJECTS_TAB_VALUE,
   PROJECT_BENEFICIARIES_TAB_VALUE,
   MIN_TARGET_BENEFICIARIES,
   getMaxTargetBeneficiaries,
@@ -249,9 +250,20 @@ function ProjectCreatePage({
         formatMessage(intl, 'projectSocialProtection', 'project.create.success.title'),
         formatMessage(intl, 'projectSocialProtection', 'project.create.success.message'),
       );
-      history.replace(`/${modulesManager.getRef('projectSocialProtection.route.projects')}`);
+      if (editedProject.projectType === 'WORK') {
+        history.replace(`/${modulesManager.getRef('socialProtection.route.benefitPlan')}/${benefitPlanId}`, {
+          activeTab: BENEFIT_PLAN_PROJECTS_TAB_VALUE,
+        });
+      } else {
+        history.replace(`/${modulesManager.getRef('projectSocialProtection.route.projects')}`);
+      }
     }).catch((error) => {
-      setSaveError(error.message || 'Unable to save Training. Please try again.');
+      if (editedProject.projectType === 'WORK') {
+        coreAlert(formatMessage(intl, 'core', 'FatalError.GenericError.title'),
+          error.message || formatMessage(intl, 'core', 'FatalError.GenericError.description'));
+      } else {
+        setSaveError(error.message || 'Unable to save Training. Please try again.');
+      }
     }).finally(() => setSaving(false));
   };
 

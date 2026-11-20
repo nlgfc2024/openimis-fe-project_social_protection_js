@@ -139,8 +139,8 @@ test('Training details honour readonly rules without applying creation defaults'
 });
 
 function pageHarness({ type = 'TRAINING', fail = false, saveStatus = 2 } = {}) {
-  const states = [], calls = [];
-  let cursor = 0, effect, submitted, redirect;
+  const states = [], calls = [], alerts = [];
+  let cursor = 0, effect, submitted, redirect, redirectState;
   const config = { fields: {
     name: rule({ required: true, readOnly: true, default: 'Configured training' }),
     location: rule({ required: true, default: { uuid: 'location', type: 'D', parent: { type: 'R' } } }),
@@ -169,7 +169,7 @@ function pageHarness({ type = 'TRAINING', fail = false, saveStatus = 2 } = {}) {
       formatMessageWithValues: (_, __, key) => key, withModulesManager: identity,
       useHistory: () => ({ location: { pathname: '/benefitPlans/benefitPlan/plan/project/create',
         state: { benefitPlanId: 'plan', benefitPlanName: 'Programme' } },
-      replace: (path) => { redirect = path; } }), coreAlert: () => {},
+      replace: (path, state) => { redirect = path; redirectState = state; } }), coreAlert: () => {},
       waitForMutation: () => ({ kind: 'wait' }),
     },
     'react-intl': { injectIntl: identity }, redux: { bindActionCreators: () => ({}) },
@@ -182,15 +182,18 @@ function pageHarness({ type = 'TRAINING', fail = false, saveStatus = 2 } = {}) {
     '../components/ProjectTabPanel': () => null,
     '../util/trainingSetup': load('util/trainingSetup.js'), '../util/trainingFormConfig': helpers,
     '../constants': { RIGHT_BENEFIT_PLAN_UPDATE: 160003, getMaxTargetBeneficiaries: () => 200,
-      MIN_TARGET_BENEFICIARIES: 5 },
+      MIN_TARGET_BENEFICIARIES: 5, BENEFIT_PLAN_PROJECTS_TAB_VALUE: 'BenefitPlanProjectsTab' },
   }).default;
-  const props = { intl: {}, classes: {}, rights: [160003], modulesManager: { getRef: () => 'projects' }, projectNameIsValid: true,
-    coreAlert: () => {},
+  const props = { intl: {}, classes: {}, rights: [160003], modulesManager: {
+    getRef: (key) => key === 'socialProtection.route.benefitPlan' ? 'benefitPlans/benefitPlan' : 'projects',
+  }, projectNameIsValid: true,
+    coreAlert: (...args) => { alerts.push(args); },
     createProject: (payload) => { submitted = payload;
       return Promise.resolve({ payload: { data: { createProject: { clientMutationId: 'save-id' } } } }); } };
   return {
     render: () => { cursor = 0; return nodes(Page(props)); },
-    run: () => effect(), calls, submitted: () => submitted, redirect: () => redirect,
+    run: () => effect(), calls, alerts, submitted: () => submitted, redirect: () => redirect,
+    redirectState: () => redirectState,
   };
 }
 
@@ -220,8 +223,31 @@ test('failed Training save stays on the form and displays its error', async () =
   page.render().find((node) => node.type === 'Form').props.save();
   await new Promise(setImmediate);
   assert.equal(page.redirect(), undefined);
+  assert.deepEqual(page.alerts, []);
   assert.ok(page.render().some((node) => node.type === 'Typography'
     && node.props.children === 'Training validation failed'));
+});
+
+test('successful WORK creation returns to its phase Projects tab', async () => {
+  const page = pageHarness({ type: 'WORK' });
+  page.render(); page.run();
+  await new Promise(setImmediate);
+  page.render().find((node) => node.type === 'Form').props.save();
+  await new Promise(setImmediate);
+  assert.equal(page.redirect(), '/benefitPlans/benefitPlan/plan');
+  assert.deepEqual(page.redirectState(), { activeTab: 'BenefitPlanProjectsTab' });
+});
+
+test('failed WORK creation uses a standard alert without redirecting', async () => {
+  const page = pageHarness({ type: 'WORK', saveStatus: 1 });
+  page.render(); page.run();
+  await new Promise(setImmediate);
+  page.render().find((node) => node.type === 'Form').props.save();
+  await new Promise(setImmediate);
+  assert.equal(page.redirect(), undefined);
+  assert.deepEqual(page.alerts, [['FatalError.GenericError.title', 'Training validation failed']]);
+  assert.equal(page.render().some((node) => node.type === 'Typography'
+    && node.props.children === 'Training validation failed'), false);
 });
 
 test('unavailable Training configuration blocks saving and shows a configuration error', async () => {
