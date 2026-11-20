@@ -51,7 +51,6 @@ export function UtilisationAssessmentTabPanel({
     <GrantTabForm
       value={value}
       tabValue={UTILISATION_ASSESSMENT_TAB_VALUE}
-      title="beneficiaryGrant.utilisationAssessment.title"
       readOnly={readOnly}
       dirty={dirty}
       valid={!Object.keys(errors).length}

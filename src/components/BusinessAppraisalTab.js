@@ -87,7 +87,6 @@ export function BusinessAppraisalTabPanel({
     <GrantTabForm
       value={value}
       tabValue={BUSINESS_APPRAISAL_TAB_VALUE}
-      title="beneficiaryGrant.businessAppraisal.title"
       readOnly={readOnly}
       dirty={dirty}
       valid={!Object.keys(errors).length}

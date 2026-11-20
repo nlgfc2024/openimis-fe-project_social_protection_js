@@ -109,26 +109,19 @@ export const useBeneficiaryJsonExt = ({
 };
 
 const styles = (theme) => ({
-  tableTitle: theme.table.title,
   item: theme.paper.item,
 });
 
-// One tab of the beneficiary page laid out like the other forms: a title bar, the
-// field groups, and the save actions for users who may edit. It renders its own tab
-// panel, without the padding policyHolder.TabPanel adds, so the title bar spans the
-// tab like the other forms' title bars.
+// One tab of the beneficiary page laid out like the other forms: the field groups
+// and the save actions for users who may edit. It renders its own tab panel, without
+// the padding policyHolder.TabPanel adds.
 function GrantTabFormBase({
-  classes, value, tabValue, title, readOnly, dirty, valid, saving, notice, onSave, onReset, formatMessage: t,
+  classes, value, tabValue, readOnly, dirty, valid, saving, notice, onSave, onReset, formatMessage: t,
   children,
 }) {
   if (value !== tabValue) return null;
   return (
     <div role="tabpanel">
-      <Grid container className={classes.tableTitle}>
-        <Grid item xs={12} className={classes.tableTitle}>
-          <Typography>{t(title)}</Typography>
-        </Grid>
-      </Grid>
       {readOnly && (
         <Grid container className={classes.item}>
           <Grid item xs={12} className={classes.item}>
