@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import {
-  Checkbox, FormControl, FormControlLabel, FormGroup, FormHelperText, FormLabel,
+  Checkbox, FormControl, FormHelperText, InputLabel, ListItemText, MenuItem, Select,
 } from '@material-ui/core';
 import {
-  AmountInput, PublishedComponent, SelectInput, TextAreaInput, TextInput, useModulesManager, useTranslations,
+  NumberInput, PublishedComponent, SelectInput, TextAreaInput, TextInput, useModulesManager, useTranslations,
 } from '@openimis/fe-core';
 import { BUSINESS_APPRAISAL_TAB_VALUE, MODULE_NAME, RIGHT_PLANS_AND_GRANTS } from '../constants';
 import {
@@ -23,6 +23,38 @@ export function BusinessAppraisalTabLabel(props) {
 
 const fieldLabel = (key) => `beneficiaryGrant.field.${key}`;
 
+// The grant types as a multi-select, read-only like the core SelectInput.
+function GrantTypesInput({
+  allowed, value, readOnly, error, onChange, formatMessage: t,
+}) {
+  const typeLabel = (type) => t(`beneficiaryGrant.grantType.${type}`);
+  if (readOnly) {
+    return (
+      <TextInput module={MODULE_NAME} label={fieldLabel('grant_types')} readOnly value={value.map(typeLabel).join(', ')} />
+    );
+  }
+  return (
+    <FormControl required fullWidth error={Boolean(error)}>
+      <InputLabel shrink>{t(fieldLabel('grant_types'))}</InputLabel>
+      <Select
+        multiple
+        displayEmpty
+        value={value}
+        renderValue={(selected) => selected.map(typeLabel).join(', ')}
+        onChange={(event) => onChange(allowed.filter((type) => event.target.value.includes(type)))}
+      >
+        {allowed.map((type) => (
+          <MenuItem key={type} value={type}>
+            <Checkbox color="primary" checked={value.includes(type)} />
+            <ListItemText primary={typeLabel(type)} />
+          </MenuItem>
+        ))}
+      </Select>
+      {error && <FormHelperText>{error}</FormHelperText>}
+    </FormControl>
+  );
+}
+
 export function BusinessAppraisalTabPanel({
   value, rights = [], beneficiary, groupBeneficiaries, benefitPlan,
 }) {
@@ -32,7 +64,7 @@ export function BusinessAppraisalTabPanel({
     beneficiary, groupBeneficiaries, inputKeys: APPRAISAL_INPUT_KEYS, mutationLabel: t('beneficiaryGrant.mutationLabel'),
   });
   const { draft, saved, change } = form;
-  const { jsonExt, errors, tranches } = useMemo(() => computeAppraisal({
+  const { jsonExt, errors } = useMemo(() => computeAppraisal({
     saved, draft, benefitPlan, today: form.today, approver: form.userName,
   }), [saved, draft, benefitPlan, form.today, form.userName]);
 
@@ -41,17 +73,15 @@ export function BusinessAppraisalTabPanel({
   const readOnly = !canEditWith(rights, RIGHT_PLANS_AND_GRANTS) || form.saving;
   const perBeneficiary = recordsGrantPerBeneficiary(benefitPlan);
   const allowed = allowedGrantTypes(benefitPlan);
-  const selected = Array.isArray(draft.grant_types) ? draft.grant_types : [];
-  const hasCash = selected.includes(CASH);
+  const selected = Array.isArray(draft.grant_types) ? allowed.filter((type) => draft.grant_types.includes(type)) : [];
   const dirty = !sameJsonExt(saved, jsonExt);
   // Errors show once the user changes something, not on a record still to be appraised.
   const error = (key) => (!readOnly && dirty ? errorText(errors, key, t, formatMessageWithValues) : null);
-  const inKindError = error('inKind');
-
-  const toggleType = (type, checked) => change(
-    'grant_types',
-    allowed.filter((item) => (item === type ? checked : selected.includes(item))),
-  );
+  const inKindTypes = IN_KIND_TYPES.filter((type) => selected.includes(type));
+  let grantHint = null;
+  if (inKindTypes.length) {
+    grantHint = t(selected.includes(CASH) ? 'beneficiaryGrant.section.grant.cashHint' : 'beneficiaryGrant.section.grant.inKindHint');
+  }
 
   return (
     <GrantTabForm
@@ -67,77 +97,44 @@ export function BusinessAppraisalTabPanel({
       onReset={form.reset}
       formatMessage={t}
     >
-      {perBeneficiary ? (
-        <GrantFieldGroup title="beneficiaryGrant.section.grant" formatMessage={t} divider={false}>
-          <FieldCell wide>
-            <FormControl component="fieldset" error={Boolean(error('grant_types'))} required>
-              <FormLabel component="legend">{t(fieldLabel('grant_types'))}</FormLabel>
-              <FormGroup row>
-                {allowed.map((type) => (
-                  <FormControlLabel
-                    key={type}
-                    label={t(`beneficiaryGrant.grantType.${type}`)}
-                    control={(
-                      <Checkbox
-                        color="primary"
-                        disabled={readOnly}
-                        checked={selected.includes(type)}
-                        onChange={(event) => toggleType(type, event.target.checked)}
-                      />
-                    )}
-                  />
-                ))}
-              </FormGroup>
-              {error('grant_types') && <FormHelperText>{error('grant_types')}</FormHelperText>}
-            </FormControl>
+      {perBeneficiary && (
+        <GrantFieldGroup title="beneficiaryGrant.section.grant" hint={grantHint} formatMessage={t} divider={false}>
+          <FieldCell>
+            <GrantTypesInput
+              allowed={allowed}
+              value={selected}
+              readOnly={readOnly}
+              error={error('grant_types')}
+              onChange={(types) => change('grant_types', types)}
+              formatMessage={t}
+            />
           </FieldCell>
           <FieldCell>
-            <AmountInput
+            <NumberInput
               module={MODULE_NAME}
               label={fieldLabel('approved_grant_amount')}
               required
+              min={0}
               readOnly={readOnly}
               value={draft.approved_grant_amount ?? ''}
               error={error('approved_grant_amount')}
               onChange={(amount) => change('approved_grant_amount', amount)}
             />
           </FieldCell>
-          {IN_KIND_TYPES.filter((type) => selected.includes(type)).map((type) => {
+          {inKindTypes.map((type) => {
             const key = trancheAmountKey(1, type);
             return (
               <FieldCell key={key}>
-                <AmountInput
+                <NumberInput
                   module={MODULE_NAME}
                   label={fieldLabel(`${type.toLowerCase()}_amount`)}
                   required
+                  min={0}
+                  displayZero
                   readOnly={readOnly}
-                  displayZero
                   value={draft[key] ?? ''}
-                  error={error(key) || inKindError}
+                  error={error(key) || error('inKind')}
                   onChange={(amount) => change(key, amount)}
-                />
-              </FieldCell>
-            );
-          })}
-        </GrantFieldGroup>
-      ) : null}
-      {perBeneficiary && selected.length > 0 && (
-        <GrantFieldGroup
-          title="beneficiaryGrant.section.tranches"
-          hint={t(hasCash ? 'beneficiaryGrant.section.tranches.cashHint' : 'beneficiaryGrant.section.tranches.inKindHint')}
-          formatMessage={t}
-        >
-          {(hasCash ? [[1, CASH], [2, CASH]] : []).map(([tranche, type]) => {
-            const key = trancheAmountKey(tranche, type);
-            return (
-              <FieldCell key={key}>
-                <AmountInput
-                  module={MODULE_NAME}
-                  label={fieldLabel(key)}
-                  readOnly
-                  displayZero
-                  value={tranches ? tranches[tranche][type] / 100 : ''}
-                  onChange={() => {}}
                 />
               </FieldCell>
             );

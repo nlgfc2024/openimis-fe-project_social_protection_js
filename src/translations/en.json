@@ -135,9 +135,8 @@
   "projectSocialProtection.beneficiaryGrant.businessAppraisal.title": "Business appraisal",
   "projectSocialProtection.beneficiaryGrant.utilisationAssessment.title": "Utilisation assessment",
   "projectSocialProtection.beneficiaryGrant.section.grant": "Grant",
-  "projectSocialProtection.beneficiaryGrant.section.tranches": "Tranche amounts",
-  "projectSocialProtection.beneficiaryGrant.section.tranches.cashHint": "Computed from the grant amount: tranche 1 is 70% of the grant, of which the equipment and service are delivered and the rest is paid in cash; tranche 2 is the remaining 30% in cash.",
-  "projectSocialProtection.beneficiaryGrant.section.tranches.inKindHint": "A grant without cash is delivered once: the equipment and service make up the whole grant.",
+  "projectSocialProtection.beneficiaryGrant.section.grant.cashHint": "The equipment and service are delivered in tranche 1. The payroll pays the rest of each tranche in cash, using the tranche percentage set on its payment plan.",
+  "projectSocialProtection.beneficiaryGrant.section.grant.inKindHint": "A grant without cash is delivered once: the equipment and service make up the whole grant.",
   "projectSocialProtection.beneficiaryGrant.section.businessPlan": "Business plan",
   "projectSocialProtection.beneficiaryGrant.section.businessPlan.planGrantHint": "The grant amount is set on the payment plan.",
   "projectSocialProtection.beneficiaryGrant.readOnly": "You can view these details but not change them.",
@@ -160,8 +159,6 @@
   "projectSocialProtection.beneficiaryGrant.field.approved_grant_amount": "Grant amount",
   "projectSocialProtection.beneficiaryGrant.field.equipment_amount": "Equipment amount",
   "projectSocialProtection.beneficiaryGrant.field.service_amount": "Service amount",
-  "projectSocialProtection.beneficiaryGrant.field.tranche_1_cash_amount": "Tranche 1 cash",
-  "projectSocialProtection.beneficiaryGrant.field.tranche_2_cash_amount": "Tranche 2 cash",
   "projectSocialProtection.beneficiaryGrant.field.business_plan_reference": "Business plan reference",
   "projectSocialProtection.beneficiaryGrant.field.business_plan_status": "Business plan status",
   "projectSocialProtection.beneficiaryGrant.field.plan_rejection_reason": "Rejection reason",
@@ -176,6 +173,6 @@
   "projectSocialProtection.beneficiaryGrant.error.positive": "Must be more than 0",
   "projectSocialProtection.beneficiaryGrant.error.nonNegative": "Must be 0 or more",
   "projectSocialProtection.beneficiaryGrant.error.percentage": "Must be from 0 to 100",
-  "projectSocialProtection.beneficiaryGrant.error.inKindAboveShare": "Equipment and service add up to {inKind}, more than tranche 1 ({share})",
+  "projectSocialProtection.beneficiaryGrant.error.inKindAboveGrant": "Equipment and service add up to {inKind}, more than the grant amount ({amount})",
   "projectSocialProtection.beneficiaryGrant.error.inKindNotGrant": "Without cash, equipment and service must add up to the grant amount ({amount})"
 }

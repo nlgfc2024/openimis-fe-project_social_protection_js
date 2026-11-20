@@ -11,10 +11,6 @@ export const REJECTED = 'REJECTED';
 export const PLAN_STATUSES = ['PENDING', APPROVED, REJECTED];
 export const YES_NO = ['YES', 'NO'];
 
-// A grant with cash is paid 70:30 over two tranches; the payment plans' default
-// tranche_percentage. A grant without cash is paid once, in full.
-export const TRANCHE_SHARES = { 1: 70, 2: 30 };
-
 export const parseJsonObject = (value) => {
   if (!value) return {};
   if (typeof value === 'object') return value;
@@ -59,15 +55,13 @@ const isBlank = (value) => value === undefined || value === null
 
 const text = (value) => (isBlank(value) ? undefined : String(value).trim());
 
-// Amounts are handled in whole cents, so tranches round like the payroll does.
+// Amounts are handled in whole cents, so sums compare exactly.
 const toCents = (value) => {
   if (isBlank(value)) return null;
   const number = Number(value);
   return Number.isFinite(number) ? Math.round(Number((number * 100).toFixed(4))) : NaN;
 };
 const fromCents = (cents) => cents / 100;
-// cents x percentage / 100, rounded half up.
-const shareOf = (cents, percentage) => Math.floor((cents * percentage + 50) / 100);
 
 const setKey = (jsonExt, key, value) => {
   if (value === undefined || value === null) {
@@ -94,20 +88,21 @@ export const pickKeys = (jsonExt, keys) => keys.reduce((picked, key) => (
   jsonExt[key] === undefined ? picked : { ...picked, [key]: jsonExt[key] }), {});
 
 // The beneficiary's jsonExt after a business appraisal, with the derived values:
-// - tranche amounts: tranche 1 is 70% of a grant with cash (100% without cash) and
-//   holds the equipment and service, the rest of it is cash; tranche 2 is the
-//   remaining 30% in cash;
+// - the equipment and service amounts are delivered in tranche one; the payroll pays
+//   the rest of each tranche's share in cash, from the tranche percentage of its
+//   payment plan, so no cash amount is recorded here (a recorded one is cleared when
+//   the grant changes, as it would no longer add up);
 // - an approval is dated today and made by the signed-in user, and kept as recorded
 //   while the plan stays approved (an approved record without them gets them with
 //   its next change);
 // - a rejection reason is kept only for a rejected plan.
-// Returns {jsonExt, errors, tranches}; errors maps a key to {id, values}.
+// Returns {jsonExt, errors}; errors maps a key to {id, values}.
 export const computeAppraisal = ({
   saved, draft, benefitPlan, today, approver,
 }) => {
-  const jsonExt = { ...parseJsonObject(saved) };
+  const savedJsonExt = parseJsonObject(saved);
+  const jsonExt = { ...savedJsonExt };
   const errors = {};
-  let tranches = null;
 
   if (recordsGrantPerBeneficiary(benefitPlan)) {
     const allowed = allowedGrantTypes(benefitPlan);
@@ -121,47 +116,32 @@ export const computeAppraisal = ({
     if (amount === null) errors.approved_grant_amount = { id: 'required' };
     else if (!(amount > 0)) errors.approved_grant_amount = { id: 'positive' };
 
-    const inKind = {};
-    IN_KIND_TYPES.filter((type) => types.includes(type)).forEach((type) => {
+    let inKindTotal = 0;
+    IN_KIND_TYPES.forEach((type) => {
       const key = trancheAmountKey(1, type);
+      if (!types.includes(type)) {
+        [1, 2].forEach((tranche) => setKey(jsonExt, trancheAmountKey(tranche, type), undefined));
+        return;
+      }
       const cents = toCents(draft[key]);
       if (cents === null) errors[key] = { id: 'required' };
       else if (!(cents >= 0)) errors[key] = { id: 'nonNegative' };
-      else inKind[type] = cents;
+      else inKindTotal += cents;
+      setKey(jsonExt, key, Number.isFinite(cents) && cents !== null ? fromCents(cents) : undefined);
     });
 
-    const inputsValid = types.length && !errors.approved_grant_amount
-      && Object.keys(inKind).length === IN_KIND_TYPES.filter((type) => types.includes(type)).length;
-    if (inputsValid) {
-      const inKindTotal = Object.values(inKind).reduce((sum, cents) => sum + cents, 0);
-      if (types.includes(CASH)) {
-        const share = shareOf(amount, TRANCHE_SHARES[1]);
-        if (inKindTotal > share) {
-          errors.inKind = { id: 'inKindAboveShare', values: { inKind: fromCents(inKindTotal), share: fromCents(share) } };
-        } else {
-          tranches = {
-            1: { ...inKind, [CASH]: share - inKindTotal },
-            2: { [CASH]: shareOf(amount, TRANCHE_SHARES[2]) },
-          };
-        }
-      } else if (inKindTotal !== amount) {
+    const inKindValid = IN_KIND_TYPES.every((type) => !errors[trancheAmountKey(1, type)]);
+    if (types.length && !errors.approved_grant_amount && inKindValid) {
+      if (types.includes(CASH) && inKindTotal > amount) {
+        errors.inKind = { id: 'inKindAboveGrant', values: { inKind: fromCents(inKindTotal), amount: fromCents(amount) } };
+      } else if (!types.includes(CASH) && inKindTotal !== amount) {
         errors.inKind = { id: 'inKindNotGrant', values: { amount: fromCents(amount) } };
-      } else {
-        tranches = { 1: inKind, 2: {} };
       }
     }
 
-    [1, 2].forEach((tranche) => GRANT_TYPES.forEach((type) => {
-      const key = trancheAmountKey(tranche, type);
-      if (!types.includes(type)) {
-        setKey(jsonExt, key, undefined);
-      } else if (tranches) {
-        const cents = tranches[tranche][type];
-        setKey(jsonExt, key, cents === undefined ? undefined : fromCents(cents));
-      } else if (tranche === 1 && inKind[type] !== undefined) {
-        setKey(jsonExt, key, fromCents(inKind[type]));
-      }
-    }));
+    const grantKeys = ['grant_types', 'approved_grant_amount', ...IN_KIND_TYPES.map((type) => trancheAmountKey(1, type))];
+    const grantChanged = grantKeys.some((key) => JSON.stringify(jsonExt[key]) !== JSON.stringify(savedJsonExt[key]));
+    if (grantChanged) [1, 2].forEach((tranche) => setKey(jsonExt, trancheAmountKey(tranche, CASH), undefined));
   }
 
   setKey(jsonExt, 'business_plan_reference', text(draft.business_plan_reference));
@@ -172,7 +152,6 @@ export const computeAppraisal = ({
   setKey(jsonExt, 'plan_rejection_reason', reason);
   if (status === REJECTED && !reason) errors.plan_rejection_reason = { id: 'required' };
 
-  const savedJsonExt = parseJsonObject(saved);
   const stillApproved = savedJsonExt.business_plan_status === APPROVED
     && !isBlank(savedJsonExt.plan_approved_on) && !isBlank(savedJsonExt.plan_approved_by);
   if (status !== APPROVED) {
@@ -183,7 +162,7 @@ export const computeAppraisal = ({
     setKey(jsonExt, 'plan_approved_by', approver || undefined);
   }
 
-  return { jsonExt, errors, tranches };
+  return { jsonExt, errors };
 };
 
 // The beneficiary's jsonExt after a utilisation assessment: a new or changed result

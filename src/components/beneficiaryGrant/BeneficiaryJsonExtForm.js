@@ -4,7 +4,7 @@ import {
   Button, Divider, Grid, Tab, Typography,
 } from '@material-ui/core';
 import { withStyles } from '@material-ui/core/styles';
-import { formatMessage, PublishedComponent } from '@openimis/fe-core';
+import { formatMessage } from '@openimis/fe-core';
 import {
   MODULE_NAME,
   RIGHT_BENEFICIARY_DATA_UPDATE,
@@ -114,13 +114,16 @@ const styles = (theme) => ({
 });
 
 // One tab of the beneficiary page laid out like the other forms: a title bar, the
-// field groups, and the save actions for users who may edit.
+// field groups, and the save actions for users who may edit. It renders its own tab
+// panel, without the padding policyHolder.TabPanel adds, so the title bar spans the
+// tab like the other forms' title bars.
 function GrantTabFormBase({
   classes, value, tabValue, title, readOnly, dirty, valid, saving, notice, onSave, onReset, formatMessage: t,
   children,
 }) {
+  if (value !== tabValue) return null;
   return (
-    <PublishedComponent pubRef="policyHolder.TabPanel" module={MODULE_NAME} index={tabValue} value={value}>
+    <div role="tabpanel">
       <Grid container className={classes.tableTitle}>
         <Grid item xs={12} className={classes.tableTitle}>
           <Typography>{t(title)}</Typography>
@@ -156,7 +159,7 @@ function GrantTabFormBase({
           </Grid>
         </>
       )}
-    </PublishedComponent>
+    </div>
   );
 }
 
