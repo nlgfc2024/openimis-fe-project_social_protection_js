@@ -149,6 +149,7 @@ test('locked picker preserves deleted catalogue snapshots without querying or re
   const picker = nodes(tree).find((node) => node.type === 'Autocomplete');
   assert.equal(picker.props.readOnly, true);
   assert.equal(picker.props.value[0].name, 'Saved module');
+  assert.equal(nodes(tree).some((node) => node.props.children === 'project.trainingModules.locked'), false);
 });
 
 test('picker exposes load errors and prevents save while catalogue is unavailable', async () => {
