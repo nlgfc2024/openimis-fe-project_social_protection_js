@@ -26,6 +26,8 @@ import {
   ProjectChangelogTabPanel,
 } from './components/ProjectChangelogTab';
 import projectBeneficiariesMiddleware from './middlewares';
+import { BusinessAppraisalTabLabel, BusinessAppraisalTabPanel } from './components/BusinessAppraisalTab';
+import { UtilisationAssessmentTabLabel, UtilisationAssessmentTabPanel } from './components/UtilisationAssessmentTab';
 import { RIGHT_PROJECT_SEARCH } from './constants';
 
 // Kept identical to social_protection's route roots so the project route stays
@@ -85,6 +87,14 @@ const DEFAULT_CONFIG = {
   ],
   'benefitPlan.TabPanel.panel': [
     BenefitPlanProjectsTabPanel,
+  ],
+  'benefitPackage.TabPanel.label': [
+    BusinessAppraisalTabLabel,
+    UtilisationAssessmentTabLabel,
+  ],
+  'benefitPackage.TabPanel.panel': [
+    BusinessAppraisalTabPanel,
+    UtilisationAssessmentTabPanel,
   ],
   'project.TabPanel.label': [
     ProjectBeneficiariesTabLabel,
