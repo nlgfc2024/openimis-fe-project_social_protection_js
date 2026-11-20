@@ -74,12 +74,14 @@ const PROJECT_ENROLLMENT_PROJECTION = (modulesManager) => [
   'id',
   'beneficiary {' + BENEFICIARY_PROJECTION(modulesManager).join(', ') + '}',
   'timeEntries { id, dayNumber, percentComplete }',
+  'moduleCompletion { module { id name } tickedTopics totalTopics percentage }',
 ];
 
 const PROJECT_GROUP_ENROLLMENT_PROJECTION = (modulesManager) => [
   'id',
   'groupBeneficiary {' + GROUP_BENEFICIARY_PROJECTION(modulesManager).join(', ') + '}',
   'timeEntries { id, dayNumber, percentComplete }',
+  'moduleCompletion { module { id name } tickedTopics totalTopics percentage }',
 ];
 
 export function fetchBenefitPlan(modulesManager, params) {
@@ -99,6 +101,11 @@ export function fetchProject(modulesManager, params) {
 
 export function fetchProjectDeploymentType() {
   return graphql('query { projectDeploymentType }', 'PROJECT_SOCIAL_PROTECTION_DEPLOYMENT_TYPE');
+}
+
+export function fetchTrainingFormConfiguration(benefitPlanId) {
+  return graphqlWithVariables('query ($benefitPlanId: UUID!) { projectTrainingFormConfig(benefitPlanId: $benefitPlanId) }',
+    { benefitPlanId: decodeTrainingReferenceId(benefitPlanId, decodeId) }, 'PROJECT_SOCIAL_PROTECTION_TRAINING_FORM_CONFIG');
 }
 
 export function fetchProjectHistory(modulesManager, params) {
@@ -150,7 +157,9 @@ function formatProjectGQL(project) {
     ${project?.projectType === 'TRAINING' ? `name: "${formatGQLString(project.name || '')}"` : ''}
     ${['sessionStartDate', 'sessionEndDate'].filter((key) => Object.prototype.hasOwnProperty.call(project || {}, key))
     .map((key) => `${key}: ${project[key] ? `"${formatGQLString(project[key])}"` : 'null'}`).join('\n')}
-    ${project?.targetBeneficiaries ? `targetBeneficiaries: ${project.targetBeneficiaries}` : ''}
+    ${project?.projectType === 'TRAINING' && Object.prototype.hasOwnProperty.call(project, 'targetBeneficiaries')
+    ? `targetBeneficiaries: ${project.targetBeneficiaries == null || project.targetBeneficiaries === '' ? 'null' : project.targetBeneficiaries}`
+    : project?.targetBeneficiaries ? `targetBeneficiaries: ${project.targetBeneficiaries}` : ''}
     ${project?.projectType !== 'TRAINING' && project?.workingDays ? `workingDays: ${project.workingDays}` : ''}
     ${project?.status ? `status: "${project.status}"` : ''}
     ${project?.projectType !== 'TRAINING' && project?.activity?.id ? `activityId: "${project.activity.id}"` : ''}
@@ -165,7 +174,16 @@ function formatProjectGQL(project) {
 
 export function createProject(project, clientMutationLabel) {
   const { status, ...projectWithoutStatus } = project || {};
-  const mutation = formatMutation('createProject', formatProjectGQL(projectWithoutStatus), clientMutationLabel);
+  // This deployment's GraphQL parser rejects inline null literals. Omitted
+  // creation inputs remain unset and are resolved by backend defaults/config.
+  ['targetBeneficiaries', 'sessionStartDate', 'sessionEndDate'].forEach((field) => {
+    if (projectWithoutStatus[field] == null || projectWithoutStatus[field] === '') {
+      delete projectWithoutStatus[field];
+    }
+  });
+  const district = project?.projectType === 'TRAINING' && project?.district?.uuid
+    ? `districtId: "${project.district.uuid}"` : '';
+  const mutation = formatMutation('createProject', `${formatProjectGQL(projectWithoutStatus)}\n${district}`, clientMutationLabel);
   const requestedDateTime = new Date();
   return graphql(
     mutation.payload,

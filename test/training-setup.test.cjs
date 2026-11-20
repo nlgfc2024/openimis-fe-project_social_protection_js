@@ -32,6 +32,8 @@ test('training names and session date order gate saving', () => {
 const actions = load('actions.js', {
   '@openimis/fe-core': {
     graphql: (payload) => payload,
+    graphqlWithVariables: (query, variables) => ({ query, variables }),
+    formatPageQueryWithCount: (field, params, projection) => JSON.stringify({ field, projection }),
     formatMutation: (_, input) => ({ payload: input }),
     formatGQLString: (value) => value.replace(/"/g, '\\"'),
     decodeId: (id) => id,
@@ -41,12 +43,27 @@ const actions = load('actions.js', {
   './util/action-type': { REQUEST: () => '', SUCCESS: () => '', ERROR: () => '' },
 });
 
+test('training configuration is requested for the selected programme UUID', () => {
+  const id = '01a1e45f-92eb-7cbd-a645-e5987d331147';
+  const request = actions.fetchTrainingFormConfiguration(id);
+  assert.deepEqual(request.variables, { benefitPlanId: id });
+  assert.match(request.query, /projectTrainingFormConfig\(benefitPlanId: \$benefitPlanId\)/);
+});
+
+test('individual and household enrollment queries request backend module completion', () => {
+  const manager = { getProjection: () => '{uuid}' };
+  for (const fetch of [actions.fetchProjectBeneficiaries, actions.fetchProjectGroupBeneficiaries]) {
+    const query = JSON.parse(fetch(manager, []));
+    assert.ok(query.projection.includes('moduleCompletion { module { id name } tickedTopics totalTopics percentage }'));
+  }
+});
+
 test('training sends manual name and nullable dates but never accepts a type input', () => {
   const payload = actions.createProject({ projectType: 'TRAINING', name: 'Business "skills"',
     sessionStartDate: '2026-12-02', sessionEndDate: null });
   assert.match(payload, /name: "Business \\"skills\\""/);
   assert.match(payload, /sessionStartDate: "2026-12-02"/);
-  assert.match(payload, /sessionEndDate: null/);
+  assert.doesNotMatch(payload, /sessionEndDate:/);
   assert.doesNotMatch(payload, /projectType:/);
 });
 
@@ -92,4 +109,13 @@ test('route and snapshot UUIDs bypass the Relay-only decoder', () => {
   assert.equal(decodeTrainingReferenceId(id, () => { throw new Error('Raw UUID must not be decoded'); }), id);
   assert.equal(decodeTrainingReferenceId('encoded', () => id), id);
   assert.doesNotMatch(actions.updateProject({ projectType: 'TRAINING', trainingModules: [{ id }] }), /moduleIds:/);
+});
+
+test('empty optional Training target is omitted from creation without inline null literals', () => {
+  for (const targetBeneficiaries of [null, undefined, '']) {
+    const payload = actions.createProject({ projectType: 'TRAINING', targetBeneficiaries,
+      sessionStartDate: null, sessionEndDate: null });
+    assert.doesNotMatch(payload, /targetBeneficiaries:|sessionStartDate:|sessionEndDate:|:\s*null/);
+  }
+  assert.doesNotMatch(actions.createProject({ projectType: 'WORK', targetBeneficiaries: null }), /targetBeneficiaries:/);
 });

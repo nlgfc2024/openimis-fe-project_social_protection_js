@@ -9,10 +9,9 @@ export const isTrainingNameValid = (project) => (
 );
 
 export const isProjectRequiredFieldsMissing = (project) => (
-  !project?.hotspot || !project?.location || !project?.targetBeneficiaries
-  || (project?.projectType === 'TRAINING'
+  !project?.location || (project?.projectType === 'TRAINING'
     ? !project.trainingModules?.length || project.trainingModuleLoading || project.trainingModuleLoadError
-    : !project?.activity || !project?.workingDays)
+    : !project?.hotspot || !project?.targetBeneficiaries || !project?.activity || !project?.workingDays)
 );
 
 export const persistedProjectData = (project) => Object.fromEntries(
@@ -23,3 +22,7 @@ export const decodeTrainingReferenceId = (id, decodeId) => (
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
     ? id : decodeId(id)
 );
+export const trainingTopicColumnLabel = (topics, sequence) => (
+  topics?.find((topic) => Number(topic.sequence) === sequence)?.code || String(sequence)
+);
+

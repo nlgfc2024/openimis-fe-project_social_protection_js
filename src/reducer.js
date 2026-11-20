@@ -225,6 +225,7 @@ function reducer(
           jsonExt: typeof beneficiary.jsonExt === 'string' ? JSON.parse(beneficiary.jsonExt) : beneficiary.jsonExt,
           id: beneficiary.id ? decodeId(beneficiary.id) : null,
           projectTimeEntriesDict,
+          moduleCompletion: enrollment.moduleCompletion || [],
         };
       });
       const projectBeneficiaries = (action.meta?.isBatch
@@ -287,6 +288,7 @@ function reducer(
               : groupBeneficiary.jsonExt,
             id: groupBeneficiary.id ? decodeId(groupBeneficiary.id) : null,
             projectTimeEntriesDict,
+            moduleCompletion: enrollment.moduleCompletion || [],
           });
           if (response?.group?.id) {
             response.group = ({
