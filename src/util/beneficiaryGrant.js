@@ -78,7 +78,6 @@ export const APPRAISAL_INPUT_KEYS = [
   'approved_grant_amount',
   trancheAmountKey(1, 'EQUIPMENT'),
   trancheAmountKey(1, 'SERVICE'),
-  'business_plan_reference',
   'business_plan_status',
   'plan_rejection_reason',
 ];
@@ -144,7 +143,6 @@ export const computeAppraisal = ({
     if (grantChanged) [1, 2].forEach((tranche) => setKey(jsonExt, trancheAmountKey(tranche, CASH), undefined));
   }
 
-  setKey(jsonExt, 'business_plan_reference', text(draft.business_plan_reference));
   const status = text(draft.business_plan_status);
   setKey(jsonExt, 'business_plan_status', status);
 

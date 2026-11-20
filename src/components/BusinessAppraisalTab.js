@@ -107,16 +107,6 @@ export function BusinessAppraisalTabPanel({
         </>
       )}
       <Grid item xs={3} className={classes.item}>
-        <TextInput
-          module={MODULE_NAME}
-          label={fieldLabel('business_plan_reference')}
-          readOnly={readOnly}
-          value={draft.business_plan_reference ?? ''}
-          inputProps={{ maxLength: 255 }}
-          onChange={(reference) => change('business_plan_reference', reference)}
-        />
-      </Grid>
-      <Grid item xs={3} className={classes.item}>
         <SelectInput
           module={MODULE_NAME}
           label={fieldLabel('business_plan_status')}
