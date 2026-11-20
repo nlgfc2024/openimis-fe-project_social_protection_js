@@ -1,4 +1,12 @@
 {
+  "projectBeneficiaries.logSheetPdf.trainingTitle": "Training Log Sheet",
+  "projectBeneficiaries.logSheetPdf.trainingSubtitle": "Topic attendance register for participants",
+  "projectBeneficiaries.logSheetPdf.trainingName": "Training Name",
+  "projectBeneficiaries.logSheetPdf.trainingProgramme": "Programme",
+  "projectBeneficiaries.logSheetPdf.trainingStatus": "Status",
+  "projectBeneficiaries.logSheetPdf.trainingModules": "Training Modules",
+  "projectBeneficiaries.logSheetPdf.trainingDates": "Session Start / End",
+  "projectBeneficiaries.logSheetPdf.trainingAttendance": "Topic Attendance",
   "projects.label": "Projects",
   "projects.searcherResultsTitle": "{projectsTotalCount} Projects",
   "projects.searcherAddAction": "Create Project",

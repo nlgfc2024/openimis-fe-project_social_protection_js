@@ -7,7 +7,7 @@ import { MODULE_NAME } from '../constants';
 import { decodeTrainingReferenceId } from '../util/trainingSetup';
 
 export default function TrainingModulePicker({ programmeId, value, savedModules, readOnly, locked = readOnly,
-  renderControl = true, onStateChange }) {
+  renderControl = true, autoSelectProgrammeModules = false, onStateChange }) {
   const dispatch = useDispatch();
   const manager = useModulesManager();
   const { formatMessage: t } = useTranslations(MODULE_NAME, manager);
@@ -43,7 +43,8 @@ export default function TrainingModulePicker({ programmeId, value, savedModules,
         setOptions(modules);
         setLoading(false);
         latest.current.onStateChange({ trainingModuleLoading: false, trainingModuleLoadError: false,
-          ...(latest.current.value === undefined ? { trainingModules: modules } : {}) });
+          ...(latest.current.value === undefined || autoSelectProgrammeModules && !latest.current.value?.length
+            ? { trainingModules: modules } : {}) });
       } catch (_) {
         if (!active) return;
         setError(true);
@@ -52,7 +53,7 @@ export default function TrainingModulePicker({ programmeId, value, savedModules,
       }
     })();
     return () => { active = false; };
-  }, [dispatch, programmeId, locked]);
+  }, [dispatch, programmeId, locked, autoSelectProgrammeModules]);
 
   if (!renderControl) return null;
   return <>

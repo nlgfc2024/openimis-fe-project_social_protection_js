@@ -30,6 +30,7 @@ import {
 } from '../util/searcher-utils';
 import { beneficiaryIdentifiers } from '../util/beneficiary-identifiers';
 import { trainingTopicColumnLabel } from '../util/trainingSetup';
+import { trainingCompletionColumns } from '../util/trainingAttendance';
 import {
   MODULE_NAME,
   DEFAULT_PAGE_SIZE,
@@ -299,6 +300,7 @@ const getWorkDayColumns = (
     return {
       title: projectType === 'TRAINING' ? trainingTopicColumnLabel(trainingTopics, dayNumber)
         : attendanceMode ? String(dayNumber) : `${translateFn('project.day')} ${dayNumber}`,
+      tooltip: projectType === 'TRAINING' ? trainingTopics?.find((topic) => Number(topic.sequence) === dayNumber)?.name : undefined,
       field: `projectTimeEntriesDict.${dayKey}.percentComplete`,
       dayKey,
       presentLabel: translateFn('projectBeneficiaries.present'),
@@ -572,6 +574,7 @@ function BeneficiaryTable({
       }),
       ...dynamicColumns,
       ...(!attendanceMode || !workLogEditMode ? workDayColumns : []),
+      ...(projectType === 'TRAINING' ? trainingCompletionColumns(trainingTopics, workLogEditMode) : []),
     ];
 
     return allColumns.map((c) => ({

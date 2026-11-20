@@ -56,7 +56,7 @@ class ProjectHeadPanel extends FormPanel {
     const project = { ...edited };
     const isNewProject = !project?.id;
     const isTraining = project?.projectType === 'TRAINING';
-    const creationConfig = isTraining && isNewProject ? this.props.trainingFormConfig : null;
+    const creationConfig = isTraining ? this.props.trainingFormConfig : null;
     const required = (field, fallback = false) => creationConfig
       ? trainingFieldRule(creationConfig, field).required : fallback;
     const isReadOnly = (field, forced = false) => readOnly || forced
@@ -194,6 +194,7 @@ class ProjectHeadPanel extends FormPanel {
 
         <Grid item xs={4} className={classes.item} data-training-field={isTraining ? 'trainingModules' : 'activity'}>
           {isTraining ? <TrainingModulePicker
+            autoSelectProgrammeModules={isNewProject}
             programmeId={project?.benefitPlan?.id}
             value={project?.trainingModules}
             savedModules={this.props.project?.trainingModules}
