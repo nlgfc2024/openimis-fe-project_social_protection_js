@@ -10,7 +10,10 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import {
   Form, Searcher, decodeId, useModulesManager, useTranslations,
 } from '@openimis/fe-core';
-import { MODULE_NAME, DEFAULT_PAGE_SIZE, ROWS_PER_PAGE_OPTIONS } from '../constants';
+import {
+  MODULE_NAME, DEFAULT_PAGE_SIZE, ROWS_PER_PAGE_OPTIONS,
+  RIGHT_ACTIVITY_SEARCH, RIGHT_ACTIVITY_CREATE, RIGHT_ACTIVITY_UPDATE, RIGHT_ACTIVITY_DELETE,
+} from '../constants';
 import TrainingModulesFilter from '../components/TrainingModulesFilter';
 import TrainingModuleHeadPanel from '../components/TrainingModuleHeadPanel';
 import { fetchTrainingModules, saveTrainingModule, deleteTrainingModule } from '../trainingCatalogueActions';
@@ -30,8 +33,8 @@ export default function TrainingModulesPage() {
   const [revision, setRevision] = useState(0);
   const request = useRef(0);
   const mounted = useRef(true);
-  const canRead = rights.includes(208001);
-  const canEdit = edited?.uuid ? rights.includes(208003) : rights.includes(208002);
+  const canRead = rights.includes(RIGHT_ACTIVITY_SEARCH);
+  const canEdit = edited?.uuid ? rights.includes(RIGHT_ACTIVITY_UPDATE) : rights.includes(RIGHT_ACTIVITY_CREATE);
   useEffect(() => () => { mounted.current = false; }, []);
 
   const fetch = useCallback(async (params) => {
@@ -73,7 +76,7 @@ export default function TrainingModulesPage() {
   };
 
   const remove = async () => {
-    if (saving || !deleting || !rights.includes(208004)) return;
+    if (saving || !deleting || !rights.includes(RIGHT_ACTIVITY_DELETE)) return;
     setSaving(true);
     setError('');
     try {
@@ -103,15 +106,15 @@ export default function TrainingModulesPage() {
           (module) => module.programmes.map((plan) => `${plan.code} ${plan.name}`).join(', '),
           (module) => module.topics.length,
           (module) => <>
-            {rights.includes(208003) && <IconButton aria-label={t('trainingModules.edit')}
+            {rights.includes(RIGHT_ACTIVITY_UPDATE) && <IconButton aria-label={t('trainingModules.edit')}
               onClick={() => { setError(''); setEdited({ ...module, topics: module.topics.map((topic) => ({ ...topic })) }); }}>
               <EditIcon /></IconButton>}
-            {rights.includes(208004) && <IconButton aria-label={t('trainingModules.delete')}
+            {rights.includes(RIGHT_ACTIVITY_DELETE) && <IconButton aria-label={t('trainingModules.delete')}
               onClick={() => { setError(''); setDeleting(module); }}><DeleteIcon /></IconButton>}
           </>,
         ]} sorts={() => [['name', true], null, null, null]} rowIdentifier={(module) => module.uuid}
         searcherActions={[{ label: t('trainingModules.create'), icon: <AddIcon />,
-          authorized: rights.includes(208002), onClick: () => {
+          authorized: rights.includes(RIGHT_ACTIVITY_CREATE), onClick: () => {
             setError(''); setEdited({ name: '', programmes: [], topics: [{ key: 'initial', code: '', name: '' }] });
           } }]} enableActionButtons enableHeaderActionButtons />
 

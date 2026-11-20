@@ -27,7 +27,7 @@ import {
   ProjectChangelogTabPanel,
 } from './components/ProjectChangelogTab';
 import projectBeneficiariesMiddleware from './middlewares';
-import { RIGHT_PROJECT_SEARCH } from './constants';
+import { RIGHT_PROJECT_SEARCH, RIGHT_ACTIVITY_SEARCH } from './constants';
 
 // Kept identical to social_protection's route roots so the project route stays
 // nested under a benefit plan ("Phase") page.
@@ -72,7 +72,7 @@ const DEFAULT_CONFIG = {
     text: <FormattedMessage module="projectSocialProtection" id="trainingModules.title" />,
     icon: <WorkIcon />,
     route: '/trainingModules',
-    filter: (rights) => rights.includes(208001),
+    filter: (rights) => rights.includes(RIGHT_ACTIVITY_SEARCH),
     id: 'projectSocialProtection.trainingModules',
   }],
   'socialProtection.MainMenu': [
