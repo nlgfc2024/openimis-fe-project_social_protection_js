@@ -95,7 +95,7 @@ const core = {
   PublishedComponent: 'PublishedComponent', TextInput: 'TextInput', Filter: 'Filter',
   decodeId: () => 'raw-programme-id',
 };
-const constants = { MODULE_NAME: 'projectSocialProtection', BENEFIT_PLAN_TYPE: { EVERY_TYPE: 'EVERY_TYPE' } };
+const constants = load('constants.js');
 
 test('programme filter configures the existing Filter and decodes programme IDs', () => {
   const Filter = load('components/TrainingModulesFilter.js', {

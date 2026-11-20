@@ -28,6 +28,12 @@ export const RIGHT_PROJECT_CREATE = 209002;
 export const RIGHT_PROJECT_UPDATE = 209003;
 export const RIGHT_PROJECT_DELETE = 209004;
 
+// Activity rights also govern Training module catalogue administration.
+export const RIGHT_ACTIVITY_SEARCH = 208001;
+export const RIGHT_ACTIVITY_CREATE = 208002;
+export const RIGHT_ACTIVITY_UPDATE = 208003;
+export const RIGHT_ACTIVITY_DELETE = 208004;
+
 // Benefit plan rights are still needed by ProjectPage (project lives under a
 // benefit plan / "Phase"); resolved against social_protection's numbering.
 export const RIGHT_BENEFIT_PLAN_SEARCH = 160001;
