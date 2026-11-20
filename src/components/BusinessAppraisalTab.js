@@ -1,18 +1,16 @@
 import React, { useMemo } from 'react';
+import { Grid } from '@material-ui/core';
 import {
-  Checkbox, FormControl, FormHelperText, InputLabel, ListItemText, MenuItem, Select,
-} from '@material-ui/core';
-import {
-  NumberInput, PublishedComponent, SelectInput, TextAreaInput, TextInput, useModulesManager, useTranslations,
+  Autocomplete, NumberInput, PublishedComponent, SelectInput, TextAreaInput, TextInput, useModulesManager,
+  useTranslations,
 } from '@openimis/fe-core';
 import { BUSINESS_APPRAISAL_TAB_VALUE, MODULE_NAME, RIGHT_PLANS_AND_GRANTS } from '../constants';
 import {
-  allowedGrantTypes, APPRAISAL_INPUT_KEYS, APPROVED, CASH, computeAppraisal, IN_KIND_TYPES, PLAN_STATUSES,
+  allowedGrantTypes, APPRAISAL_INPUT_KEYS, APPROVED, computeAppraisal, IN_KIND_TYPES, PLAN_STATUSES,
   recordsGrantPerBeneficiary, REJECTED, sameJsonExt, trancheAmountKey,
 } from '../util/beneficiaryGrant';
 import {
-  canEditWith, canSeeGrantTabs, errorText, FieldCell, GrantFieldGroup, GrantTabForm, GrantTabLabel,
-  useBeneficiaryJsonExt,
+  canEditWith, canSeeGrantTabs, errorText, GrantTabForm, GrantTabLabel, useBeneficiaryJsonExt, useGrantTabStyles,
 } from './beneficiaryGrant/BeneficiaryJsonExtForm';
 
 export function BusinessAppraisalTabLabel(props) {
@@ -23,41 +21,10 @@ export function BusinessAppraisalTabLabel(props) {
 
 const fieldLabel = (key) => `beneficiaryGrant.field.${key}`;
 
-// The grant types as a multi-select, read-only like the core SelectInput.
-function GrantTypesInput({
-  allowed, value, readOnly, error, onChange, formatMessage: t,
-}) {
-  const typeLabel = (type) => t(`beneficiaryGrant.grantType.${type}`);
-  if (readOnly) {
-    return (
-      <TextInput module={MODULE_NAME} label={fieldLabel('grant_types')} readOnly value={value.map(typeLabel).join(', ')} />
-    );
-  }
-  return (
-    <FormControl required fullWidth error={Boolean(error)}>
-      <InputLabel shrink>{t(fieldLabel('grant_types'))}</InputLabel>
-      <Select
-        multiple
-        displayEmpty
-        value={value}
-        renderValue={(selected) => selected.map(typeLabel).join(', ')}
-        onChange={(event) => onChange(allowed.filter((type) => event.target.value.includes(type)))}
-      >
-        {allowed.map((type) => (
-          <MenuItem key={type} value={type}>
-            <Checkbox color="primary" checked={value.includes(type)} />
-            <ListItemText primary={typeLabel(type)} />
-          </MenuItem>
-        ))}
-      </Select>
-      {error && <FormHelperText>{error}</FormHelperText>}
-    </FormControl>
-  );
-}
-
 export function BusinessAppraisalTabPanel({
   value, rights = [], beneficiary, groupBeneficiaries, benefitPlan,
 }) {
+  const classes = useGrantTabStyles();
   const modulesManager = useModulesManager();
   const { formatMessage: t, formatMessageWithValues } = useTranslations(MODULE_NAME, modulesManager);
   const form = useBeneficiaryJsonExt({
@@ -71,17 +38,12 @@ export function BusinessAppraisalTabPanel({
   if (!form.target || !canSeeGrantTabs(rights)) return null;
 
   const readOnly = !canEditWith(rights, RIGHT_PLANS_AND_GRANTS) || form.saving;
-  const perBeneficiary = recordsGrantPerBeneficiary(benefitPlan);
   const allowed = allowedGrantTypes(benefitPlan);
+  const typeOptions = allowed.map((type) => ({ id: type, label: t(`beneficiaryGrant.grantType.${type}`) }));
   const selected = Array.isArray(draft.grant_types) ? allowed.filter((type) => draft.grant_types.includes(type)) : [];
   const dirty = !sameJsonExt(saved, jsonExt);
   // Errors show once the user changes something, not on a record still to be appraised.
   const error = (key) => (!readOnly && dirty ? errorText(errors, key, t, formatMessageWithValues) : null);
-  const inKindTypes = IN_KIND_TYPES.filter((type) => selected.includes(type));
-  let grantHint = null;
-  if (inKindTypes.length) {
-    grantHint = t(selected.includes(CASH) ? 'beneficiaryGrant.section.grant.cashHint' : 'beneficiaryGrant.section.grant.inKindHint');
-  }
 
   return (
     <GrantTabForm
@@ -96,19 +58,23 @@ export function BusinessAppraisalTabPanel({
       onReset={form.reset}
       formatMessage={t}
     >
-      {perBeneficiary && (
-        <GrantFieldGroup title="beneficiaryGrant.section.grant" hint={grantHint} formatMessage={t} divider={false}>
-          <FieldCell>
-            <GrantTypesInput
-              allowed={allowed}
-              value={selected}
+      {recordsGrantPerBeneficiary(benefitPlan) && (
+        <>
+          <Grid item xs={3} className={classes.item}>
+            <Autocomplete
+              multiple
+              required
               readOnly={readOnly}
-              error={error('grant_types')}
-              onChange={(types) => change('grant_types', types)}
-              formatMessage={t}
+              label={t(fieldLabel('grant_types'))}
+              withPlaceholder={false}
+              filterSelectedOptions
+              options={typeOptions}
+              value={typeOptions.filter((option) => selected.includes(option.id))}
+              onChange={(chosen) => change('grant_types', (chosen || []).map((option) => option.id))}
+              onInputChange={() => {}}
             />
-          </FieldCell>
-          <FieldCell>
+          </Grid>
+          <Grid item xs={3} className={classes.item}>
             <NumberInput
               module={MODULE_NAME}
               label={fieldLabel('approved_grant_amount')}
@@ -119,11 +85,11 @@ export function BusinessAppraisalTabPanel({
               error={error('approved_grant_amount')}
               onChange={(amount) => change('approved_grant_amount', amount)}
             />
-          </FieldCell>
-          {inKindTypes.map((type) => {
+          </Grid>
+          {IN_KIND_TYPES.filter((type) => selected.includes(type)).map((type) => {
             const key = trancheAmountKey(1, type);
             return (
-              <FieldCell key={key}>
+              <Grid item xs={3} className={classes.item} key={key}>
                 <NumberInput
                   module={MODULE_NAME}
                   label={fieldLabel(`${type.toLowerCase()}_amount`)}
@@ -135,39 +101,34 @@ export function BusinessAppraisalTabPanel({
                   error={error(key) || error('inKind')}
                   onChange={(amount) => change(key, amount)}
                 />
-              </FieldCell>
+              </Grid>
             );
           })}
-        </GrantFieldGroup>
+        </>
       )}
-      <GrantFieldGroup
-        title="beneficiaryGrant.section.businessPlan"
-        hint={perBeneficiary ? null : t('beneficiaryGrant.section.businessPlan.planGrantHint')}
-        formatMessage={t}
-        divider={perBeneficiary}
-      >
-        <FieldCell>
-          <TextInput
-            module={MODULE_NAME}
-            label={fieldLabel('business_plan_reference')}
-            readOnly={readOnly}
-            value={draft.business_plan_reference ?? ''}
-            inputProps={{ maxLength: 255 }}
-            onChange={(reference) => change('business_plan_reference', reference)}
-          />
-        </FieldCell>
-        <FieldCell>
-          <SelectInput
-            module={MODULE_NAME}
-            label={fieldLabel('business_plan_status')}
-            readOnly={readOnly}
-            value={draft.business_plan_status ?? ''}
-            options={PLAN_STATUSES.map((status) => ({ value: status, label: t(`beneficiaryGrant.status.${status}`) }))}
-            onChange={(status) => change('business_plan_status', status)}
-          />
-        </FieldCell>
-        {jsonExt.business_plan_status === APPROVED && (
-          <FieldCell>
+      <Grid item xs={3} className={classes.item}>
+        <TextInput
+          module={MODULE_NAME}
+          label={fieldLabel('business_plan_reference')}
+          readOnly={readOnly}
+          value={draft.business_plan_reference ?? ''}
+          inputProps={{ maxLength: 255 }}
+          onChange={(reference) => change('business_plan_reference', reference)}
+        />
+      </Grid>
+      <Grid item xs={3} className={classes.item}>
+        <SelectInput
+          module={MODULE_NAME}
+          label={fieldLabel('business_plan_status')}
+          readOnly={readOnly}
+          value={draft.business_plan_status ?? ''}
+          options={PLAN_STATUSES.map((status) => ({ value: status, label: t(`beneficiaryGrant.status.${status}`) }))}
+          onChange={(status) => change('business_plan_status', status)}
+        />
+      </Grid>
+      {jsonExt.business_plan_status === APPROVED && (
+        <>
+          <Grid item xs={3} className={classes.item}>
             <PublishedComponent
               pubRef="core.DatePicker"
               module={MODULE_NAME}
@@ -176,10 +137,8 @@ export function BusinessAppraisalTabPanel({
               value={jsonExt.plan_approved_on || null}
               onChange={() => {}}
             />
-          </FieldCell>
-        )}
-        {jsonExt.business_plan_status === APPROVED && (
-          <FieldCell>
+          </Grid>
+          <Grid item xs={3} className={classes.item}>
             <TextInput
               module={MODULE_NAME}
               label={fieldLabel('plan_approved_by')}
@@ -187,24 +146,24 @@ export function BusinessAppraisalTabPanel({
               value={jsonExt.plan_approved_by ?? ''}
               onChange={() => {}}
             />
-          </FieldCell>
-        )}
-        {draft.business_plan_status === REJECTED && (
-          <FieldCell wide>
-            <TextAreaInput
-              module={MODULE_NAME}
-              label={fieldLabel('plan_rejection_reason')}
-              required
-              readOnly={readOnly}
-              rows={3}
-              value={draft.plan_rejection_reason ?? ''}
-              error={error('plan_rejection_reason')}
-              inputProps={{ maxLength: 1000 }}
-              onChange={(reason) => change('plan_rejection_reason', reason)}
-            />
-          </FieldCell>
-        )}
-      </GrantFieldGroup>
+          </Grid>
+        </>
+      )}
+      {draft.business_plan_status === REJECTED && (
+        <Grid item xs={12} className={classes.item}>
+          <TextAreaInput
+            module={MODULE_NAME}
+            label={fieldLabel('plan_rejection_reason')}
+            required
+            readOnly={readOnly}
+            rows={3}
+            value={draft.plan_rejection_reason ?? ''}
+            error={error('plan_rejection_reason')}
+            inputProps={{ maxLength: 1000 }}
+            onChange={(reason) => change('plan_rejection_reason', reason)}
+          />
+        </Grid>
+      )}
     </GrantTabForm>
   );
 }

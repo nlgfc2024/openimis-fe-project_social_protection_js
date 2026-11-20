@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   Button, Divider, Grid, Tab, Typography,
 } from '@material-ui/core';
-import { withStyles } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/core/styles';
 import { formatMessage } from '@openimis/fe-core';
 import {
   MODULE_NAME,
@@ -108,28 +108,28 @@ export const useBeneficiaryJsonExt = ({
   };
 };
 
-const styles = (theme) => ({
+export const useGrantTabStyles = makeStyles((theme) => ({
   item: theme.paper.item,
-});
+}));
 
-// One tab of the beneficiary page laid out like the other forms: the field groups
-// and the save actions for users who may edit. It renders its own tab panel, without
-// the padding policyHolder.TabPanel adds.
-function GrantTabFormBase({
-  classes, value, tabValue, readOnly, dirty, valid, saving, notice, onSave, onReset, formatMessage: t,
-  children,
+// One tab of the beneficiary page: its fields, as grid items, and the save actions
+// for users who may edit. It renders its own tab panel, without the padding
+// policyHolder.TabPanel adds.
+export function GrantTabForm({
+  value, tabValue, readOnly, dirty, valid, saving, notice, onSave, onReset, formatMessage: t, children,
 }) {
+  const classes = useGrantTabStyles();
   if (value !== tabValue) return null;
   return (
     <div role="tabpanel">
-      {readOnly && (
-        <Grid container className={classes.item}>
+      <Grid container className={classes.item}>
+        {readOnly && (
           <Grid item xs={12} className={classes.item}>
             <Typography variant="caption" color="textSecondary">{t('beneficiaryGrant.readOnly')}</Typography>
           </Grid>
-        </Grid>
-      )}
-      {children}
+        )}
+        {children}
+      </Grid>
       {(!readOnly || notice) && (
         <>
           <Divider />
@@ -155,36 +155,6 @@ function GrantTabFormBase({
     </div>
   );
 }
-
-export const GrantTabForm = withStyles(styles)(GrantTabFormBase);
-
-// A titled group of fields within a tab.
-function GrantFieldGroupBase({
-  classes, title, hint, children, formatMessage: t, divider = true,
-}) {
-  return (
-    <>
-      {divider && <Divider />}
-      <Grid container className={classes.item}>
-        {title && (
-          <Grid item xs={12} className={classes.item}>
-            <Typography variant="subtitle2">{t(title)}</Typography>
-            {hint && <Typography variant="caption" color="textSecondary">{hint}</Typography>}
-          </Grid>
-        )}
-        {children}
-      </Grid>
-    </>
-  );
-}
-
-export const GrantFieldGroup = withStyles(styles)(GrantFieldGroupBase);
-
-function FieldCellBase({ classes, wide, children }) {
-  return <Grid item xs={wide ? 12 : 3} className={classes.item}>{children}</Grid>;
-}
-
-export const FieldCell = withStyles(styles)(FieldCellBase);
 
 // The message of a computed validation error, or null.
 export const errorText = (errors, key, t, formatMessageWithValues) => {

@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { Grid } from '@material-ui/core';
 import {
   NumberInput, PublishedComponent, SelectInput, TextAreaInput, TextInput, useModulesManager, useTranslations,
 } from '@openimis/fe-core';
@@ -7,8 +8,7 @@ import {
   computeUtilisation, sameJsonExt, usesYesNoUtilization, UTILISATION_INPUT_KEYS, utilizationResultKey, YES_NO,
 } from '../util/beneficiaryGrant';
 import {
-  canEditWith, canSeeGrantTabs, errorText, FieldCell, GrantFieldGroup, GrantTabForm, GrantTabLabel,
-  useBeneficiaryJsonExt,
+  canEditWith, canSeeGrantTabs, errorText, GrantTabForm, GrantTabLabel, useBeneficiaryJsonExt, useGrantTabStyles,
 } from './beneficiaryGrant/BeneficiaryJsonExtForm';
 
 export function UtilisationAssessmentTabLabel(props) {
@@ -26,6 +26,7 @@ const fieldLabel = (key) => `beneficiaryGrant.field.${key}`;
 export function UtilisationAssessmentTabPanel({
   value, rights = [], beneficiary, groupBeneficiaries, benefitPlan,
 }) {
+  const classes = useGrantTabStyles();
   const modulesManager = useModulesManager();
   const { formatMessage: t, formatMessageWithValues } = useTranslations(MODULE_NAME, modulesManager);
   const form = useBeneficiaryJsonExt({
@@ -60,33 +61,33 @@ export function UtilisationAssessmentTabPanel({
       onReset={form.reset}
       formatMessage={t}
     >
-      <GrantFieldGroup divider={false} formatMessage={t}>
-        <FieldCell>
-          {usesYesNoUtilization(benefitPlan) ? (
-            <SelectInput
-              module={MODULE_NAME}
-              label={fieldLabel(resultKey)}
-              readOnly={readOnly}
-              value={draft[resultKey] ?? ''}
-              options={YES_NO.map((option) => ({ value: option, label: t(`beneficiaryGrant.yesNo.${option}`) }))}
-              onChange={(result) => change(resultKey, result)}
-            />
-          ) : (
-            <NumberInput
-              module={MODULE_NAME}
-              label={fieldLabel(resultKey)}
-              min={0}
-              max={100}
-              displayZero
-              readOnly={readOnly}
-              value={draft[resultKey] ?? ''}
-              error={error(resultKey)}
-              onChange={(result) => change(resultKey, result)}
-            />
-          )}
-        </FieldCell>
-        {assessed && (
-          <FieldCell>
+      <Grid item xs={3} className={classes.item}>
+        {usesYesNoUtilization(benefitPlan) ? (
+          <SelectInput
+            module={MODULE_NAME}
+            label={fieldLabel(resultKey)}
+            readOnly={readOnly}
+            value={draft[resultKey] ?? ''}
+            options={YES_NO.map((option) => ({ value: option, label: t(`beneficiaryGrant.yesNo.${option}`) }))}
+            onChange={(result) => change(resultKey, result)}
+          />
+        ) : (
+          <NumberInput
+            module={MODULE_NAME}
+            label={fieldLabel(resultKey)}
+            min={0}
+            max={100}
+            displayZero
+            readOnly={readOnly}
+            value={draft[resultKey] ?? ''}
+            error={error(resultKey)}
+            onChange={(result) => change(resultKey, result)}
+          />
+        )}
+      </Grid>
+      {assessed && (
+        <>
+          <Grid item xs={3} className={classes.item}>
             <PublishedComponent
               pubRef="core.DatePicker"
               module={MODULE_NAME}
@@ -95,10 +96,8 @@ export function UtilisationAssessmentTabPanel({
               value={jsonExt.utilization_assessed_on || null}
               onChange={() => {}}
             />
-          </FieldCell>
-        )}
-        {assessed && (
-          <FieldCell>
+          </Grid>
+          <Grid item xs={3} className={classes.item}>
             <TextInput
               module={MODULE_NAME}
               label={fieldLabel('utilization_assessed_by')}
@@ -106,20 +105,20 @@ export function UtilisationAssessmentTabPanel({
               value={jsonExt.utilization_assessed_by ?? ''}
               onChange={() => {}}
             />
-          </FieldCell>
-        )}
-        <FieldCell wide>
-          <TextAreaInput
-            module={MODULE_NAME}
-            label={fieldLabel('utilization_notes')}
-            readOnly={readOnly}
-            rows={3}
-            value={draft.utilization_notes ?? ''}
-            inputProps={{ maxLength: 1000 }}
-            onChange={(notes) => change('utilization_notes', notes)}
-          />
-        </FieldCell>
-      </GrantFieldGroup>
+          </Grid>
+        </>
+      )}
+      <Grid item xs={12} className={classes.item}>
+        <TextAreaInput
+          module={MODULE_NAME}
+          label={fieldLabel('utilization_notes')}
+          readOnly={readOnly}
+          rows={3}
+          value={draft.utilization_notes ?? ''}
+          inputProps={{ maxLength: 1000 }}
+          onChange={(notes) => change('utilization_notes', notes)}
+        />
+      </Grid>
     </GrantTabForm>
   );
 }
