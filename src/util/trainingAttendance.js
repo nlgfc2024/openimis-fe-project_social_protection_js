@@ -28,7 +28,7 @@ export const trainingCompletionColumns = (topics = [], editing = false) => {
       field: `trainingModuleCompletion.${module.id}`,
       editable: 'never',
       filtering: false,
-      width: '180px',
+      width: '12em',
       render: (row) => {
         const saved = completion(row);
         if (!saved || !Number.isFinite(Number(saved.percentage))) return '\u2014';

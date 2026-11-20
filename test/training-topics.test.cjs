@@ -83,6 +83,16 @@ test('Training attendance columns use snapshot topic codes in sequence; Work kee
   assert.deepEqual(training.map((column) => column.title), ['E01', 'BM01']);
   assert.deepEqual(training.map((column) => column.field), [
     'projectTimeEntriesDict.day1.percentComplete', 'projectTimeEntriesDict.day2.percentComplete']);
+  for (const count of [18, 29]) {
+    const programmeTopics = Array.from({ length: count }, (_, i) => ({
+      sequence: i + 1, code: `T${String(i + 1).padStart(2, '0')}`, name: `Topic ${i + 1}`,
+    }));
+    const programmeColumns = columns((key) => key, () => {}, count, 10, true, theme, 'TRAINING', programmeTopics);
+    assert.equal(programmeColumns.length, count);
+    assert.deepEqual(programmeColumns.map((column) => column.title), programmeTopics.map((topic) => topic.code));
+    assert.ok(programmeColumns.every((column) => typeof column.editComponent === 'function'));
+    assert.equal(programmeColumns.at(-1).field, `projectTimeEntriesDict.day${count}.percentComplete`);
+  }
   const work = columns((key) => key, () => {}, 2, 200, true, theme, 'WORK', topics);
   assert.deepEqual(work.map((column) => column.title), ['1', '2']);
 });
@@ -112,11 +122,9 @@ function pickerHarness({ value, readOnly = false, fail = false, autoSelectProgra
   const dispatch = async (params) => {
     requests.push(params);
     if (fail) throw new Error('Network unavailable');
-    const second = params.some((param) => param.startsWith('after:'));
-    return { payload: { data: { trainingModule: {
-      edges: [{ node: { id: second ? 'encoded-b' : 'encoded-a', name: second ? 'B' : 'A', topics: [{}, {}] } }],
-      pageInfo: { hasNextPage: !second, endCursor: second ? 'done' : 'page-1' },
-    } } } };
+    return { payload: { data: { projectProgrammeModules: [
+      { id: 'encoded-a', name: 'A', topicCount: 2 }, { id: 'encoded-b', name: 'B', topicCount: 2 },
+    ] } } };
   };
   const Picker = load('pickers/TrainingModulePicker.js', {
     react: { ...React,
@@ -131,7 +139,7 @@ function pickerHarness({ value, readOnly = false, fail = false, autoSelectProgra
     '@material-ui/core': { TextField: 'TextField', Typography: 'Typography' },
     '@openimis/fe-core': { Autocomplete: 'Autocomplete', decodeId: (id) => id.replace('encoded-', ''),
       useModulesManager: () => ({}), useTranslations: () => ({ formatMessage: (key) => key }) },
-    '../trainingCatalogueActions': { fetchTrainingModules: (params) => params },
+    '../actions': { fetchProgrammeModules: (id) => id },
     '../constants': { MODULE_NAME: 'projectSocialProtection' },
     '../util/trainingSetup': load('util/trainingSetup.js', {}),
   }).default;
@@ -146,27 +154,27 @@ function pickerHarness({ value, readOnly = false, fail = false, autoSelectProgra
 const nodes = (node) => !node || typeof node !== 'object' ? []
   : [node, ...React.Children.toArray(node.props?.children).flatMap(nodes)];
 
-test('picker loads every page and defaults to all programme modules in one state update', async () => {
+test('read-only module display loads the programme query once and derives all modules', async () => {
   const harness = pickerHarness();
   harness.render(); harness.run();
   await new Promise(setImmediate);
-  assert.equal(harness.requests.length, 2);
-  assert.ok(harness.requests[0].includes('benefitPlans_Id: "plan"'));
+  assert.equal(harness.requests.length, 1);
+  assert.ok(harness.requests[0] === 'encoded-plan');
   const update = harness.updates.at(-1);
   assert.equal(update.trainingModuleLoading, false);
   assert.deepEqual(update.trainingModules.map((module) => module.id), ['a', 'b']);
   assert.equal(update.trainingModules[0].topicCount, 2);
 });
 
-test('picker retains explicit selections and lets users choose a subset', async () => {
+test('saved programme module membership is read-only', async () => {
   const harness = pickerHarness({ value: [{ id: 'b', name: 'Snapshot B', topicCount: 1 }] });
   harness.render(); harness.run();
   await new Promise(setImmediate);
   assert.equal('trainingModules' in harness.updates.at(-1), false);
   const picker = nodes(harness.render()).find((node) => node.type === 'Autocomplete');
   assert.equal(picker.props.value[0].name, 'Snapshot B');
-  picker.props.onChange([{ id: 'a' }]);
-  assert.deepEqual(harness.updates.at(-1).trainingModules, [{ id: 'a', name: 'A', topicCount: 2 }]);
+  assert.equal(picker.props.readOnly, true);
+  assert.equal(picker.props.onChange, undefined);
 });
 
 test('new Training preselects programme modules for empty initial values; existing selections stay unchanged', async () => {
@@ -176,8 +184,8 @@ test('new Training preselects programme modules for empty initial values; existi
     await new Promise(setImmediate);
     assert.deepEqual(harness.updates.at(-1).trainingModules.map((module) => module.id), ['a', 'b']);
     const picker = nodes(harness.render()).find((node) => node.type === 'Autocomplete');
-    picker.props.onChange([]);
-    assert.deepEqual(harness.updates.at(-1).trainingModules, []);
+    assert.equal(picker.props.readOnly, true);
+    assert.equal(picker.props.onChange, undefined);
   }
   const existing = pickerHarness({ value: [] });
   existing.render(); existing.run();
@@ -212,7 +220,7 @@ test('opening and typing in the shared autocomplete does not refetch or crash', 
   const states = [], effects = [];
   let cursor = 0;
   const identity = (component) => component;
-  const SharedAutocomplete = load('../../openimis-fe_js/node_modules/@openimis/fe-core/src/components/inputs/Autocomplete.js', {
+  const SharedAutocomplete = load('../../openimis-fe-core_js/src/components/inputs/Autocomplete.js', {
     react: { ...React,
       useState: (initial) => {
         const index = cursor++;
@@ -233,7 +241,7 @@ test('opening and typing in the shared autocomplete does not refetch or crash', 
   const opened = SharedAutocomplete(picker.props);
   assert.doesNotThrow(() => effects[0]());
   assert.doesNotThrow(() => opened.props.onInputChange(null, 'business'));
-  assert.equal(harness.requests.length, 2);
+  assert.equal(harness.requests.length, 1);
 });
 
 test('form switches Training to module selection and a derived read-only topic count', () => {

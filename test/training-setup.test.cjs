@@ -39,6 +39,7 @@ const actions = load('actions.js', {
     decodeId: (id) => id,
   },
   './reducer': { ACTION_TYPE: {} },
+  './util/projectDeployment': load('util/projectDeployment.js'),
   './util/trainingSetup': load('util/trainingSetup.js'),
   './util/action-type': { REQUEST: () => '', SUCCESS: () => '', ERROR: () => '' },
 });
@@ -51,7 +52,7 @@ test('training configuration is requested for the selected programme UUID', () =
 });
 
 test('individual and household enrollment queries request backend module completion', () => {
-  const manager = { getProjection: () => '{uuid}' };
+  const manager = { getProjection: () => '{uuid}', getConf: () => 'TRAINING' };
   for (const fetch of [actions.fetchProjectBeneficiaries, actions.fetchProjectGroupBeneficiaries]) {
     const query = JSON.parse(fetch(manager, []));
     assert.ok(query.projection.includes('moduleCompletion { module { id name } tickedTopics totalTopics percentage }'));
@@ -152,4 +153,39 @@ test('a zero target remains explicit so backend validation can reject it', () =>
   for (const action of [actions.createProject, actions.updateProject]) {
     assert.match(action({ projectType: 'TRAINING', targetBeneficiaries: 0 }), /targetBeneficiaries: 0/);
   }
+});
+
+
+test('WORK and missing deployment configuration omit all Training-only query fields', () => {
+  for (const type of ['WORK', undefined]) {
+    const manager = { getProjection: () => '{uuid}', getConf: () => type };
+    for (const fetch of [actions.fetchBenefitPlanProjects, actions.fetchProjectBeneficiaries,
+      actions.fetchProjectGroupBeneficiaries]) {
+      const query = JSON.parse(fetch(manager, []));
+      assert.doesNotMatch(query.projection.join(' '), /trainingModules|trainingTopics|moduleCompletion|sessionStartDate|sessionEndDate/);
+      assert.match(query.projection.join(' '), /id/);
+    }
+  }
+});
+
+test('TRAINING project queries retain session and catalogue fields', () => {
+  const manager = { getProjection: () => '{uuid}', getConf: () => 'TRAINING' };
+  const query = JSON.parse(actions.fetchBenefitPlanProjects(manager, []));
+  assert.match(query.projection.join(' '), /sessionStartDate/);
+  assert.match(query.projection.join(' '), /trainingTopics/);
+});
+
+test('deployment menu gate fails closed before boot and reads backend configuration after boot', () => {
+  const { deploymentMenuGate, isTrainingDeployment } = load('util/projectDeployment.js');
+  const gate = deploymentMenuGate();
+  assert.equal(gate.enabled(), false);
+  gate.initialize({ getConf: (module, key) => {
+    assert.equal(module, 'project_social_protection');
+    assert.equal(key, 'project_type');
+    return 'TRAINING';
+  } });
+  assert.equal(gate.enabled(), true);
+  gate.initialize({ getConf: () => 'WORK' });
+  assert.equal(gate.enabled(), false);
+  assert.equal(isTrainingDeployment({}), false);
 });

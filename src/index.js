@@ -2,7 +2,7 @@
 /* eslint-disable import/prefer-default-export */
 import React from 'react';
 import WorkIcon from '@material-ui/icons/Work';
-import { FormattedMessage } from '@openimis/fe-core';
+import { FormattedMessage, useModulesManager } from '@openimis/fe-core';
 import flatten from 'flat';
 import messages_en from './translations/en.json';
 import reducer from './reducer';
@@ -28,6 +28,7 @@ import {
 } from './components/ProjectChangelogTab';
 import projectBeneficiariesMiddleware from './middlewares';
 import { RIGHT_PROJECT_SEARCH, RIGHT_ACTIVITY_SEARCH } from './constants';
+import { deploymentMenuGate } from './util/projectDeployment';
 
 // Kept identical to social_protection's route roots so the project route stays
 // nested under a benefit plan ("Phase") page.
@@ -106,4 +107,20 @@ const DEFAULT_CONFIG = {
   middlewares: [projectBeneficiariesMiddleware],
 };
 
-export const ProjectSocialProtectionModule = (cfg) => ({ ...DEFAULT_CONFIG, ...cfg });
+export const ProjectSocialProtectionModule = (cfg) => {
+  const config = { ...DEFAULT_CONFIG, ...cfg };
+  const gate = deploymentMenuGate();
+  function DeploymentBoot() {
+    gate.initialize(useModulesManager());
+    return null;
+  }
+  return {
+    ...config,
+    'core.Boot': [DeploymentBoot, ...(config['core.Boot'] || [])],
+    'admin.MainMenu': (config['admin.MainMenu'] || []).map((entry) => (
+      entry.id === 'projectSocialProtection.trainingModules'
+        ? { ...entry, filter: (rights) => gate.enabled() && (!entry.filter || entry.filter(rights)) }
+        : entry
+    )),
+  };
+};

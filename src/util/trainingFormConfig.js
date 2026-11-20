@@ -4,7 +4,7 @@ export const trainingFieldRule = (config, field) => config?.fields?.[field]
 export const parseTrainingFormConfig = (raw) => {
   const config = typeof raw === 'string' ? JSON.parse(raw) : raw;
   if (!config || !config.fields || typeof config.fields !== 'object' || Array.isArray(config.fields)) {
-    throw new Error('Invalid Training form configuration');
+    throw new Error('project.trainingFormConfig.error');
   }
   return config;
 };

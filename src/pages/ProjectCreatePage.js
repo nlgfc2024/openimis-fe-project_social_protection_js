@@ -106,7 +106,7 @@ function ProjectCreatePage({
         loadingTrainingConfiguration = true;
         const configuration = await dispatch(fetchTrainingFormConfiguration(benefitPlanId));
         if (!active) return;
-        if (configuration?.payload?.errors?.length) throw new Error('Training form configuration unavailable');
+        if (configuration?.payload?.errors?.length) throw new Error(formatMessage(intl, 'projectSocialProtection', 'project.trainingFormConfig.error'));
         const config = parseTrainingFormConfig(configuration?.payload?.data?.projectTrainingFormConfig);
         setTrainingFormConfig(config);
         setEditedProject((previous) => ({ ...applyTrainingFormDefaults(previous, config), projectType: type }));
@@ -236,15 +236,15 @@ function ProjectCreatePage({
     )).then(async (response) => {
       const errors = response?.payload?.errors;
       if (response?.error || errors?.length) {
-        throw new Error(errors?.map((error) => error.message).join('; ') || 'Unable to save Training. Please try again.');
+        throw new Error(errors?.map((error) => error.message).join('; ') || formatMessage(intl, 'projectSocialProtection', 'project.save.error'));
       }
       const clientMutationId = response?.payload?.data?.createProject?.clientMutationId;
-      if (!clientMutationId) throw new Error('Unable to confirm the save. Check the Training list before retrying.');
+      if (!clientMutationId) throw new Error(formatMessage(intl, 'projectSocialProtection', 'project.save.unconfirmed'));
       const result = await dispatch(waitForMutation(clientMutationId));
       if (result?.status !== 2) {
-        const errors = Array.isArray(result?.error) ? result.error : [];
+        const errors = Array.isArray(result?.error) ? result.error : result?.error ? [result.error] : [];
         throw new Error(errors.map((error) => error.detail || error.message).filter(Boolean).join('; ')
-          || 'Save could not be confirmed. Check the Training list before retrying.');
+          || formatMessage(intl, 'projectSocialProtection', 'project.save.unconfirmed'));
       }
       coreAlert(
         formatMessage(intl, 'projectSocialProtection', 'project.create.success.title'),
@@ -262,7 +262,7 @@ function ProjectCreatePage({
         coreAlert(formatMessage(intl, 'core', 'FatalError.GenericError.title'),
           error.message || formatMessage(intl, 'core', 'FatalError.GenericError.description'));
       } else {
-        setSaveError(error.message || 'Unable to save Training. Please try again.');
+        setSaveError(error.message || formatMessage(intl, 'projectSocialProtection', 'project.save.error'));
       }
     }).finally(() => setSaving(false));
   };

@@ -114,7 +114,7 @@ test('programme filter configures the existing Filter and decodes programme IDs'
 test('topic editor supports add and reorder and hides editing controls when read-only', () => {
   const material = Object.fromEntries(['Button', 'Grid', 'IconButton', 'Table', 'TableBody', 'TableCell',
     'TableHead', 'TableRow', 'Tooltip'].map((name) => [name, name]));
-  const dependencies = { react: React, '@openimis/fe-core': core, '@material-ui/core': material,
+  const dependencies = { '@material-ui/core/styles': { useTheme: () => ({ spacing: (value) => value * 8 }) }, react: React, '@openimis/fe-core': core, '@material-ui/core': material,
     '../constants': constants, '../util/trainingCatalogue': helpers };
   for (const icon of ['ArrowUpward', 'ArrowDownward', 'Delete']) dependencies[`@material-ui/icons/${icon}`] = () => null;
   const Head = load('components/TrainingModuleHeadPanel.js', dependencies).default;
@@ -139,6 +139,7 @@ test('shared Form save receives no Promise and a failed save remains editable fo
   let cursor = 0;
   let fail = true;
   let saves = 0;
+  let deployment = 'TRAINING';
   const fakeReact = { ...React,
     useState: (initial) => {
       const index = cursor++;
@@ -163,7 +164,9 @@ test('shared Form save receives no Promise and a failed save remains editable fo
     '../constants': constants, '../components/TrainingModulesFilter': () => null,
     '../components/TrainingModuleHeadPanel': () => null,
     '../trainingCatalogueActions': { saveTrainingModule: () => ({ type: 'save' }) },
+    '@material-ui/core/styles': { useTheme: () => ({ spacing: (value) => value * 8 }) },
     '../util/trainingCatalogue': helpers,
+    '../util/projectDeployment': { isTrainingDeployment: () => deployment === 'TRAINING' },
   }).default;
   const nodes = (node) => !node || typeof node !== 'object' ? []
     : [node, ...React.Children.toArray(node.props?.children).flatMap(nodes)];
@@ -185,4 +188,38 @@ test('shared Form save receives no Promise and a failed save remains editable fo
   await new Promise(setImmediate);
   assert.equal(render().some((node) => node.type === 'Form'), false);
   assert.equal(saves, 2);
+  deployment = 'WORK';
+  assert.deepEqual(render(), []);
+  assert.equal(saves, 2);
+});
+
+
+test('Training menu requires deployment type and catalogue permission after core boot', () => {
+  let deployment = 'WORK';
+  const source = fs.readFileSync(path.join(__dirname, '../src/index.js'), 'utf8');
+  const { code } = babel.transformSync(source, {
+    babelrc: false, configFile: false,
+    presets: [require.resolve('../../openimis-fe_js/node_modules/@babel/preset-react')],
+    plugins: [require.resolve('../../openimis-fe_js/node_modules/@babel/plugin-transform-modules-commonjs')],
+  });
+  const output = { exports: {} };
+  new Function('module', 'exports', 'require', code)(output, output.exports, (name) => {
+    if (name === 'react') return React;
+    if (name === '@openimis/fe-core') return { FormattedMessage: () => null,
+      useModulesManager: () => ({ getConf: () => deployment }) };
+    if (name === 'flat') return (value) => value;
+    if (name === './constants') return constants;
+    if (name === './util/projectDeployment') return load('util/projectDeployment.js');
+    return () => null;
+  });
+  const config = output.exports.ProjectSocialProtectionModule({});
+  const menu = config['admin.MainMenu'][0];
+  assert.equal(menu.filter([208001]), false);
+  config['core.Boot'][0]();
+  assert.equal(menu.filter([208001]), false);
+  deployment = 'TRAINING';
+  assert.equal(menu.filter([208001]), true);
+  assert.equal(menu.filter([]), false);
+  deployment = undefined;
+  assert.equal(menu.filter([208001]), false);
 });

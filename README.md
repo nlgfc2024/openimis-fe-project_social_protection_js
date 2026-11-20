@@ -68,3 +68,29 @@ and `training_form.programs.<UPG_PROGRAM_CODE>.fields` (UPG) to that backend con
 These override shared fields per property. The creation page requests effective
 rules for its selected BenefitPlan; the backend matches the programme code. Replace `<UPG_PROGRAM_CODE>` with its actual code.
 See the backend `training-form-config.example.json` for both programmes.
+
+Deployment gating uses the backend `project_social_protection.project_type`
+configuration loaded at application boot. Mark that backend ModuleConfiguration
+**Is exposed** so the frontend can read it; do not expose configurations containing
+credentials. No duplicate frontend `project_type` setting is required. Missing
+configuration defaults to WORK and hides the Training Modules menu and page.
+WORK project and enrollment queries omit session dates, training topics/modules,
+and module completion fields. Reload the application after changing deployment type.
+
+The programme module summary is always visible and read-only: every programme
+module is assigned by the backend. Legacy visibility/read-only settings for
+`trainingModules` no longer make it an editable selection. Creation loads
+`projectProgrammeModules`, which requires project search/create/update permission
+and programme access, not catalogue-management permission. Details preserve the
+Training's saved module membership and topic order.
+
+Shared WORK attendance behavior also changes: Save waits for mutation completion,
+failures display an alert and preserve edits, and Cancel restores the saved rows.
+These changes apply to PWP as well as TRAINING.
+
+The expected curriculum sizes are 29 topics for one programme and 18 for the
+other. Regression checks cover all topic columns and edit controls at both sizes. The backend storage limit of 32767 topics is not a browser capacity
+guarantee. The grid renders visible beneficiary rows times topic columns; these structural checks
+are not a browser performance benchmark. No topics are silently
+omitted from Training attendance. Very large curricula need topic windowing or
+virtualization before rollout.

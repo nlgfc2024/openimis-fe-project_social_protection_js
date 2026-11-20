@@ -8,6 +8,7 @@ import {
   decodeId,
 } from '@openimis/fe-core';
 import { ACTION_TYPE } from './reducer';
+import { isTrainingDeployment } from './util/projectDeployment';
 import { decodeTrainingReferenceId } from './util/trainingSetup';
 import {
   CLEAR, ERROR, REQUEST, SUCCESS,
@@ -29,11 +30,13 @@ const PROJECT_FULL_PROJECTION = (modulesManager) => [
   'name',
   'status',
   'projectType',
-  'sessionStartDate',
-  'sessionEndDate',
-  'trainingModules {id, name, topicCount}',
-  'trainingTopics {sequence, code, name, module {id, name}}',
-  'trainingModulesLocked',
+  ...(isTrainingDeployment(modulesManager) ? [
+    'sessionStartDate',
+    'sessionEndDate',
+    'trainingModules {id, name, topicCount}',
+    'trainingTopics {sequence, code, name, module {id, name}}',
+    'trainingModulesLocked',
+  ] : []),
   'targetBeneficiaries',
   'workingDays',
   'activity {id, name}',
@@ -74,14 +77,16 @@ const PROJECT_ENROLLMENT_PROJECTION = (modulesManager) => [
   'id',
   'beneficiary {' + BENEFICIARY_PROJECTION(modulesManager).join(', ') + '}',
   'timeEntries { id, dayNumber, percentComplete }',
-  'moduleCompletion { module { id name } tickedTopics totalTopics percentage }',
+  ...(isTrainingDeployment(modulesManager)
+    ? ['moduleCompletion { module { id name } tickedTopics totalTopics percentage }'] : []),
 ];
 
 const PROJECT_GROUP_ENROLLMENT_PROJECTION = (modulesManager) => [
   'id',
   'groupBeneficiary {' + GROUP_BENEFICIARY_PROJECTION(modulesManager).join(', ') + '}',
   'timeEntries { id, dayNumber, percentComplete }',
-  'moduleCompletion { module { id name } tickedTopics totalTopics percentage }',
+  ...(isTrainingDeployment(modulesManager)
+    ? ['moduleCompletion { module { id name } tickedTopics totalTopics percentage }'] : []),
 ];
 
 export function fetchBenefitPlan(modulesManager, params) {
@@ -101,6 +106,13 @@ export function fetchProject(modulesManager, params) {
 
 export function fetchProjectDeploymentType() {
   return graphql('query { projectDeploymentType }', 'PROJECT_SOCIAL_PROTECTION_DEPLOYMENT_TYPE');
+}
+
+export function fetchProgrammeModules(benefitPlanId) {
+  return graphqlWithVariables(`query ($benefitPlanId: UUID!) {
+    projectProgrammeModules(benefitPlanId: $benefitPlanId) { id name topicCount }
+  }`, { benefitPlanId: decodeTrainingReferenceId(benefitPlanId, decodeId) },
+  'PROJECT_SOCIAL_PROTECTION_PROGRAMME_MODULES');
 }
 
 export function fetchTrainingFormConfiguration(benefitPlanId) {

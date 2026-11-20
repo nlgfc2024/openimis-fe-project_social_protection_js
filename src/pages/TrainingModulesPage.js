@@ -1,3 +1,4 @@
+import { useTheme } from '@material-ui/core/styles';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -14,6 +15,7 @@ import {
   MODULE_NAME, DEFAULT_PAGE_SIZE, ROWS_PER_PAGE_OPTIONS,
   RIGHT_ACTIVITY_SEARCH, RIGHT_ACTIVITY_CREATE, RIGHT_ACTIVITY_UPDATE, RIGHT_ACTIVITY_DELETE,
 } from '../constants';
+import { isTrainingDeployment } from '../util/projectDeployment';
 import TrainingModulesFilter from '../components/TrainingModulesFilter';
 import TrainingModuleHeadPanel from '../components/TrainingModuleHeadPanel';
 import { fetchTrainingModules, saveTrainingModule, deleteTrainingModule } from '../trainingCatalogueActions';
@@ -22,6 +24,7 @@ import { validTrainingModule, trainingModuleInput, trainingCatalogueError } from
 export default function TrainingModulesPage() {
   const dispatch = useDispatch();
   const manager = useModulesManager();
+  const theme = useTheme();
   const { formatMessage: t } = useTranslations(MODULE_NAME, manager);
   const rights = useSelector((state) => state.core?.user?.i_user?.rights || []);
   const [list, setList] = useState({ items: [], pageInfo: {}, loading: false, fetched: false, error: null });
@@ -33,7 +36,7 @@ export default function TrainingModulesPage() {
   const [revision, setRevision] = useState(0);
   const request = useRef(0);
   const mounted = useRef(true);
-  const canRead = rights.includes(RIGHT_ACTIVITY_SEARCH);
+  const canRead = isTrainingDeployment(manager) && rights.includes(RIGHT_ACTIVITY_SEARCH);
   const canEdit = edited?.uuid ? rights.includes(RIGHT_ACTIVITY_UPDATE) : rights.includes(RIGHT_ACTIVITY_CREATE);
   useEffect(() => () => { mounted.current = false; }, []);
 
@@ -94,7 +97,7 @@ export default function TrainingModulesPage() {
 
   if (!canRead) return null;
   return (
-    <div style={{ padding: 16 }}>
+    <div style={{ padding: theme.spacing(2) }}>
       <Searcher key={revision} module={MODULE_NAME} FilterPane={TrainingModulesFilter}
         fetch={fetch} items={list.items} itemsPageInfo={list.pageInfo} fetchingItems={list.loading}
         fetchedItems={list.fetched} errorItems={list.error}

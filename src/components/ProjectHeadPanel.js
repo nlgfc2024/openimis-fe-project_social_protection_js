@@ -293,7 +293,7 @@ class ProjectHeadPanel extends FormPanel {
     if (!creationConfig) return content;
     const children = React.Children.toArray(content.props.children).flatMap((element) => {
       const field = element.props['data-training-field'];
-      if (!field || trainingFieldRule(creationConfig, field).visible) return [element];
+      if (!field || field === 'trainingModules' || trainingFieldRule(creationConfig, field).visible) return [element];
       // Keep module metadata/defaults loading without rendering a hidden input.
       if (field === 'trainingModules') return [React.cloneElement(element.props.children, {
         key: 'hidden-module-defaults', renderControl: false,

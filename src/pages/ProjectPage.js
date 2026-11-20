@@ -88,7 +88,7 @@ function ProjectPage({
     if (project?.projectType === 'TRAINING' && project?.benefitPlan?.id) {
       dispatch(fetchTrainingFormConfiguration(project.benefitPlan.id)).then((response) => {
         if (!active) return;
-        if (response?.error || response?.payload?.errors?.length) throw new Error('Invalid Training configuration');
+        if (response?.error || response?.payload?.errors?.length) throw new Error(formatMessage(intl, 'projectSocialProtection', 'project.trainingFormConfig.error'));
         setTrainingFormConfig(parseTrainingFormConfig(response?.payload?.data?.projectTrainingFormConfig));
       }).catch(() => { if (active) setConfigurationError(true); });
     }
