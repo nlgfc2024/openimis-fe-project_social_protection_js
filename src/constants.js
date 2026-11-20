@@ -53,8 +53,9 @@ export const BENEFIT_PLAN_TABS_PANEL_CONTRIBUTION_KEY = 'benefitPlan.TabPanel.pa
 export const BENEFIT_PLAN_PROJECTS_TAB_VALUE = 'BenefitPlanProjectsTab';
 
 // The beneficiary page's tab point is owned by social_protection; the training
-// frontend contributes a Grant and utilization tab to it.
-export const BENEFICIARY_GRANT_TAB_VALUE = 'beneficiaryGrantTab';
+// frontend contributes the Business appraisal and Utilisation assessment tabs to it.
+export const BUSINESS_APPRAISAL_TAB_VALUE = 'businessAppraisalTab';
+export const UTILISATION_ASSESSMENT_TAB_VALUE = 'utilisationAssessmentTab';
 // Rights defined by the attendance-grant backend module.
 export const RIGHT_PLANS_AND_GRANTS = 210001;
 export const RIGHT_UTILIZATION_ASSESSMENT = 210002;
