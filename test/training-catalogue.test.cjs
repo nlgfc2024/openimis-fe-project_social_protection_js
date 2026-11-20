@@ -57,11 +57,12 @@ test('mutation payload sends complete ordered topics and decoded programme IDs',
 test('GraphQL errors become readable text without rendering objects', () => {
   assert.equal(helpers.trainingCatalogueError({ payload: { errors: [{ message: 'Denied' }] } }, 'Failed'), 'Denied');
   assert.equal(helpers.trainingCatalogueError({}, 'Failed'), 'Failed');
+  assert.equal(helpers.trainingCatalogueError({ status: 1, error: [{ message: 'Failed mutation', detail: 'Module is in use' }] }, 'Failed'), 'Module is in use');
 });
 
 const actions = load('trainingCatalogueActions.js', { '@openimis/fe-core': {
   graphql: (query) => ({ query }),
-  graphqlWithVariables: (query, variables) => ({ query, variables }),
+  graphqlMutation: (query, variables) => ({ query, variables }),
   formatPageQueryWithCount: (field, params, projection) => JSON.stringify({ field, params, projection }),
 } });
 
@@ -69,12 +70,15 @@ test('create, edit and delete use typed mutation variables', () => {
   const input = { name: 'Business "skills"', programmeIds: ['plan'], topics: [{ code: 'E01', name: 'Idea' }] };
   const created = actions.saveTrainingModule(null, input);
   assert.match(created.query, /createTrainingModule/);
-  assert.deepEqual(created.variables, { input });
+  assert.match(created.query, /CreateTrainingModuleInput!/);
+  assert.deepEqual(created.variables.input, { ...input, clientMutationLabel: `Create Training module ${input.name}` });
   const updated = actions.saveTrainingModule('module-id', input);
   assert.match(updated.query, /updateTrainingModule/);
-  assert.deepEqual(updated.variables, { id: 'module-id', input });
+  assert.match(updated.query, /UpdateTrainingModuleInput!/);
+  assert.deepEqual(updated.variables.input, { ...input, id: 'module-id', clientMutationLabel: `Update Training module ${input.name}` });
   const deleted = actions.deleteTrainingModule('module-id');
-  assert.deepEqual(deleted.variables, { id: 'module-id' });
+  assert.match(deleted.query, /DeleteTrainingModuleInput!/);
+  assert.deepEqual(deleted.variables, { input: { id: 'module-id', clientMutationLabel: 'Delete Training module' } });
 });
 
 test('search retains programme filters and requests ordered topic details', () => {
@@ -149,8 +153,7 @@ test('shared Form save receives no Promise and a failed save remains editable fo
       useSelector: (select) => select({ core: { user: { i_user: { rights: [208001, 208002] } } } }),
       useDispatch: () => async () => {
         saves += 1;
-        return { payload: { data: { result: fail ? { success: false, errors: ['Duplicate topic code'] }
-          : { success: true, errors: [] } } } };
+        return fail ? { status: 1, error: [{ detail: 'Duplicate topic code' }] } : { status: 2 };
       },
     },
     '@material-ui/core': Object.fromEntries(['Button', 'Dialog', 'DialogActions', 'DialogContent',
