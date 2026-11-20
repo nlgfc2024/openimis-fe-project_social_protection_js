@@ -96,15 +96,27 @@ const calculateColumnWidth = (doc, values, header, minWidth, maxWidth) => {
 };
 
 const drawPageHeader = (doc, translate, values) => {
+  const training = values.projectType === 'TRAINING';
   // The compressed logo is embedded at build time and reused on each PDF page.
   doc.addImage(malawiCoatOfArms, 'PNG', PAGE.left, PAGE.top, 18, 18);
   doc.addImage(malawiCoatOfArms, 'PNG', PAGE.width - PAGE.right - 18, PAGE.top, 18, 18);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(13);
-  doc.text(translate('projectBeneficiaries.logSheetPdf.title'), PAGE.width / 2, 12, { align: 'center' });
+  doc.text(translate(`projectBeneficiaries.logSheetPdf.${training ? 'trainingTitle' : 'title'}`), PAGE.width / 2, 12, { align: 'center' });
   doc.setFontSize(6.5);
-  doc.text(translate('projectBeneficiaries.logSheetPdf.subtitle'), PAGE.width / 2, 19, { align: 'center' });
+  doc.text(translate(`projectBeneficiaries.logSheetPdf.${training ? 'trainingSubtitle' : 'subtitle'}`), PAGE.width / 2, 19, { align: 'center' });
   doc.setFontSize(5.5);
+  if (training) {
+    const label = (key) => translate(`projectBeneficiaries.logSheetPdf.${key}`);
+    addHeaderText(doc, translate('location.locationType.0'), values.location, 6, 27, 47);
+    addHeaderText(doc, label('trainingProgramme'), values.programme, 54, 27, 59);
+    addHeaderText(doc, label('trainingStatus'), values.status, 114, 27, 49);
+    addHeaderText(doc, label('trainingName'), values.projectName, 164, 27, 92);
+    addHeaderText(doc, label('code'), values.code, 257, 27, 34);
+    addHeaderText(doc, label('trainingModules'), values.modules, 6, 37, 140);
+    addHeaderText(doc, label('trainingDates'), values.dates, 150, 37, 141);
+    return;
+  }
   addHeaderText(doc, translate('location.locationType.0'), values.location, 6, 27, 47);
   addHeaderText(doc, translate('projectBeneficiaries.logSheetPdf.microCatchment'), values.microCatchment, 54, 27, 59);
   addHeaderText(doc, translate('projectBeneficiaries.logSheetPdf.sector'), values.sector, 114, 27, 49);
@@ -120,6 +132,8 @@ const drawPageHeader = (doc, translate, values) => {
 export const downloadLogSheetPdf = ({
   project, beneficiaries, isGroup = false, translate,
 }) => {
+  const training = project?.projectType === 'TRAINING';
+  const topics = [...(project?.trainingTopics || [])].sort((a, b) => Number(a.sequence) - Number(b.sequence));
   const projectWorkingDays = Number(project?.workingDays);
   const workingDays = Number.isFinite(projectWorkingDays)
     ? Math.max(0, Math.floor(projectWorkingDays))
@@ -191,6 +205,12 @@ export const downloadLogSheetPdf = ({
     count: Math.min(daysPerGroup, workingDays - (index * daysPerGroup)),
   }));
   const headerValues = {
+    projectType: project?.projectType,
+    programme: project?.benefitPlan?.name,
+    status: project?.status,
+    modules: [...new Set(topics.map((topic) => topic.module?.name).filter(Boolean))].join(', ')
+      || project?.trainingModules?.map((module) => module.name).join(', '),
+    dates: [project?.sessionStartDate || '', project?.sessionEndDate || ''].join(' - '),
     location: projectLocation[0],
     microCatchment: project?.microCatchment?.name,
     sector: project?.activity?.name,
@@ -210,11 +230,12 @@ export const downloadLogSheetPdf = ({
     const head = count > 0 ? [[
       ...measuredStaticColumns.map((column) => ({ content: column.header, rowSpan: 2 })),
       {
-        content: translate('projectBeneficiaries.logSheetPdf.amountOfWorkDone'),
+        content: translate(`projectBeneficiaries.logSheetPdf.${training ? 'trainingAttendance' : 'amountOfWorkDone'}`),
         colSpan: count,
       },
     ], Array.from({ length: count }, (_, dayIndex) => (
-      `${translate('project.day')}\n${start + dayIndex + 1}`
+      training ? (topics.find((topic) => Number(topic.sequence) === start + dayIndex + 1)?.code
+        || String(start + dayIndex + 1)) : `${translate('project.day')}\n${start + dayIndex + 1}`
     ))] : [segmentHeaders];
     const columnStyles = measuredStaticColumns.reduce((styles, column, index) => {
       styles[index] = {

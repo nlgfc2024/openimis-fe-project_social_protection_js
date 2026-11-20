@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import _ from 'lodash';
 import {
   Form,
   formatMessage,
@@ -20,14 +21,16 @@ import UndoIcon from '@material-ui/icons/Undo';
 
 import {
   fetchProject,
+  fetchTrainingFormConfiguration,
   updateProject,
   deleteProject,
   undoDeleteProject,
 } from '../actions';
 import { ACTION_TYPE } from '../reducer';
 import ProjectHeadPanel from '../components/ProjectHeadPanel';
-import { isSessionDateOrderValid, isTrainingNameValid } from '../util/trainingSetup';
+import { isSessionDateOrderValid, isTrainingNameValid, isProjectRequiredFieldsMissing, persistedProjectData } from '../util/trainingSetup';
 import ProjectTabPanel from '../components/ProjectTabPanel';
+import { parseTrainingFormConfig, trainingCreationFieldsMissing, trainingTargetInRange } from '../util/trainingFormConfig';
 import {
   RIGHT_BENEFIT_PLAN_UPDATE,
   PROJECT_BENEFICIARIES_TAB_VALUE,
@@ -69,12 +72,28 @@ function ProjectPage({
 
   const [editedProject, setEditedProject] = useState({});
   const [reset, setReset] = useState(() => false);
+  const [trainingFormConfig, setTrainingFormConfig] = useState(null);
+  const [configurationError, setConfigurationError] = useState(false);
 
   const [activeTab, setActiveTab] = useState(PROJECT_BENEFICIARIES_TAB_VALUE);
 
   const dispatch = useDispatch();
 
   const prevSubmittingMutationRef = useRef();
+
+  useEffect(() => {
+    let active = true;
+    setTrainingFormConfig(null);
+    setConfigurationError(false);
+    if (project?.projectType === 'TRAINING' && project?.benefitPlan?.id) {
+      dispatch(fetchTrainingFormConfiguration(project.benefitPlan.id)).then((response) => {
+        if (!active) return;
+        if (response?.error || response?.payload?.errors?.length) throw new Error('Invalid Training configuration');
+        setTrainingFormConfig(parseTrainingFormConfig(response?.payload?.data?.projectTrainingFormConfig));
+      }).catch(() => { if (active) setConfigurationError(true); });
+    }
+    return () => { active = false; };
+  }, [dispatch, project?.id, project?.benefitPlan?.id, project?.projectType]);
 
   useEffect(() => {
     if (projectUuid) {
@@ -138,23 +157,19 @@ function ProjectPage({
     prevSubmittingMutationRef.current = submittingMutation;
   });
 
-  const isMandatoryFieldsEmpty = () => (
-    !editedProject?.hotspot
-    || !editedProject?.activity
-    || !editedProject?.location
-    || !editedProject?.targetBeneficiaries
-    || !editedProject?.workingDays
-  );
+  const isMandatoryFieldsEmpty = () => editedProject.projectType === 'TRAINING'
+    ? trainingCreationFieldsMissing(editedProject, trainingFormConfig) : isProjectRequiredFieldsMissing(editedProject);
 
   const isTargetBeneficiariesInRange = () => {
+    if (editedProject.projectType === 'TRAINING') return trainingTargetInRange(editedProject, trainingFormConfig, maxTargetBeneficiaries);
     const target = Number(editedProject?.targetBeneficiaries);
     return Number.isFinite(target)
-      && target >= MIN_TARGET_BENEFICIARIES
+      && target >= (editedProject.projectType === 'TRAINING' ? 1 : MIN_TARGET_BENEFICIARIES)
       && target <= maxTargetBeneficiaries;
   };
 
   const doesProjectChange = () => {
-    if (_.isEqual(project, editedProject)) return false;
+    if (_.isEqual(persistedProjectData(project), persistedProjectData(editedProject))) return false;
     return true;
   };
 
@@ -230,6 +245,9 @@ function ProjectPage({
 
   return rights.includes(RIGHT_BENEFIT_PLAN_UPDATE) && (
     <div className={classes.page}>
+      {configurationError && <Typography color="error">
+        {formatMessage(intl, 'projectSocialProtection', 'project.trainingFormConfig.error')}
+      </Typography>}
       {!isSessionDateOrderValid(editedProject) && (
         <Typography color="error">
           {formatMessage(intl, 'projectSocialProtection', 'project.sessionDates.invalid')}
@@ -262,12 +280,13 @@ function ProjectPage({
         canSave={canSave}
         save={handleSave}
         HeadPanel={ProjectHeadPanel}
+        trainingFormConfig={trainingFormConfig}
         Panels={[ProjectTabPanel]}
         onActiveTabChange={setActiveTab}
         activeTab={activeTab}
         rights={rights}
         actions={actions}
-        readOnly={editedProject?.isDeleted}
+        readOnly={editedProject?.isDeleted || editedProject.projectType === 'TRAINING' && !trainingFormConfig}
         saveTooltip={
           formatMessage(intl, 'projectSocialProtection', 'project.saveButton.tooltip')
         }
