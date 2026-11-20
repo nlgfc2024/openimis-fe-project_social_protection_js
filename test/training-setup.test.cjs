@@ -119,3 +119,37 @@ test('empty optional Training target is omitted from creation without inline nul
   }
   assert.doesNotMatch(actions.createProject({ projectType: 'WORK', targetBeneficiaries: null }), /targetBeneficiaries:/);
 });
+
+test('loaded WORK projects never send session fields, including nulls and populated dates', () => {
+  for (const action of [actions.createProject, actions.updateProject]) {
+    for (const date of [null, undefined, '', '2026-11-20']) {
+      const payload = action({ id: 'work', projectType: 'WORK', workingDays: 5,
+        targetBeneficiaries: 10, sessionStartDate: date, sessionEndDate: date, knownPlace: '' });
+      assert.doesNotMatch(payload, /sessionStartDate:|sessionEndDate:|:\s*null/);
+      assert.match(payload, /workingDays: 5/);
+      assert.match(payload, /targetBeneficiaries: 10/);
+      assert.match(payload, /knownPlace: ""/);
+    }
+  }
+});
+
+test('Training updates omit empty optional fields without losing populated dates or targets', () => {
+  for (const empty of [null, undefined, '']) {
+    const payload = actions.updateProject({ id: 'training', projectType: 'TRAINING', name: 'Saved Training',
+      sessionStartDate: empty, sessionEndDate: empty, targetBeneficiaries: empty });
+    assert.doesNotMatch(payload, /sessionStartDate:|sessionEndDate:|targetBeneficiaries:|:\s*null/);
+    assert.match(payload, /name: "Saved Training"/);
+  }
+  const payload = actions.updateProject({ id: 'training', projectType: 'TRAINING', name: 'Saved Training',
+    sessionStartDate: '2026-11-20', sessionEndDate: '2026-11-30', targetBeneficiaries: 10 });
+  assert.match(payload, /sessionStartDate: "2026-11-20"/);
+  assert.match(payload, /sessionEndDate: "2026-11-30"/);
+  assert.match(payload, /targetBeneficiaries: 10/);
+  assert.doesNotMatch(payload, /:\s*null/);
+});
+
+test('a zero target remains explicit so backend validation can reject it', () => {
+  for (const action of [actions.createProject, actions.updateProject]) {
+    assert.match(action({ projectType: 'TRAINING', targetBeneficiaries: 0 }), /targetBeneficiaries: 0/);
+  }
+});
