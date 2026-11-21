@@ -114,7 +114,7 @@ test('programme filter configures the existing Filter and decodes programme IDs'
 test('topic editor supports add and reorder and hides editing controls when read-only', () => {
   const material = Object.fromEntries(['Button', 'Grid', 'IconButton', 'Table', 'TableBody', 'TableCell',
     'TableHead', 'TableRow', 'Tooltip'].map((name) => [name, name]));
-  const dependencies = { '@material-ui/core/styles': { useTheme: () => ({ spacing: (value) => value * 8 }) }, react: React, '@openimis/fe-core': core, '@material-ui/core': material,
+  const dependencies = { '@material-ui/core/styles': { useTheme: () => ({ spacing: (value) => value * 8 }), makeStyles: () => () => ({}) }, react: React, '@openimis/fe-core': core, '@material-ui/core': material,
     '../constants': constants, '../util/trainingCatalogue': helpers };
   for (const icon of ['ArrowUpward', 'ArrowDownward', 'Delete']) dependencies[`@material-ui/icons/${icon}`] = () => null;
   const Head = load('components/TrainingModuleHeadPanel.js', dependencies).default;
@@ -164,7 +164,7 @@ test('shared Form save receives no Promise and a failed save remains editable fo
     '../constants': constants, '../components/TrainingModulesFilter': () => null,
     '../components/TrainingModuleHeadPanel': () => null,
     '../trainingCatalogueActions': { saveTrainingModule: () => ({ type: 'save' }) },
-    '@material-ui/core/styles': { useTheme: () => ({ spacing: (value) => value * 8 }) },
+    '@material-ui/core/styles': { useTheme: () => ({ spacing: (value) => value * 8 }), makeStyles: () => () => ({}) },
     '../util/trainingCatalogue': helpers,
     '../util/projectDeployment': { isTrainingDeployment: () => deployment === 'TRAINING' },
   }).default;

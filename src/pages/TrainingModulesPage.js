@@ -1,4 +1,4 @@
-import { useTheme } from '@material-ui/core/styles';
+import { makeStyles, useTheme } from '@material-ui/core/styles';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -21,10 +21,17 @@ import TrainingModuleHeadPanel from '../components/TrainingModuleHeadPanel';
 import { fetchTrainingModules, saveTrainingModule, deleteTrainingModule } from '../trainingCatalogueActions';
 import { validTrainingModule, trainingModuleInput, trainingCatalogueError } from '../util/trainingCatalogue';
 
+const useStyles = makeStyles((theme) => ({
+  dialogContent: { padding: theme.spacing(0.25) },
+  formPaper: { margin: 0, boxShadow: 'none' },
+  dialogActions: { padding: theme.spacing(0, 0.5) },
+}));
+
 export default function TrainingModulesPage() {
   const dispatch = useDispatch();
   const manager = useModulesManager();
   const theme = useTheme();
+  const classes = useStyles();
   const { formatMessage: t } = useTranslations(MODULE_NAME, manager);
   const rights = useSelector((state) => state.core?.user?.i_user?.rights || []);
   const [list, setList] = useState({ items: [], pageInfo: {}, loading: false, fetched: false, error: null });
@@ -122,15 +129,15 @@ export default function TrainingModulesPage() {
           } }]} enableActionButtons={false} enableHeaderActionButtons />
 
       <Dialog open={Boolean(edited)} maxWidth="lg" fullWidth onClose={() => !saving && setEdited(null)}>
-        <DialogContent>
+        <DialogContent className={classes.dialogContent}>
           {error && <Typography color="error" role="alert">{error}</Typography>}
-          {edited && <Form module={MODULE_NAME} title={edited.uuid ? 'trainingModules.edit' : 'trainingModules.create'}
+          {edited && <Form classes={{ paper: classes.formPaper }} module={MODULE_NAME} title={edited.uuid ? 'trainingModules.edit' : 'trainingModules.create'}
             openDirty edited={edited} edited_id={edited.uuid || 'new'} update={saveAttempt}
             onEditedChanged={setEdited} HeadPanel={TrainingModuleHeadPanel}
             readOnly={!canEdit || saving} canSave={() => !saving && canEdit && validTrainingModule(edited)}
             save={() => { save(); }} saveTooltip={t('trainingModules.save')} />}
         </DialogContent>
-        <DialogActions><Button disabled={saving} onClick={() => setEdited(null)}>{t('trainingModules.cancel')}</Button></DialogActions>
+        <DialogActions className={classes.dialogActions}><Button disabled={saving} onClick={() => setEdited(null)}>{t('trainingModules.cancel')}</Button></DialogActions>
       </Dialog>
 
       <Dialog open={Boolean(deleting)} onClose={() => !saving && setDeleting(null)}>
