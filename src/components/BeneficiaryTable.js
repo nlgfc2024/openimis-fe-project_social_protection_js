@@ -29,6 +29,8 @@ import {
   locationFormatter,
 } from '../util/searcher-utils';
 import { beneficiaryIdentifiers } from '../util/beneficiary-identifiers';
+import { trainingTopicColumnLabel } from '../util/trainingSetup';
+import { trainingCompletionColumns } from '../util/trainingAttendance';
 import {
   MODULE_NAME,
   DEFAULT_PAGE_SIZE,
@@ -306,14 +308,18 @@ const getWorkDayColumns = (
   maxColumns = DEFAULT_MAX_WORKING_DAYS,
   attendanceMode = false,
   theme,
+  projectType,
+  trainingTopics,
 ) => {
   if (!workingDays) return [];
-  const cappedDays = Math.min(workingDays, maxColumns);
+  const cappedDays = projectType === 'TRAINING' ? workingDays : Math.min(workingDays, maxColumns);
   return Array.from({ length: cappedDays }, (_, i) => {
     const dayNumber = i + 1;
     const dayKey = `day${dayNumber}`;
     return {
-      title: attendanceMode ? String(dayNumber) : `${translateFn('project.day')} ${dayNumber}`,
+      title: projectType === 'TRAINING' ? trainingTopicColumnLabel(trainingTopics, dayNumber)
+        : attendanceMode ? String(dayNumber) : `${translateFn('project.day')} ${dayNumber}`,
+      tooltip: projectType === 'TRAINING' ? trainingTopics?.find((topic) => Number(topic.sequence) === dayNumber)?.name : undefined,
       field: `projectTimeEntriesDict.${dayKey}.percentComplete`,
       dayKey,
       presentLabel: translateFn('projectBeneficiaries.present'),
@@ -369,6 +375,8 @@ function BeneficiaryTable({
   appliedFilters,
   appliedPageSize,
   workingDays,
+  projectType,
+  trainingTopics,
   tableRef,
   classes,
   onTimeEntryChange,
@@ -532,6 +540,8 @@ function BeneficiaryTable({
       maxWorkingDays,
       attendanceMode,
       theme,
+      projectType,
+      trainingTopics,
     );
     const allColumns = [
       ...additionalColumns,
@@ -601,6 +611,7 @@ function BeneficiaryTable({
       ...dynamicColumns,
       ...groupKycColumns,
       ...(!attendanceMode || !workLogEditMode ? workDayColumns : []),
+      ...(projectType === 'TRAINING' ? trainingCompletionColumns(trainingTopics, workLogEditMode) : []),
     ];
 
     return allColumns.map((c) => ({
@@ -616,7 +627,7 @@ function BeneficiaryTable({
     }));
   }, [
     isGroup, nameDoBFieldPrefix, locationFieldPrefix,
-    dynamicColumns, workingDays, onTimeEntryChange, maxWorkingDays, attendanceMode, workLogEditMode, theme,
+    dynamicColumns, workingDays, projectType, trainingTopics, onTimeEntryChange, maxWorkingDays, attendanceMode, workLogEditMode, theme,
   ]);
 
   const fixedLeftColumnCount = useMemo(() => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Form,
   formatMessage,
@@ -6,6 +6,7 @@ import {
   withModulesManager,
   useHistory,
   coreAlert,
+  waitForMutation,
 } from '@openimis/fe-core';
 import { injectIntl } from 'react-intl';
 import { bindActionCreators } from 'redux';
@@ -15,14 +16,21 @@ import { withTheme, withStyles } from '@material-ui/core/styles';
 
 import {
   fetchBenefitPlan,
+  fetchProjectDeploymentType,
+  fetchTrainingFormConfiguration,
   createProject,
   clearProject,
   projectNameValidationCheck,
   projectNameValidationClear,
 } from '../actions';
-import { ACTION_TYPE } from '../reducer';
 import ProjectHeadPanel from '../components/ProjectHeadPanel';
+import { isSessionDateOrderValid, isTrainingNameValid, isProjectRequiredFieldsMissing } from '../util/trainingSetup';
 import ProjectTabPanel from '../components/ProjectTabPanel';
+import {
+  parseTrainingFormConfig, applyTrainingFormDefaults, trainingCreationFieldsMissing,
+  trainingCreationPayload, trainingTargetInRange,
+  trainingFieldRule,
+} from '../util/trainingFormConfig';
 import {
   RIGHT_BENEFIT_PLAN_UPDATE,
   BENEFIT_PLAN_PROJECTS_TAB_VALUE,
@@ -49,8 +57,6 @@ function ProjectCreatePage({
   projectNameValidationCheck,
   projectNameValidationClear,
   coreAlert,
-  submittingMutation,
-  mutation,
   projectNameIsValid,
   projectNameIsValidating,
   projectNameValidationError,
@@ -71,12 +77,50 @@ function ProjectCreatePage({
   const [activeTab, setActiveTab] = useState(PROJECT_BENEFICIARIES_TAB_VALUE);
 
   const dispatch = useDispatch();
-  const prevSubmittingMutationRef = useRef();
+  const [deploymentError, setDeploymentError] = useState(false);
+  const [trainingFormConfig, setTrainingFormConfig] = useState(null);
+  const [trainingConfigurationError, setTrainingConfigurationError] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const [editedProject, setEditedProject] = useState({
     benefitPlan: { id: benefitPlanId, name: benefitPlanName },
     status: 'PREPARATION',
   });
+
+  useEffect(() => {
+    let active = true;
+    let loadingTrainingConfiguration = false;
+    setTrainingFormConfig(null);
+    setDeploymentError(false);
+    setTrainingConfigurationError(false);
+    setEditedProject({ benefitPlan: { id: benefitPlanId, name: benefitPlanNameFromState }, status: 'PREPARATION' });
+    dispatch(fetchProjectDeploymentType()).then(async (response) => {
+      if (!active) return;
+      const type = response?.payload?.data?.projectDeploymentType;
+      if (!['WORK', 'TRAINING'].includes(type) || response?.payload?.errors?.length) {
+        setDeploymentError(true);
+        return;
+      }
+      if (type === 'TRAINING') {
+        loadingTrainingConfiguration = true;
+        const configuration = await dispatch(fetchTrainingFormConfiguration(benefitPlanId));
+        if (!active) return;
+        if (configuration?.payload?.errors?.length) throw new Error(formatMessage(intl, 'projectSocialProtection', 'project.trainingFormConfig.error'));
+        const config = parseTrainingFormConfig(configuration?.payload?.data?.projectTrainingFormConfig);
+        setTrainingFormConfig(config);
+        setEditedProject((previous) => ({ ...applyTrainingFormDefaults(previous, config), projectType: type }));
+      } else {
+        setEditedProject((previous) => ({ ...previous, projectType: type }));
+      }
+    }).catch(() => {
+      if (active) {
+        setDeploymentError(true);
+        setTrainingConfigurationError(loadingTrainingConfiguration);
+      }
+    });
+    return () => { active = false; };
+  }, [dispatch, benefitPlanId]);
 
   useEffect(() => {
     if (!benefitPlanNameFromState && benefitPlanIdFromPath) {
@@ -106,48 +150,15 @@ function ProjectCreatePage({
     };
   }, [clearProject]);
 
-  useEffect(() => {
-    if (
-      prevSubmittingMutationRef.current
-      && !submittingMutation
-      && mutation?.actionType === ACTION_TYPE.CREATE_PROJECT
-    ) {
-      coreAlert(
-        formatMessage(intl, 'projectSocialProtection', 'project.create.success.title'),
-        formatMessage(intl, 'projectSocialProtection', 'project.create.success.message'),
-      );
-      const benefitPlanRoute = modulesManager.getRef('socialProtection.route.benefitPlan');
-      const benefitPlanId = benefitPlanIdFromPath || benefitPlanIdFromState;
-      if (benefitPlanId) {
-        // On create, return to the benefit plan's project list instead of opening the detail view.
-        history.replace(`/${benefitPlanRoute}/${benefitPlanId}`, {
-          activeTab: BENEFIT_PLAN_PROJECTS_TAB_VALUE,
-        });
-      }
-    }
-  }, [
-    submittingMutation,
-    mutation,
-    history,
-    modulesManager,
-    benefitPlanIdFromPath,
-    benefitPlanIdFromState,
-    intl,
-    coreAlert,
-  ]);
-
-  useEffect(() => {
-    prevSubmittingMutationRef.current = submittingMutation;
-  });
-
   const generatedProjectName = [
     editedProject?.hotspot?.name,
     editedProject?.activity?.name,
     editedProject?.benefitPlan?.name,
   ].filter(Boolean).join('-');
-  const projectName = editedProject?.knownPlace
+  const generatedName = editedProject?.knownPlace
     ? `${generatedProjectName} - ${editedProject.knownPlace}`
     : generatedProjectName;
+  const projectName = editedProject?.projectType === 'TRAINING' ? editedProject?.name || '' : generatedName;
   const canValidateProjectName = Boolean(projectName && editedProject?.benefitPlan?.id);
 
   useEffect(() => {
@@ -175,15 +186,11 @@ function ProjectCreatePage({
 
   const back = () => history.goBack();
 
-  const isMandatoryFieldsEmpty = () => (
-    !editedProject?.hotspot
-    || !editedProject?.activity
-    || !editedProject?.location
-    || !editedProject?.targetBeneficiaries
-    || !editedProject?.workingDays
-  );
+  const isMandatoryFieldsEmpty = () => editedProject.projectType === 'TRAINING'
+    ? trainingCreationFieldsMissing(editedProject, trainingFormConfig) : isProjectRequiredFieldsMissing(editedProject);
 
   const isTargetBeneficiariesInRange = () => {
+    if (editedProject.projectType === 'TRAINING') return trainingTargetInRange(editedProject, trainingFormConfig, maxTargetBeneficiaries);
     const target = Number(editedProject?.targetBeneficiaries);
     return Number.isFinite(target)
       && target >= MIN_TARGET_BENEFICIARIES
@@ -200,7 +207,12 @@ function ProjectCreatePage({
   };
 
   const canSave = () => (
-    !isMandatoryFieldsEmpty()
+    ['WORK', 'TRAINING'].includes(editedProject?.projectType)
+    && !deploymentError
+    && !saving
+    && isSessionDateOrderValid(editedProject)
+    && isTrainingNameValid(editedProject)
+    && !isMandatoryFieldsEmpty()
     && isTargetBeneficiariesInRange()
     && doesProjectChange()
     && projectNameIsValid === true
@@ -211,16 +223,55 @@ function ProjectCreatePage({
     && !isTargetBeneficiariesInRange();
 
   const handleSave = () => {
-    createProject(
-      editedProject,
+    setSaveError(null);
+    setSaving(true);
+    Promise.resolve().then(() => createProject(
+      editedProject.projectType === 'TRAINING' ? trainingCreationPayload(editedProject, trainingFormConfig) : editedProject,
       formatMessageWithValues(
         intl,
         'projectSocialProtection',
         'project.create.mutationLabel',
         editedProject,
       ),
-    );
+    )).then(async (response) => {
+      const errors = response?.payload?.errors;
+      if (response?.error || errors?.length) {
+        throw new Error(errors?.map((error) => error.message).join('; ') || formatMessage(intl, 'projectSocialProtection', 'project.save.error'));
+      }
+      const clientMutationId = response?.payload?.data?.createProject?.clientMutationId;
+      if (!clientMutationId) throw new Error(formatMessage(intl, 'projectSocialProtection', 'project.save.unconfirmed'));
+      const result = await dispatch(waitForMutation(clientMutationId));
+      if (result?.status !== 2) {
+        const errors = Array.isArray(result?.error) ? result.error : result?.error ? [result.error] : [];
+        throw new Error(errors.map((error) => error.detail || error.message).filter(Boolean).join('; ')
+          || formatMessage(intl, 'projectSocialProtection', 'project.save.unconfirmed'));
+      }
+      coreAlert(
+        formatMessage(intl, 'projectSocialProtection', 'project.create.success.title'),
+        formatMessage(intl, 'projectSocialProtection', 'project.create.success.message'),
+      );
+      if (editedProject.projectType === 'WORK') {
+        history.replace(`/${modulesManager.getRef('socialProtection.route.benefitPlan')}/${benefitPlanId}`, {
+          activeTab: BENEFIT_PLAN_PROJECTS_TAB_VALUE,
+        });
+      } else {
+        history.replace(`/${modulesManager.getRef('projectSocialProtection.route.projects')}`);
+      }
+    }).catch((error) => {
+      if (editedProject.projectType === 'WORK') {
+        coreAlert(formatMessage(intl, 'core', 'FatalError.GenericError.title'),
+          error.message || formatMessage(intl, 'core', 'FatalError.GenericError.description'));
+      } else {
+        setSaveError(error.message || formatMessage(intl, 'projectSocialProtection', 'project.save.error'));
+      }
+    }).finally(() => setSaving(false));
   };
+
+  const onEditedChanged = (update) => setEditedProject((previous) => {
+    const next = typeof update === 'function' ? update(previous) : update;
+    return next.projectType === 'TRAINING' && trainingFormConfig
+      ? applyTrainingFormDefaults(next, trainingFormConfig) : next;
+  });
 
   if (!benefitPlanId) {
     return <div>{formatMessage(intl, 'projectSocialProtection', 'project.loading')}</div>;
@@ -228,6 +279,26 @@ function ProjectCreatePage({
 
   return rights.includes(RIGHT_BENEFIT_PLAN_UPDATE) && (
     <div className={classes.page}>
+      {saveError && <Typography color="error">{saveError}</Typography>}
+      {deploymentError && (
+        <Typography color="error">
+          {formatMessage(intl, 'projectSocialProtection', trainingConfigurationError
+            ? 'project.trainingFormConfig.error' : 'project.deploymentType.error')}
+        </Typography>
+      )}
+      {trainingFormConfig && !trainingFieldRule(trainingFormConfig, 'trainingModules').visible
+        && (editedProject.trainingModuleLoadError || !editedProject.trainingModuleLoading
+          && Array.isArray(editedProject.trainingModules) && !editedProject.trainingModules.length) && (
+        <Typography color="error">
+          {formatMessage(intl, 'projectSocialProtection', editedProject.trainingModuleLoadError
+            ? 'project.trainingModules.loadError' : 'project.trainingModules.empty')}
+        </Typography>
+      )}
+      {!isSessionDateOrderValid(editedProject) && (
+        <Typography color="error">
+          {formatMessage(intl, 'projectSocialProtection', 'project.sessionDates.invalid')}
+        </Typography>
+      )}
       {showTargetBeneficiariesRangeError && (
         <Typography color="error">
           {formatMessageWithValues(
@@ -256,13 +327,14 @@ function ProjectCreatePage({
         title="project.createPageTitle"
         openDirty
         edited={editedProject}
-        onEditedChanged={setEditedProject}
+        onEditedChanged={onEditedChanged}
         back={back}
         mandatoryFieldsEmpty={isMandatoryFieldsEmpty}
         canSave={canSave}
         save={handleSave}
         HeadPanel={ProjectHeadPanel}
         previewProjectName={projectName}
+        trainingFormConfig={trainingFormConfig}
         Panels={[ProjectTabPanel]}
         onActiveTabChange={setActiveTab}
         activeTab={activeTab}
@@ -278,8 +350,6 @@ function ProjectCreatePage({
 const mapStateToProps = (state) => ({
   rights: state.core?.user?.i_user?.rights ?? [],
   project: state.projectSocialProtection.project,
-  submittingMutation: state.projectSocialProtection.submittingMutation,
-  mutation: state.projectSocialProtection.mutation,
   projectNameIsValid: state.projectSocialProtection.validationFields?.projectName?.isValid,
   projectNameIsValidating: state.projectSocialProtection.validationFields?.projectName?.isValidating,
   projectNameValidationError: state.projectSocialProtection.validationFields?.projectName?.validationError,
