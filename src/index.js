@@ -28,6 +28,8 @@ import {
 import projectBeneficiariesMiddleware from './middlewares';
 import { BusinessAppraisalTabLabel, BusinessAppraisalTabPanel } from './components/BusinessAppraisalTab';
 import { UtilisationAssessmentTabLabel, UtilisationAssessmentTabPanel } from './components/UtilisationAssessmentTab';
+import { PlanApprovalConfirmationPanel, PlanApprovalTaskPreview } from './components/PlanApprovalTask';
+import { PLAN_APPROVAL_TASK_SOURCE } from './util/beneficiaryGrant';
 import { RIGHT_PROJECT_SEARCH } from './constants';
 
 // Kept identical to social_protection's route roots so the project route stays
@@ -96,6 +98,14 @@ const DEFAULT_CONFIG = {
     BusinessAppraisalTabPanel,
     UtilisationAssessmentTabPanel,
   ],
+  'tasksManagement.tasks': [{
+    text: <FormattedMessage module="projectSocialProtection" id="beneficiaryGrant.task.title" />,
+    tableHeaders: [],
+    itemFormatters: [],
+    taskSource: [PLAN_APPROVAL_TASK_SOURCE],
+    previewComponent: PlanApprovalTaskPreview,
+    confirmationPanel: PlanApprovalConfirmationPanel,
+  }],
   'project.TabPanel.label': [
     ProjectBeneficiariesTabLabel,
     ProjectChangelogTabLabel,
