@@ -32,6 +32,7 @@ export function UtilisationAssessmentTabPanel({
   const form = useBeneficiaryJsonExt({
     beneficiary,
     groupBeneficiaries,
+    benefitPlan,
     inputKeys: UTILISATION_INPUT_KEYS,
     mutationLabel: t('beneficiaryGrant.utilisationMutationLabel'),
   });

@@ -2,8 +2,10 @@ import { graphqlMutation, graphqlWithVariables } from '@openimis/fe-core';
 
 // Saves a beneficiary's (or household beneficiary's) jsonExt through the existing
 // update mutation and waits for its journalled result. The backend checks the
-// grant and utilization rights and may turn the update into an approval task.
-export const saveBeneficiaryJsonExt = ({ isGroup, beneficiary, jsonExt, label }) => {
+// utilisation right and may turn the update into an approval task.
+export const saveBeneficiaryJsonExt = ({
+  isGroup, beneficiary, benefitPlanId, jsonExt, label,
+}) => {
   const mutation = isGroup ? 'updateGroupBeneficiary' : 'updateBeneficiary';
   const inputType = isGroup ? 'UpdateGroupBeneficiaryMutationInput' : 'UpdateBeneficiaryMutationInput';
   return graphqlMutation(
@@ -11,7 +13,7 @@ export const saveBeneficiaryJsonExt = ({ isGroup, beneficiary, jsonExt, label })
     {
       input: {
         id: beneficiary.id,
-        benefitPlanId: beneficiary.benefitPlan?.id,
+        benefitPlanId,
         status: beneficiary.status,
         jsonExt: JSON.stringify(jsonExt),
         clientMutationLabel: label,
@@ -20,6 +22,50 @@ export const saveBeneficiaryJsonExt = ({ isGroup, beneficiary, jsonExt, label })
     'PROJECT_SOCIAL_PROTECTION_SAVE_BENEFICIARY_GRANT',
   );
 };
+
+// Submits a beneficiary's grant details for approval (attendance-grant backend).
+export const submitBeneficiaryPlan = ({
+  isGroup, beneficiary, proposal, label,
+}) => graphqlMutation(
+  'mutation ($input: SubmitBeneficiaryPlanMutationInput!) { submitBeneficiaryPlan(input: $input) '
+  + '{ internalId clientMutationId } }',
+  {
+    input: {
+      id: beneficiary.id,
+      isGroup,
+      jsonExt: JSON.stringify(proposal),
+      clientMutationLabel: label,
+    },
+  },
+  'PROJECT_SOCIAL_PROTECTION_SUBMIT_BENEFICIARY_PLAN',
+);
+
+// The beneficiary's plan approval waiting for a decision, if any.
+export const fetchPendingPlanApproval = ({ isGroup, id }) => graphqlWithVariables(
+  `query ($id: UUID!, $isGroup: Boolean) {
+    pendingBeneficiaryPlanApproval(beneficiaryId: $id, isGroup: $isGroup) {
+      taskId origin submittedOn submittedBy incomingData
+    }
+  }`,
+  { id, isGroup },
+  'PROJECT_SOCIAL_PROTECTION_PENDING_PLAN_APPROVAL',
+);
+
+// Approves or rejects a plan approval task; a rejection carries its reason.
+export const resolvePlanApproval = ({
+  task, user, decision, reason, label,
+}) => graphqlMutation(
+  'mutation ($input: ResolveTaskMutationInput!) { resolveTask(input: $input) { internalId clientMutationId } }',
+  {
+    input: {
+      id: task.id,
+      businessStatus: JSON.stringify({ [user.id]: decision }),
+      ...(reason ? { additionalData: JSON.stringify({ reason }) } : {}),
+      clientMutationLabel: label,
+    },
+  },
+  'PROJECT_SOCIAL_PROTECTION_RESOLVE_PLAN_APPROVAL',
+);
 
 // The beneficiary's current jsonExt, to tell a saved change from one waiting for
 // approval.

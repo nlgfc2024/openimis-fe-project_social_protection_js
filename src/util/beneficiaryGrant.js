@@ -1,14 +1,15 @@
 // Grant, business plan and utilisation keys on a beneficiary's jsonExt, and how the
 // Business appraisal and Utilisation assessment tabs derive them from what the user
-// enters. The attendance-grant backend module protects these keys and validates
-// them again on save.
+// enters. The attendance-grant backend module protects these keys: grant details are
+// submitted for approval, and the approval records the plan status and approver.
 
 export const CASH = 'CASH';
 export const GRANT_TYPES = [CASH, 'EQUIPMENT', 'SERVICE'];
 export const IN_KIND_TYPES = ['EQUIPMENT', 'SERVICE'];
 export const APPROVED = 'APPROVED';
 export const REJECTED = 'REJECTED';
-export const PLAN_STATUSES = ['PENDING', APPROVED, REJECTED];
+// The plan approval task source, as configured on the approvers' task group.
+export const PLAN_APPROVAL_TASK_SOURCE = 'calcrule_attendance_grant.plan_approval';
 export const YES_NO = ['YES', 'NO'];
 
 export const parseJsonObject = (value) => {
@@ -72,46 +73,38 @@ const setKey = (jsonExt, key, value) => {
   }
 };
 
-// What the Business appraisal tab lets the user enter.
+// What the Business appraisal tab lets the user enter and submit for approval.
 export const APPRAISAL_INPUT_KEYS = [
   'grant_types',
   'approved_grant_amount',
   trancheAmountKey(1, 'EQUIPMENT'),
   trancheAmountKey(1, 'SERVICE'),
-  'business_plan_status',
-  'plan_rejection_reason',
+  'business_plan_reference',
 ];
 export const UTILISATION_INPUT_KEYS = ['utilization_percentage', 'utilization_confirmed', 'utilization_notes'];
 
 export const pickKeys = (jsonExt, keys) => keys.reduce((picked, key) => (
   jsonExt[key] === undefined ? picked : { ...picked, [key]: jsonExt[key] }), {});
 
-// The beneficiary's jsonExt after a business appraisal, with the derived values:
-// - the equipment and service amounts are delivered in tranche one; the payroll pays
-//   the rest of each tranche's share in cash, from the tranche percentage of its
-//   payment plan, so no cash amount is recorded here (a recorded one is cleared when
-//   the grant changes, as it would no longer add up);
-// - an approval is dated today and made by the signed-in user, and kept as recorded
-//   while the plan stays approved (an approved record without them gets them with
-//   its next change);
-// - a rejection reason is kept only for a rejected plan.
-// Returns {jsonExt, errors}; errors maps a key to {id, values}.
-export const computeAppraisal = ({
-  saved, draft, benefitPlan, today, approver,
-}) => {
+// The grant details to submit for approval: the keys whose value differs from the
+// saved ones (null removes a key). Equipment and service are delivered in tranche
+// one; the payroll pays the rest of each tranche's share in cash, from its payment
+// plan's tranche percentage, so a recorded cash amount is cleared when the grant
+// changes. Returns {proposal, errors}; errors maps a key to {id, values}.
+export const computeProposal = ({ saved, draft, benefitPlan }) => {
   const savedJsonExt = parseJsonObject(saved);
-  const jsonExt = { ...savedJsonExt };
+  const next = { ...savedJsonExt };
   const errors = {};
 
   if (recordsGrantPerBeneficiary(benefitPlan)) {
     const allowed = allowedGrantTypes(benefitPlan);
     const selected = Array.isArray(draft.grant_types) ? draft.grant_types : [];
     const types = allowed.filter((type) => selected.includes(type));
-    setKey(jsonExt, 'grant_types', types.length ? types : undefined);
+    setKey(next, 'grant_types', types.length ? types : undefined);
     if (!types.length) errors.grant_types = { id: 'required' };
 
     const amount = toCents(draft.approved_grant_amount);
-    setKey(jsonExt, 'approved_grant_amount', Number.isFinite(amount) && amount !== null ? fromCents(amount) : undefined);
+    setKey(next, 'approved_grant_amount', Number.isFinite(amount) && amount !== null ? fromCents(amount) : undefined);
     if (amount === null) errors.approved_grant_amount = { id: 'required' };
     else if (!(amount > 0)) errors.approved_grant_amount = { id: 'positive' };
 
@@ -119,14 +112,14 @@ export const computeAppraisal = ({
     IN_KIND_TYPES.forEach((type) => {
       const key = trancheAmountKey(1, type);
       if (!types.includes(type)) {
-        [1, 2].forEach((tranche) => setKey(jsonExt, trancheAmountKey(tranche, type), undefined));
+        [1, 2].forEach((tranche) => setKey(next, trancheAmountKey(tranche, type), undefined));
         return;
       }
       const cents = toCents(draft[key]);
       if (cents === null) errors[key] = { id: 'required' };
       else if (!(cents >= 0)) errors[key] = { id: 'nonNegative' };
       else inKindTotal += cents;
-      setKey(jsonExt, key, Number.isFinite(cents) && cents !== null ? fromCents(cents) : undefined);
+      setKey(next, key, Number.isFinite(cents) && cents !== null ? fromCents(cents) : undefined);
     });
 
     const inKindValid = IN_KIND_TYPES.every((type) => !errors[trancheAmountKey(1, type)]);
@@ -139,28 +132,18 @@ export const computeAppraisal = ({
     }
 
     const grantKeys = ['grant_types', 'approved_grant_amount', ...IN_KIND_TYPES.map((type) => trancheAmountKey(1, type))];
-    const grantChanged = grantKeys.some((key) => JSON.stringify(jsonExt[key]) !== JSON.stringify(savedJsonExt[key]));
-    if (grantChanged) [1, 2].forEach((tranche) => setKey(jsonExt, trancheAmountKey(tranche, CASH), undefined));
+    const grantChanged = grantKeys.some((key) => JSON.stringify(next[key]) !== JSON.stringify(savedJsonExt[key]));
+    if (grantChanged) [1, 2].forEach((tranche) => setKey(next, trancheAmountKey(tranche, CASH), undefined));
   }
+  setKey(next, 'business_plan_reference', text(draft.business_plan_reference));
 
-  const status = text(draft.business_plan_status);
-  setKey(jsonExt, 'business_plan_status', status);
-
-  const reason = status === REJECTED ? text(draft.plan_rejection_reason) : undefined;
-  setKey(jsonExt, 'plan_rejection_reason', reason);
-  if (status === REJECTED && !reason) errors.plan_rejection_reason = { id: 'required' };
-
-  const stillApproved = savedJsonExt.business_plan_status === APPROVED
-    && !isBlank(savedJsonExt.plan_approved_on) && !isBlank(savedJsonExt.plan_approved_by);
-  if (status !== APPROVED) {
-    setKey(jsonExt, 'plan_approved_on', undefined);
-    setKey(jsonExt, 'plan_approved_by', undefined);
-  } else if (!stillApproved && !sameJsonExt(savedJsonExt, jsonExt)) {
-    setKey(jsonExt, 'plan_approved_on', today);
-    setKey(jsonExt, 'plan_approved_by', approver || undefined);
-  }
-
-  return { jsonExt, errors };
+  const proposal = {};
+  new Set([...Object.keys(next), ...Object.keys(savedJsonExt)]).forEach((key) => {
+    if (JSON.stringify(next[key]) !== JSON.stringify(savedJsonExt[key])) {
+      proposal[key] = next[key] === undefined ? null : next[key];
+    }
+  });
+  return { proposal, errors };
 };
 
 // The beneficiary's jsonExt after a utilisation assessment: a new or changed result

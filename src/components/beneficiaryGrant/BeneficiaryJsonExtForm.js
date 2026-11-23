@@ -9,20 +9,24 @@ import {
   MODULE_NAME,
   RIGHT_BENEFICIARY_DATA_UPDATE,
   RIGHT_BENEFICIARY_UPDATE,
+  RIGHT_PLAN_APPROVAL,
   RIGHT_PLANS_AND_GRANTS,
   RIGHT_UTILIZATION_ASSESSMENT,
 } from '../../constants';
-import { fetchBeneficiaryJsonExt, mutationErrorMessages, saveBeneficiaryJsonExt } from '../../grantActions';
+import {
+  fetchBeneficiaryJsonExt, fetchPendingPlanApproval, mutationErrorMessages, saveBeneficiaryJsonExt,
+  submitBeneficiaryPlan,
+} from '../../grantActions';
 import {
   localIsoDate, parseJsonObject, pickKeys, sameJsonExt, userDisplayName,
 } from '../../util/beneficiaryGrant';
 
 const MUTATION_SUCCESS = 2;
 
-// Both tabs are shown to anyone who records appraisals or assessments; each tab is
+// Both tabs are shown to anyone who enters, approves or assesses grants; each tab is
 // editable only with its own right.
 export const canSeeGrantTabs = (rights = []) => rights.includes(RIGHT_PLANS_AND_GRANTS)
-  || rights.includes(RIGHT_UTILIZATION_ASSESSMENT);
+  || rights.includes(RIGHT_PLAN_APPROVAL) || rights.includes(RIGHT_UTILIZATION_ASSESSMENT);
 
 // The update mutations also need social_protection's beneficiary and data rights.
 export const canEditWith = (rights = [], right) => rights.includes(RIGHT_BENEFICIARY_UPDATE)
@@ -44,9 +48,10 @@ export function GrantTabLabel({
 }
 
 // The beneficiary (UMEP) or household beneficiary (UPG, RMEP) the page shows, its
-// saved jsonExt, the draft of the keys this tab enters, and saving it.
+// saved jsonExt, the draft of the keys this tab enters, saving it directly or
+// submitting it for approval, and, with withApproval, the approval waiting for it.
 export const useBeneficiaryJsonExt = ({
-  beneficiary, groupBeneficiaries, inputKeys, mutationLabel,
+  beneficiary, groupBeneficiaries, benefitPlan, inputKeys, mutationLabel, withApproval = false,
 }) => {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.core?.user);
@@ -56,6 +61,16 @@ export const useBeneficiaryJsonExt = ({
   const [draft, setDraft] = useState(() => pickKeys(saved, inputKeys));
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState(null);
+  const [pending, setPending] = useState(null);
+
+  const loadPending = async () => {
+    if (!withApproval || !target?.id) return;
+    const response = await dispatch(fetchPendingPlanApproval({ isGroup, id: target.id }));
+    const approval = response?.payload?.data?.pendingBeneficiaryPlanApproval;
+    setPending(approval ? { ...approval, incomingData: parseJsonObject(approval.incomingData) } : null);
+  };
+
+  useEffect(() => { loadPending(); }, [target?.id]);
 
   const restart = (jsonExt) => {
     setSaved(jsonExt);
@@ -79,7 +94,7 @@ export const useBeneficiaryJsonExt = ({
     setNotice(null);
     try {
       const result = await dispatch(saveBeneficiaryJsonExt({
-        isGroup, beneficiary: target, jsonExt, label: mutationLabel,
+        isGroup, beneficiary: target, benefitPlanId: benefitPlan?.id, jsonExt, label: mutationLabel,
       }));
       if (result?.status !== MUTATION_SUCCESS) {
         const messages = mutationErrorMessages(result);
@@ -93,7 +108,7 @@ export const useBeneficiaryJsonExt = ({
       restart(current);
       setNotice({
         error: false,
-        text: t(sameJsonExt(current, jsonExt) ? 'beneficiaryGrant.saved' : 'beneficiaryGrant.pendingApproval'),
+        text: t(sameJsonExt(current, jsonExt) ? 'beneficiaryGrant.saved' : 'beneficiaryGrant.savedForApproval'),
       });
     } catch (error) {
       setNotice({ error: true, text: t('beneficiaryGrant.saveError') });
@@ -102,8 +117,29 @@ export const useBeneficiaryJsonExt = ({
     }
   };
 
+  const submit = async (proposal, t) => {
+    setSaving(true);
+    setNotice(null);
+    try {
+      const result = await dispatch(submitBeneficiaryPlan({
+        isGroup, beneficiary: target, proposal, label: mutationLabel,
+      }));
+      if (result?.status !== MUTATION_SUCCESS) {
+        const messages = mutationErrorMessages(result);
+        setNotice({ error: true, text: messages.length ? messages.join(' ') : t('beneficiaryGrant.saveError') });
+        return;
+      }
+      await loadPending();
+      setNotice({ error: false, text: t('beneficiaryGrant.submitted') });
+    } catch (error) {
+      setNotice({ error: true, text: t('beneficiaryGrant.saveError') });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return {
-    target, saved, draft, change, reset, save, saving, notice,
+    target, saved, draft, change, reset, save, submit, saving, notice, pending,
     today: localIsoDate(), userName: userDisplayName(user),
   };
 };
@@ -117,15 +153,16 @@ export const useGrantTabStyles = makeStyles((theme) => ({
 // policyHolder.TabPanel adds.
 export function GrantTabForm({
   value, tabValue, readOnly, dirty, valid, saving, notice, onSave, onReset, formatMessage: t, children,
+  actionLabel = 'beneficiaryGrant.save', banner = null,
 }) {
   const classes = useGrantTabStyles();
   if (value !== tabValue) return null;
   return (
     <div role="tabpanel">
       <Grid container className={classes.item}>
-        {readOnly && (
+        {(banner || readOnly) && (
           <Grid item xs={12} className={classes.item}>
-            <Typography variant="caption" color="textSecondary">{t('beneficiaryGrant.readOnly')}</Typography>
+            <Typography variant="caption" color="textSecondary">{banner || t('beneficiaryGrant.readOnly')}</Typography>
           </Grid>
         )}
         {children}
@@ -145,7 +182,7 @@ export function GrantTabForm({
               <Grid item className={classes.item}>
                 <Button disabled={!dirty || saving} onClick={onReset}>{t('beneficiaryGrant.reset')}</Button>
                 <Button variant="contained" color="primary" disabled={!dirty || !valid || saving} onClick={onSave}>
-                  {t('beneficiaryGrant.save')}
+                  {t(actionLabel)}
                 </Button>
               </Grid>
             )}

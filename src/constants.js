@@ -59,6 +59,7 @@ export const UTILISATION_ASSESSMENT_TAB_VALUE = 'utilisationAssessmentTab';
 // Rights defined by the attendance-grant backend module.
 export const RIGHT_PLANS_AND_GRANTS = 210001;
 export const RIGHT_UTILIZATION_ASSESSMENT = 210002;
+export const RIGHT_PLAN_APPROVAL = 210003;
 // social_protection rights the beneficiary update mutations need to change jsonExt.
 export const RIGHT_BENEFICIARY_UPDATE = 170003;
 export const RIGHT_BENEFICIARY_DATA_UPDATE = 171003;
