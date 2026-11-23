@@ -1,27 +1,22 @@
 import { graphqlMutation, graphqlWithVariables } from '@openimis/fe-core';
 
-// Saves a beneficiary's (or household beneficiary's) jsonExt through the existing
-// update mutation and waits for its journalled result. The backend checks the
-// utilisation right and may turn the update into an approval task.
-export const saveBeneficiaryJsonExt = ({
-  isGroup, beneficiary, benefitPlanId, jsonExt, label,
-}) => {
-  const mutation = isGroup ? 'updateGroupBeneficiary' : 'updateBeneficiary';
-  const inputType = isGroup ? 'UpdateGroupBeneficiaryMutationInput' : 'UpdateBeneficiaryMutationInput';
-  return graphqlMutation(
-    `mutation ($input: ${inputType}!) { ${mutation}(input: $input) { internalId clientMutationId } }`,
-    {
-      input: {
-        id: beneficiary.id,
-        benefitPlanId,
-        status: beneficiary.status,
-        jsonExt: JSON.stringify(jsonExt),
-        clientMutationLabel: label,
-      },
+// Records a beneficiary's utilisation assessment (attendance-grant backend): only the
+// assessment values are sent, and the backend merges them into the current record.
+export const recordUtilisationAssessment = ({
+  isGroup, beneficiary, values, label,
+}) => graphqlMutation(
+  'mutation ($input: RecordUtilisationAssessmentMutationInput!) { recordUtilisationAssessment(input: $input) '
+  + '{ internalId clientMutationId } }',
+  {
+    input: {
+      id: beneficiary.id,
+      isGroup,
+      jsonExt: JSON.stringify(values),
+      clientMutationLabel: label,
     },
-    'PROJECT_SOCIAL_PROTECTION_SAVE_BENEFICIARY_GRANT',
-  );
-};
+  },
+  'PROJECT_SOCIAL_PROTECTION_RECORD_UTILISATION',
+);
 
 // Submits a beneficiary's grant details for approval (attendance-grant backend).
 export const submitBeneficiaryPlan = ({

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Button, Divider, Grid, Tab, Typography,
@@ -7,18 +7,16 @@ import { makeStyles } from '@material-ui/core/styles';
 import { formatMessage, useModulesManager } from '@openimis/fe-core';
 import {
   MODULE_NAME,
-  RIGHT_BENEFICIARY_DATA_UPDATE,
-  RIGHT_BENEFICIARY_UPDATE,
   RIGHT_PLAN_APPROVAL,
   RIGHT_PLANS_AND_GRANTS,
   RIGHT_UTILIZATION_ASSESSMENT,
 } from '../../constants';
 import {
-  fetchBeneficiaryJsonExt, fetchPendingPlanApproval, mutationErrorMessages, saveBeneficiaryJsonExt,
+  fetchBeneficiaryJsonExt, fetchPendingPlanApproval, mutationErrorMessages, recordUtilisationAssessment,
   submitBeneficiaryPlan,
 } from '../../grantActions';
 import {
-  localIsoDate, parseJsonObject, pickKeys, sameJsonExt, userDisplayName,
+  localIsoDate, parseJsonObject, pickKeys, userDisplayName,
 } from '../../util/beneficiaryGrant';
 import { isTrainingDeployment } from '../../util/projectDeployment';
 
@@ -32,9 +30,6 @@ export const canSeeGrantTabs = (rights = [], modulesManager) => isTrainingDeploy
   && (rights.includes(RIGHT_PLANS_AND_GRANTS) || rights.includes(RIGHT_PLAN_APPROVAL)
     || rights.includes(RIGHT_UTILIZATION_ASSESSMENT));
 
-// The update mutations also need social_protection's beneficiary and data rights.
-export const canEditWith = (rights = [], right) => rights.includes(RIGHT_BENEFICIARY_UPDATE)
-  && rights.includes(RIGHT_BENEFICIARY_DATA_UPDATE) && rights.includes(right);
 
 export function GrantTabLabel({
   intl, rights, onChange, tabStyle, isSelected, tabValue, labelKey,
@@ -53,10 +48,12 @@ export function GrantTabLabel({
 }
 
 // The beneficiary (UMEP) or household beneficiary (UPG, RMEP) the page shows, its
-// saved jsonExt, the draft of the keys this tab enters, saving it directly or
-// submitting it for approval, and, with withApproval, the approval waiting for it.
+// saved jsonExt, the draft of the keys this tab enters, recording the utilisation
+// assessment or submitting grant details for approval, and, with withApproval, the
+// approval waiting for it. Responses that arrive after the page moved to another
+// beneficiary are ignored.
 export const useBeneficiaryJsonExt = ({
-  beneficiary, groupBeneficiaries, benefitPlan, inputKeys, mutationLabel, withApproval = false,
+  beneficiary, groupBeneficiaries, inputKeys, mutationLabel, withApproval = false,
 }) => {
   const dispatch = useDispatch();
   const modulesManager = useModulesManager();
@@ -68,15 +65,23 @@ export const useBeneficiaryJsonExt = ({
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState(null);
   const [pending, setPending] = useState(null);
+  const shownId = useRef(target?.id);
+  shownId.current = target?.id;
+  const stillShown = (id) => shownId.current === id;
 
-  const loadPending = async () => {
-    if (!withApproval || !target?.id || !isTrainingDeployment(modulesManager)) return;
-    const response = await dispatch(fetchPendingPlanApproval({ isGroup, id: target.id }));
+  const loadPending = async (id) => {
+    if (!withApproval || !id || !isTrainingDeployment(modulesManager)) return;
+    const response = await dispatch(fetchPendingPlanApproval({ isGroup, id }));
+    if (!stillShown(id)) return;
     const approval = response?.payload?.data?.pendingBeneficiaryPlanApproval;
     setPending(approval ? { ...approval, incomingData: parseJsonObject(approval.incomingData) } : null);
   };
 
-  useEffect(() => { loadPending(); }, [target?.id]);
+  useEffect(() => {
+    setPending(null);
+    setNotice(null);
+    loadPending(target?.id);
+  }, [target?.id]);
 
   const restart = (jsonExt) => {
     setSaved(jsonExt);
@@ -95,66 +100,64 @@ export const useBeneficiaryJsonExt = ({
     restart(saved);
   };
 
-  const fetchCurrent = async () => {
-    const response = await dispatch(fetchBeneficiaryJsonExt({ isGroup, id: target.id }));
+  const fetchCurrent = async (id) => {
+    const response = await dispatch(fetchBeneficiaryJsonExt({ isGroup, id }));
     const node = response?.payload?.data?.[isGroup ? 'groupBeneficiary' : 'beneficiary']?.edges?.[0]?.node;
     return node ? parseJsonObject(node.jsonExt) : null;
   };
 
-  // build(current) returns the jsonExt to save from the beneficiary's current one, read
-  // just before saving, so a change made elsewhere since the page loaded (a KYC
-  // approval, say) is kept.
-  const save = async (build, t) => {
+  // Runs a mutation for the beneficiary shown now; onSuccess runs only while it is
+  // still the one shown.
+  const run = async (mutate, onSuccess, t) => {
+    const id = target.id;
     setSaving(true);
     setNotice(null);
     try {
-      const latest = await fetchCurrent();
-      const jsonExt = build(latest || saved);
-      const result = await dispatch(saveBeneficiaryJsonExt({
-        isGroup, beneficiary: target, benefitPlanId: benefitPlan?.id, jsonExt, label: mutationLabel,
-      }));
+      const result = await dispatch(mutate());
+      if (!stillShown(id)) return;
       if (result?.status !== MUTATION_SUCCESS) {
         const messages = mutationErrorMessages(result);
         setNotice({ error: true, text: messages.length ? messages.join(' ') : t('beneficiaryGrant.saveError') });
         return;
       }
-      // An update that needs approval succeeds as a task and leaves the record as it was.
-      const current = (await fetchCurrent()) || saved;
-      restart(current);
-      setNotice({
-        error: false,
-        text: t(sameJsonExt(current, jsonExt) ? 'beneficiaryGrant.saved' : 'beneficiaryGrant.savedForApproval'),
-      });
+      await onSuccess(id);
     } catch (error) {
-      setNotice({ error: true, text: t('beneficiaryGrant.saveError') });
+      if (stillShown(id)) setNotice({ error: true, text: t('beneficiaryGrant.saveError') });
     } finally {
-      setSaving(false);
+      if (stillShown(id)) setSaving(false);
     }
   };
 
-  const submit = async (proposal, t) => {
-    setSaving(true);
-    setNotice(null);
-    try {
-      const result = await dispatch(submitBeneficiaryPlan({
-        isGroup, beneficiary: target, proposal, label: mutationLabel,
-      }));
-      if (result?.status !== MUTATION_SUCCESS) {
-        const messages = mutationErrorMessages(result);
-        setNotice({ error: true, text: messages.length ? messages.join(' ') : t('beneficiaryGrant.saveError') });
-        return;
-      }
-      await loadPending();
-      setNotice({ error: false, text: t('beneficiaryGrant.submitted') });
-    } catch (error) {
-      setNotice({ error: true, text: t('beneficiaryGrant.saveError') });
-    } finally {
-      setSaving(false);
-    }
-  };
+  // Sends only the assessment values; the backend merges them into the current record.
+  const record = (values, t) => run(
+    () => recordUtilisationAssessment({
+      isGroup, beneficiary: target, values, label: mutationLabel,
+    }),
+    async (id) => {
+      const current = await fetchCurrent(id);
+      if (!stillShown(id) || !current) return;
+      restart(current);
+      // An update that needs approval succeeds as a task and leaves the record as it was.
+      const applied = Object.entries(values).every(([key, value]) => (value === null
+        ? current[key] === undefined : JSON.stringify(current[key]) === JSON.stringify(value)));
+      setNotice({ error: false, text: t(applied ? 'beneficiaryGrant.saved' : 'beneficiaryGrant.savedForApproval') });
+    },
+    t,
+  );
+
+  const submit = (proposal, t) => run(
+    () => submitBeneficiaryPlan({
+      isGroup, beneficiary: target, proposal, label: mutationLabel,
+    }),
+    async (id) => {
+      await loadPending(id);
+      if (stillShown(id)) setNotice({ error: false, text: t('beneficiaryGrant.submitted') });
+    },
+    t,
+  );
 
   return {
-    target, saved, draft, change, reset, save, submit, saving, notice, pending,
+    target, saved, draft, change, reset, record, submit, saving, notice, pending,
     today: localIsoDate(), userName: userDisplayName(user),
   };
 };

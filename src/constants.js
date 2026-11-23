@@ -66,9 +66,6 @@ export const UTILISATION_ASSESSMENT_TAB_VALUE = 'utilisationAssessmentTab';
 export const RIGHT_PLANS_AND_GRANTS = 210001;
 export const RIGHT_UTILIZATION_ASSESSMENT = 210002;
 export const RIGHT_PLAN_APPROVAL = 210003;
-// social_protection rights the beneficiary update mutations need to change jsonExt.
-export const RIGHT_BENEFICIARY_UPDATE = 170003;
-export const RIGHT_BENEFICIARY_DATA_UPDATE = 171003;
 
 export const PROJECT_TABS_LABEL_CONTRIBUTION_KEY = 'project.TabPanel.label';
 export const PROJECT_TABS_PANEL_CONTRIBUTION_KEY = 'project.TabPanel.panel';

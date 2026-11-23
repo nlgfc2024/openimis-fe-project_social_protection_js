@@ -8,7 +8,7 @@ import {
   computeUtilisation, sameJsonExt, usesYesNoUtilization, UTILISATION_INPUT_KEYS, utilizationResultKey, YES_NO,
 } from '../util/beneficiaryGrant';
 import {
-  canEditWith, canSeeGrantTabs, errorText, GrantTabForm, GrantTabLabel, useBeneficiaryJsonExt, useGrantTabStyles,
+  canSeeGrantTabs, errorText, GrantTabForm, GrantTabLabel, useBeneficiaryJsonExt, useGrantTabStyles,
 } from './beneficiaryGrant/BeneficiaryJsonExtForm';
 
 export function UtilisationAssessmentTabLabel(props) {
@@ -32,7 +32,6 @@ export function UtilisationAssessmentTabPanel({
   const form = useBeneficiaryJsonExt({
     beneficiary,
     groupBeneficiaries,
-    benefitPlan,
     inputKeys: UTILISATION_INPUT_KEYS,
     mutationLabel: t('beneficiaryGrant.utilisationMutationLabel'),
   });
@@ -43,7 +42,8 @@ export function UtilisationAssessmentTabPanel({
 
   if (!form.target || !canSeeGrantTabs(rights, modulesManager)) return null;
 
-  const readOnly = !canEditWith(rights, RIGHT_UTILIZATION_ASSESSMENT) || form.saving;
+  // The assessment mutation needs only the utilisation right.
+  const readOnly = !rights.includes(RIGHT_UTILIZATION_ASSESSMENT) || form.saving;
   const dirty = !sameJsonExt(saved, jsonExt);
   const resultKey = utilizationResultKey(benefitPlan);
   const error = (key) => (!readOnly && dirty ? errorText(errors, key, t, formatMessageWithValues) : null);
@@ -58,9 +58,10 @@ export function UtilisationAssessmentTabPanel({
       valid={!Object.keys(errors).length}
       saving={form.saving}
       notice={form.notice}
-      onSave={() => form.save((current) => computeUtilisation({
-        saved: current, draft, benefitPlan, today: form.today, assessor: form.userName,
-      }).jsonExt, t)}
+      onSave={() => form.record({
+        [resultKey]: jsonExt[resultKey] ?? null,
+        utilization_notes: jsonExt.utilization_notes ?? null,
+      }, t)}
       onReset={form.reset}
       formatMessage={t}
     >

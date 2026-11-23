@@ -29,7 +29,6 @@ export function BusinessAppraisalTabPanel({
   const form = useBeneficiaryJsonExt({
     beneficiary,
     groupBeneficiaries,
-    benefitPlan,
     inputKeys: APPRAISAL_INPUT_KEYS,
     mutationLabel: t('beneficiaryGrant.mutationLabel'),
     withApproval: true,
