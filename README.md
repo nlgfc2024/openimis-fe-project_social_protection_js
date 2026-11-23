@@ -77,9 +77,9 @@ configuration defaults to WORK and hides the Training Modules menu and page.
 WORK project and enrollment queries omit session dates, training topics/modules,
 and module completion fields. Reload the application after changing deployment type.
 
-The programme module summary is always visible and read-only: every programme
-module is assigned by the backend. Legacy visibility/read-only settings for
-`trainingModules` no longer make it an editable selection. Creation loads
+The programme module summary is read-only when visible: every programme
+module is assigned by the backend. `trainingModules.visible: false` hides the summary while module metadata still
+loads for validation and topic counts. Read-only settings never make it an editable selection. Creation loads
 `projectProgrammeModules`, which requires project search/create/update permission
 and programme access, not catalogue-management permission. Details preserve the
 Training's saved module membership and topic order.

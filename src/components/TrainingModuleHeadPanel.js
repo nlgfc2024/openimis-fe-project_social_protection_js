@@ -1,4 +1,4 @@
-import { useTheme } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/core/styles';
 import React from 'react';
 import {
   Button, Grid, IconButton, Table, TableBody, TableCell, TableHead, TableRow, Tooltip,
@@ -10,9 +10,13 @@ import { PublishedComponent, TextInput, useTranslations, useModulesManager } fro
 import { MODULE_NAME, BENEFIT_PLAN_TYPE } from '../constants';
 import { moveTopic } from '../util/trainingCatalogue';
 
+const useStyles = makeStyles((theme) => ({
+  root: { padding: theme.spacing(2) },
+}));
+
 export default function TrainingModuleHeadPanel({ edited, onEditedChanged, readOnly }) {
   const manager = useModulesManager();
-  const theme = useTheme();
+  const classes = useStyles();
   const { formatMessage: t } = useTranslations(MODULE_NAME, manager);
   const topics = edited.topics || [];
   const change = (updates) => onEditedChanged({ ...edited, ...updates });
@@ -20,7 +24,7 @@ export default function TrainingModuleHeadPanel({ edited, onEditedChanged, readO
     topics: topics.map((topic, position) => (position === index ? { ...topic, ...updates } : topic)),
   });
   return (
-    <Grid container spacing={2} style={{ padding: theme.spacing(2) }}>
+    <Grid container spacing={2} className={classes.root}>
       <Grid item xs={12} md={6}>
         <TextInput module={MODULE_NAME} label="trainingModules.name" required readOnly={readOnly}
           value={edited.name || ''} inputProps={{ maxLength: 255 }} onChange={(name) => change({ name })} />

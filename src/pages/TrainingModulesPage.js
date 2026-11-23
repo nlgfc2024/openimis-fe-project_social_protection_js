@@ -1,4 +1,4 @@
-import { makeStyles, useTheme } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/core/styles';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -22,6 +22,7 @@ import { fetchTrainingModules, saveTrainingModule, deleteTrainingModule } from '
 import { validTrainingModule, trainingModuleInput, trainingCatalogueError } from '../util/trainingCatalogue';
 
 const useStyles = makeStyles((theme) => ({
+  page: { padding: theme.spacing(2) },
   dialogContent: { padding: theme.spacing(0.25) },
   formPaper: { margin: 0, boxShadow: 'none' },
   dialogActions: { padding: theme.spacing(0, 0.5) },
@@ -30,7 +31,6 @@ const useStyles = makeStyles((theme) => ({
 export default function TrainingModulesPage() {
   const dispatch = useDispatch();
   const manager = useModulesManager();
-  const theme = useTheme();
   const classes = useStyles();
   const { formatMessage: t } = useTranslations(MODULE_NAME, manager);
   const rights = useSelector((state) => state.core?.user?.i_user?.rights || []);
@@ -104,7 +104,7 @@ export default function TrainingModulesPage() {
 
   if (!canRead) return null;
   return (
-    <div style={{ padding: theme.spacing(2) }}>
+    <div className={classes.page}>
       <Searcher key={revision} module={MODULE_NAME} FilterPane={TrainingModulesFilter}
         fetch={fetch} items={list.items} itemsPageInfo={list.pageInfo} fetchingItems={list.loading}
         fetchedItems={list.fetched} errorItems={list.error}

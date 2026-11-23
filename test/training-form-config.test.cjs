@@ -95,12 +95,12 @@ test('JSON controls field visibility, required markers and read-only state', () 
     && node.props.label === 'project.targetBeneficiaries').props.required, false);
 });
 
-test('programme module summary remains visible even when legacy configuration hides the input', () => {
+test('hidden programme modules load metadata without displaying a picker or empty grid', () => {
   const elements = render({ fields: { trainingModules: rule({ visible: false }) } });
   const picker = elements.find((node) => node.type === 'TrainingModulePicker');
   assert.ok(picker);
-  assert.notEqual(picker.props.renderControl, false);
-  assert.equal(elements.some((node) => node.type === 'Grid' && node.props['data-training-field'] === 'trainingModules'), true);
+  assert.equal(picker.props.renderControl, false);
+  assert.equal(elements.some((node) => node.type === 'Grid' && node.props['data-training-field'] === 'trainingModules'), false);
 });
 
 test('read-only module configuration does not skip automatic programme loading', () => {
