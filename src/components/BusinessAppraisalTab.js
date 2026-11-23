@@ -42,7 +42,7 @@ export function BusinessAppraisalTabPanel({
     [saved, draft, benefitPlan],
   );
 
-  if (!form.target || !canSeeGrantTabs(rights)) return null;
+  if (!form.target || !canSeeGrantTabs(rights, modulesManager)) return null;
 
   // Submitting needs only the plans-and-grants right; the approval records the rest.
   const readOnly = !rights.includes(RIGHT_PLANS_AND_GRANTS) || Boolean(pending) || form.saving;

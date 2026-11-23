@@ -4,7 +4,7 @@ import {
   Button, Divider, Grid, Tab, Typography,
 } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
-import { formatMessage } from '@openimis/fe-core';
+import { formatMessage, useModulesManager } from '@openimis/fe-core';
 import {
   MODULE_NAME,
   RIGHT_BENEFICIARY_DATA_UPDATE,
@@ -20,13 +20,17 @@ import {
 import {
   localIsoDate, parseJsonObject, pickKeys, sameJsonExt, userDisplayName,
 } from '../../util/beneficiaryGrant';
+import { isTrainingDeployment } from '../../util/projectDeployment';
 
 const MUTATION_SUCCESS = 2;
 
-// Both tabs are shown to anyone who enters, approves or assesses grants; each tab is
-// editable only with its own right.
-export const canSeeGrantTabs = (rights = []) => rights.includes(RIGHT_PLANS_AND_GRANTS)
-  || rights.includes(RIGHT_PLAN_APPROVAL) || rights.includes(RIGHT_UTILIZATION_ASSESSMENT);
+// Both tabs exist only on a training deployment (the backend's project_type, as for
+// the Training menu; a WORK deployment such as PWP never shows them). There they are
+// shown to anyone who enters, approves or assesses grants; each tab is editable only
+// with its own right.
+export const canSeeGrantTabs = (rights = [], modulesManager) => isTrainingDeployment(modulesManager)
+  && (rights.includes(RIGHT_PLANS_AND_GRANTS) || rights.includes(RIGHT_PLAN_APPROVAL)
+    || rights.includes(RIGHT_UTILIZATION_ASSESSMENT));
 
 // The update mutations also need social_protection's beneficiary and data rights.
 export const canEditWith = (rights = [], right) => rights.includes(RIGHT_BENEFICIARY_UPDATE)
@@ -35,7 +39,8 @@ export const canEditWith = (rights = [], right) => rights.includes(RIGHT_BENEFIC
 export function GrantTabLabel({
   intl, rights, onChange, tabStyle, isSelected, tabValue, labelKey,
 }) {
-  if (!canSeeGrantTabs(rights)) return null;
+  const modulesManager = useModulesManager();
+  if (!canSeeGrantTabs(rights, modulesManager)) return null;
   return (
     <Tab
       onChange={onChange}
@@ -54,6 +59,7 @@ export const useBeneficiaryJsonExt = ({
   beneficiary, groupBeneficiaries, benefitPlan, inputKeys, mutationLabel, withApproval = false,
 }) => {
   const dispatch = useDispatch();
+  const modulesManager = useModulesManager();
   const user = useSelector((state) => state.core?.user);
   const isGroup = Boolean(groupBeneficiaries);
   const target = groupBeneficiaries || beneficiary;
@@ -64,7 +70,7 @@ export const useBeneficiaryJsonExt = ({
   const [pending, setPending] = useState(null);
 
   const loadPending = async () => {
-    if (!withApproval || !target?.id) return;
+    if (!withApproval || !target?.id || !isTrainingDeployment(modulesManager)) return;
     const response = await dispatch(fetchPendingPlanApproval({ isGroup, id: target.id }));
     const approval = response?.payload?.data?.pendingBeneficiaryPlanApproval;
     setPending(approval ? { ...approval, incomingData: parseJsonObject(approval.incomingData) } : null);
@@ -89,10 +95,21 @@ export const useBeneficiaryJsonExt = ({
     restart(saved);
   };
 
-  const save = async (jsonExt, t) => {
+  const fetchCurrent = async () => {
+    const response = await dispatch(fetchBeneficiaryJsonExt({ isGroup, id: target.id }));
+    const node = response?.payload?.data?.[isGroup ? 'groupBeneficiary' : 'beneficiary']?.edges?.[0]?.node;
+    return node ? parseJsonObject(node.jsonExt) : null;
+  };
+
+  // build(current) returns the jsonExt to save from the beneficiary's current one, read
+  // just before saving, so a change made elsewhere since the page loaded (a KYC
+  // approval, say) is kept.
+  const save = async (build, t) => {
     setSaving(true);
     setNotice(null);
     try {
+      const latest = await fetchCurrent();
+      const jsonExt = build(latest || saved);
       const result = await dispatch(saveBeneficiaryJsonExt({
         isGroup, beneficiary: target, benefitPlanId: benefitPlan?.id, jsonExt, label: mutationLabel,
       }));
@@ -102,9 +119,7 @@ export const useBeneficiaryJsonExt = ({
         return;
       }
       // An update that needs approval succeeds as a task and leaves the record as it was.
-      const response = await dispatch(fetchBeneficiaryJsonExt({ isGroup, id: target.id }));
-      const node = response?.payload?.data?.[isGroup ? 'groupBeneficiary' : 'beneficiary']?.edges?.[0]?.node;
-      const current = node ? parseJsonObject(node.jsonExt) : saved;
+      const current = (await fetchCurrent()) || saved;
       restart(current);
       setNotice({
         error: false,

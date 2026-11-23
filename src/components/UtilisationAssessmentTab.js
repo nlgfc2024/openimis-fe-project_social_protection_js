@@ -41,7 +41,7 @@ export function UtilisationAssessmentTabPanel({
     saved, draft, benefitPlan, today: form.today, assessor: form.userName,
   }), [saved, draft, benefitPlan, form.today, form.userName]);
 
-  if (!form.target || !canSeeGrantTabs(rights)) return null;
+  if (!form.target || !canSeeGrantTabs(rights, modulesManager)) return null;
 
   const readOnly = !canEditWith(rights, RIGHT_UTILIZATION_ASSESSMENT) || form.saving;
   const dirty = !sameJsonExt(saved, jsonExt);
@@ -58,7 +58,9 @@ export function UtilisationAssessmentTabPanel({
       valid={!Object.keys(errors).length}
       saving={form.saving}
       notice={form.notice}
-      onSave={() => form.save(jsonExt, t)}
+      onSave={() => form.save((current) => computeUtilisation({
+        saved: current, draft, benefitPlan, today: form.today, assessor: form.userName,
+      }).jsonExt, t)}
       onReset={form.reset}
       formatMessage={t}
     >
