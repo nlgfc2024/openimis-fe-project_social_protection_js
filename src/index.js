@@ -27,6 +27,10 @@ import {
   ProjectChangelogTabPanel,
 } from './components/ProjectChangelogTab';
 import projectBeneficiariesMiddleware from './middlewares';
+import { BusinessAppraisalTabLabel, BusinessAppraisalTabPanel } from './components/BusinessAppraisalTab';
+import { UtilisationAssessmentTabLabel, UtilisationAssessmentTabPanel } from './components/UtilisationAssessmentTab';
+import { PlanApprovalConfirmationPanel, PlanApprovalTaskPreview } from './components/PlanApprovalTask';
+import { PLAN_APPROVAL_TASK_SOURCE } from './util/beneficiaryGrant';
 import { RIGHT_PROJECT_SEARCH, RIGHT_ACTIVITY_SEARCH } from './constants';
 import { deploymentMenuGate } from './util/projectDeployment';
 
@@ -96,6 +100,22 @@ const DEFAULT_CONFIG = {
   'benefitPlan.TabPanel.panel': [
     BenefitPlanProjectsTabPanel,
   ],
+  'benefitPackage.TabPanel.label': [
+    BusinessAppraisalTabLabel,
+    UtilisationAssessmentTabLabel,
+  ],
+  'benefitPackage.TabPanel.panel': [
+    BusinessAppraisalTabPanel,
+    UtilisationAssessmentTabPanel,
+  ],
+  'tasksManagement.tasks': [{
+    text: <FormattedMessage module="projectSocialProtection" id="beneficiaryGrant.task.title" />,
+    tableHeaders: [],
+    itemFormatters: [],
+    taskSource: [PLAN_APPROVAL_TASK_SOURCE],
+    previewComponent: PlanApprovalTaskPreview,
+    confirmationPanel: PlanApprovalConfirmationPanel,
+  }],
   'project.TabPanel.label': [
     ProjectBeneficiariesTabLabel,
     ProjectChangelogTabLabel,
