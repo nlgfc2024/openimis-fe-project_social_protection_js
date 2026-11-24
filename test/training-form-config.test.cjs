@@ -138,7 +138,7 @@ test('Training details honour readonly rules without applying creation defaults'
   assert.equal(elements.some((node) => node.props['data-training-field'] === 'location'), false);
 });
 
-function pageHarness({ type = 'TRAINING', fail = false, saveStatus = 2 } = {}) {
+function pageHarness({ type = 'TRAINING', fail = false, saveStatus = 2, configurationWait = null } = {}) {
   const states = [], calls = [], alerts = [];
   let cursor = 0, effect, submitted, redirect, redirectState;
   const config = { fields: {
@@ -152,6 +152,7 @@ function pageHarness({ type = 'TRAINING', fail = false, saveStatus = 2 } = {}) {
     if (action.kind === 'wait') return { status: saveStatus, error: [{ message: 'Training validation failed' }] };
     calls.push(action.kind);
     if (action.kind === 'type') return { payload: { data: { projectDeploymentType: type } } };
+    if (configurationWait) await configurationWait;
     return fail ? { payload: { errors: [{ message: 'Invalid configuration' }] } }
       : { payload: { data: { projectTrainingFormConfig: JSON.stringify(config) } } };
   };
@@ -255,7 +256,7 @@ test('unavailable Training configuration blocks saving and shows a configuration
   page.render(); page.run();
   await new Promise(setImmediate);
   const elements = page.render();
-  assert.equal(elements.find((node) => node.type === 'Form').props.canSave(), false);
+  assert.equal(elements.some((node) => node.type === 'Form'), false);
   assert.ok(elements.some((node) => node.type === 'Typography'
     && node.props.children === 'project.trainingFormConfig.error'));
 });
@@ -268,4 +269,28 @@ test('WORK creation does not fetch or apply Training configuration', async () =>
   assert.deepEqual(page.calls, ['type']);
   assert.equal(form.props.edited.projectType, 'WORK');
   assert.equal(form.props.edited.name, undefined);
+});
+
+test('creation never mounts a fallback form while deployment and Training configuration load', async () => {
+  let release;
+  const configurationWait = new Promise((resolve) => { release = resolve; });
+  const page = pageHarness({ configurationWait });
+  assert.equal(page.render().some((node) => node.type === 'Form'), false);
+  page.run();
+  await new Promise(setImmediate);
+  assert.deepEqual(page.calls, ['type', 'config']);
+  assert.equal(page.render().some((node) => node.type === 'Form'), false);
+  release();
+  await new Promise(setImmediate);
+  const form = page.render().find((node) => node.type === 'Form');
+  assert.equal(form.props.edited.projectType, 'TRAINING');
+  assert.ok(form.props.trainingFormConfig);
+});
+
+test('WORK creation also waits for its deployment type before mounting', async () => {
+  const page = pageHarness({ type: 'WORK' });
+  assert.equal(page.render().some((node) => node.type === 'Form'), false);
+  page.run();
+  await new Promise(setImmediate);
+  assert.equal(page.render().find((node) => node.type === 'Form').props.edited.projectType, 'WORK');
 });

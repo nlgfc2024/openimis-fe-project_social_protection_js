@@ -277,15 +277,27 @@ function ProjectCreatePage({
     return <div>{formatMessage(intl, 'projectSocialProtection', 'project.loading')}</div>;
   }
 
-  return rights.includes(RIGHT_BENEFIT_PLAN_UPDATE) && (
+  if (!rights.includes(RIGHT_BENEFIT_PLAN_UPDATE)) return null;
+
+  if (deploymentError) {
+    return <Typography color="error" role="alert">
+      {formatMessage(intl, 'projectSocialProtection', trainingConfigurationError
+        ? 'project.trainingFormConfig.error' : 'project.deploymentType.error')}
+    </Typography>;
+  }
+
+  const formReady = editedProject.benefitPlan?.id === benefitPlanId
+    && ['WORK', 'TRAINING'].includes(editedProject.projectType)
+    && (editedProject.projectType !== 'TRAINING' || Boolean(trainingFormConfig));
+  if (!formReady) {
+    return <div className={classes.page} role="status" aria-busy="true">
+      {formatMessage(intl, 'projectSocialProtection', 'project.loading')}
+    </div>;
+  }
+
+  return (
     <div className={classes.page}>
       {saveError && <Typography color="error">{saveError}</Typography>}
-      {deploymentError && (
-        <Typography color="error">
-          {formatMessage(intl, 'projectSocialProtection', trainingConfigurationError
-            ? 'project.trainingFormConfig.error' : 'project.deploymentType.error')}
-        </Typography>
-      )}
       {trainingFormConfig && !trainingFieldRule(trainingFormConfig, 'trainingModules').visible
         && (editedProject.trainingModuleLoadError || !editedProject.trainingModuleLoading
           && Array.isArray(editedProject.trainingModules) && !editedProject.trainingModules.length) && (
