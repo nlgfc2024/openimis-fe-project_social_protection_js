@@ -22,6 +22,7 @@ const BENEFIT_PLAN_PROJECTION = () => [
 
 const PROJECT_FULL_PROJECTION = (modulesManager) => [
   'id',
+  'uuid',
   'code',
   'assignedBeneficiariesCount',
   'benefitPlan {id, name, type}',

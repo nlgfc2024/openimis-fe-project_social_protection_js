@@ -29,6 +29,6 @@ export function ProjectBoundaryTabPanel({ value, project, rights = [] }) {
   if (value !== VALUE || !allowed) return null;
   return project?.microCatchment?.uuid
     ? <PublishedComponent pubRef={mapping ? "mapping.MappingMap" : "location.GeospatialDashboard"} key={project.id}
-        microCatchmentUuid={project.microCatchment.uuid} />
+        microCatchmentUuid={project.microCatchment.uuid} projectId={project.uuid} />
     : <Typography style={{ padding: 20 }}>This project has no linked micro-catchment.</Typography>;
 }
